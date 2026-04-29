@@ -1,0 +1,8 @@
+.lake/
+build/
+lake-packages/
+*.olean
+*.ilean
+*.hash
+*.trace
+*.c

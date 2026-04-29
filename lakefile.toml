@@ -1,0 +1,5 @@
+name = "elk-sdd"
+defaultTargets = ["ELKSDD"]
+
+[[lean_lib]]
+name = "ELKSDD"
