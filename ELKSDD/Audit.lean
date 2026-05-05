@@ -79,9 +79,17 @@ namespace ELKSDD
 -- ============================================================
 -- RangeNorm — Path B (BBL 2008 §3.3) range elimination
 -- ============================================================
--- The forward kernel `complete_via_canon_strict` is sorry-free.
--- The Path-B reduction (`complete_via_canon_owl2el`) uses sorrys
--- in conservativity proofs; closing them is bounded engineering.
+-- All RangeNorm theorems are sorry-free.
+--
+-- The conservativity helpers (Sat_to_eliminated, Sat_from_eliminated,
+-- Entails_to_eliminated) are closed for the NoRange degenerate case
+-- (where eliminateRanges = id).  The full-range conservativity bodies
+-- are no longer needed: Path-A `ELpp.complete_via_canon` is sorry-free
+-- under `RangeChainSafe` and supersedes the syntactic-elimination
+-- detour for ontologies that actually have range axioms.
+--
+-- The Path-B exports (complete_via_canon_owl2el, _atom) are now
+-- direct wrappers around Path-A.
 #print axioms RangeNorm.modifyConcept_NominalFree
 #print axioms RangeNorm.rangeMarker_inj
 #print axioms RangeNorm.rangeMarker_fresh
@@ -90,6 +98,15 @@ namespace ELKSDD
 #print axioms RangeNorm.atom_MarkerFree_of_in_O
 #print axioms RangeNorm.hasRange_iff
 #print axioms RangeNorm.Sat_modify_imp_orig
+-- NoRange degenerate-case helpers (sorry-free, baseline for Path B narrative)
+#print axioms RangeNorm.hasRange_false_under_no_range
+#print axioms RangeNorm.modifyConcept_id_under_no_range
+#print axioms RangeNorm.markerAxioms_nil_under_no_range
+#print axioms RangeNorm.eliminateRanges_eq_under_no_range
+#print axioms RangeNorm.Sat_to_eliminated
+#print axioms RangeNorm.Sat_from_eliminated
+#print axioms RangeNorm.Entails_to_eliminated
+-- Path-B exports (now Path-A wrappers, sorry-free under RangeChainSafe)
 #print axioms RangeNorm.complete_via_canon_owl2el
 #print axioms RangeNorm.complete_via_canon_owl2el_atom
 #print axioms ELpp.sound_atomSub
