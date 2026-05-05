@@ -34,6 +34,9 @@ import ELKSDD.ELpp
 import ELKSDD.Normalize
 import ELKSDD.RangeNorm
 import ELKSDD.Merging
+import ELKSDD.OWL2EL
+import ELKSDD.ELKBoundary
+import ELKSDD.DISPONTE
 import ELKSDD.Stratified
 import ELKSDD.SCC
 import ELKSDD.SDD
