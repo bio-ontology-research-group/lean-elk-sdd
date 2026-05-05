@@ -80,6 +80,28 @@ namespace Stratified
 open ELpp
 
 -- ============================================================
+-- 0. Helpers — foldr-max bound
+-- ============================================================
+
+/-- For any `f : α → Nat` and any list `xs : List α`, the
+    foldr-max `xs.foldr (fun x acc => max (f x) acc) 0` upper-bounds
+    `f x` for every `x ∈ xs`. -/
+theorem foldr_max_ge {α : Type} (f : α → Nat) :
+    ∀ (xs : List α) (x : α), x ∈ xs →
+      f x ≤ xs.foldr (fun y acc => Nat.max (f y) acc) 0 := by
+  intro xs
+  induction xs with
+  | nil => intro x hx; exact (List.not_mem_nil hx).elim
+  | cons y ys ih =>
+      intro x hx
+      rcases List.mem_cons.mp hx with hEq | hMem
+      · subst hEq
+        simp only [List.foldr_cons]
+        exact Nat.le_max_left _ _
+      · simp only [List.foldr_cons]
+        exact Nat.le_trans (ih x hMem) (Nat.le_max_right _ _)
+
+-- ============================================================
 -- 1. Time-stamped saturation predicate
 -- ============================================================
 
@@ -137,6 +159,12 @@ inductive SatAt (O : Ontology) : Nat → Concept → Concept → Prop where
       SatAt O (k+1) C (.self S)
   | nom_symm : ∀ {k i j},
       SatAt O k (.nom i) (.nom j) → SatAt O (k+1) (.nom j) (.nom i)
+  | hasKey_apply : ∀ {k a b C rs} (cs : Role → Nat),
+      SatAt O k (.nom a) C → SatAt O k (.nom b) C →
+      Axiom.hasKey C rs ∈ O →
+      (∀ R, R ∈ rs → SatAt O k (.nom a) (.exist R (.nom (cs R)))) →
+      (∀ R, R ∈ rs → SatAt O k (.nom b) (.exist R (.nom (cs R)))) →
+      SatAt O (k+1) (.nom a) (.nom b)
 
 -- ============================================================
 -- 2. Depth monotonicity
@@ -244,6 +272,51 @@ theorem Sat_to_SatAt {O : Ontology} {C D : Concept}
   | nom_symm _ ih =>
       obtain ⟨k, h⟩ := ih
       exact ⟨k+1, SatAt.nom_symm h⟩
+  | @hasKey_apply a b C rs cs _ _ h_ax _ _ ih_aC ih_bC ih_aR ih_bR =>
+      classical
+      obtain ⟨k₁, h_aC_k⟩ := ih_aC
+      obtain ⟨k₂, h_bC_k⟩ := ih_bC
+      -- For each R in rs, classical-choose a uniform pair-depth.
+      have h_pair : ∀ R, R ∈ rs → ∃ k,
+          SatAt O k (.nom a) (.exist R (.nom (cs R))) ∧
+          SatAt O k (.nom b) (.exist R (.nom (cs R))) := by
+        intro R hR
+        obtain ⟨ka, ha⟩ := ih_aR R hR
+        obtain ⟨kb, hb⟩ := ih_bR R hR
+        exact ⟨Nat.max ka kb,
+               SatAt_mono ha (Nat.le_max_left _ _),
+               SatAt_mono hb (Nat.le_max_right _ _)⟩
+      -- Build a per-role depth function and its list-max bound.
+      let kR : Role → Nat := fun R =>
+        if h : R ∈ rs then Classical.choose (h_pair R h) else 0
+      let kFold : Nat := rs.foldr (fun R acc => Nat.max (kR R) acc) 0
+      -- Foldr-max lemma: every kR R for R ∈ rs is bounded by kFold.
+      have kR_le_fold : ∀ R, R ∈ rs → kR R ≤ kFold := fun R hR =>
+        foldr_max_ge kR rs R hR
+      let kAll : Nat := Nat.max (Nat.max k₁ k₂) kFold
+      refine ⟨kAll + 1, SatAt.hasKey_apply cs ?_ ?_ h_ax ?_ ?_⟩
+      · exact SatAt_mono h_aC_k
+          (Nat.le_trans (Nat.le_max_left _ _) (Nat.le_max_left _ _))
+      · exact SatAt_mono h_bC_k
+          (Nat.le_trans (Nat.le_max_right _ _) (Nat.le_max_left _ _))
+      · intro R hR
+        have hkR_def : kR R = Classical.choose (h_pair R hR) := by
+          show (if h : R ∈ rs then Classical.choose (h_pair R h) else 0) = _
+          rw [dif_pos hR]
+        have h_at_kR : SatAt O (kR R) (.nom a) (.exist R (.nom (cs R))) := by
+          rw [hkR_def]
+          exact (Classical.choose_spec (h_pair R hR)).1
+        exact SatAt_mono h_at_kR
+          (Nat.le_trans (kR_le_fold R hR) (Nat.le_max_right _ _))
+      · intro R hR
+        have hkR_def : kR R = Classical.choose (h_pair R hR) := by
+          show (if h : R ∈ rs then Classical.choose (h_pair R h) else 0) = _
+          rw [dif_pos hR]
+        have h_at_kR : SatAt O (kR R) (.nom b) (.exist R (.nom (cs R))) := by
+          rw [hkR_def]
+          exact (Classical.choose_spec (h_pair R hR)).2
+        exact SatAt_mono h_at_kR
+          (Nat.le_trans (kR_le_fold R hR) (Nat.le_max_right _ _))
 
 -- ============================================================
 -- 4. Backward: SatAt ⊆ Sat
@@ -277,6 +350,8 @@ theorem SatAt_to_Sat {O : Ontology} : ∀ {k C D},
   | range_via_rincStar _ hAnc hRange ih => exact Sat.range_via_rincStar ih hAnc hRange
   | rinc_self_star _ hAnc ih => exact Sat.rinc_self_star ih hAnc
   | nom_symm _ ih => exact Sat.nom_symm ih
+  | @hasKey_apply k a b C rs cs _ _ h_ax _ _ ih_aC ih_bC ih_aR ih_bR =>
+      exact Sat.hasKey_apply cs ih_aC ih_bC h_ax ih_aR ih_bR
 
 -- ============================================================
 -- 5. The equivalence — Layer 5 main theorem

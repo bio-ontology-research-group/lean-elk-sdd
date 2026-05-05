@@ -518,16 +518,17 @@ theorem merged_canon_eval (O : Ontology) (default : MergedDom O)
                          shape-3 `∃R.{a}` + shape-4 `{a} ⊑ {b}`).
       * `rinc R S`    — supported.
       * `reflexive R` — supported.
-      * `rchain`, `range`, `hasKey` — gated `False` (require additional
-        machinery: `RangeChainSafe`, range-on-nominal Sat rules, or the
-        full Kazakov 2014 §6 quotient with HasKey support).  -/
+      * `hasKey C rs` — supported when `C` is `Shallow` (HasKey-induced
+                         merging is captured via `Sat.hasKey_apply`).
+      * `rchain`, `range` — gated `False` (require additional
+        machinery: `RangeChainSafe` analogue, range-on-nominal Sat rules). -/
 def AxiomMerge : Axiom → Prop
   | .gci C D       => Shallow C ∧ Shallow D
   | .rinc _ _      => True
   | .rchain _ _ _  => False
   | .range _ _     => False
   | .reflexive _   => True
-  | .hasKey _ _    => False
+  | .hasKey C _    => Shallow C
 
 /-- An ontology supports the merged canonical model if all its axioms
     fall in `AxiomMerge`. -/
@@ -626,7 +627,74 @@ theorem mergedCanon_satisfies (O : Ontology) (default : MergedDom O)
       | regular C hReg =>
           show Sat O C (.exist R C)
           exact Sat.reflexive_apply hax
-  | hasKey C rs => exact hax_m.elim
+  | hasKey C rs =>
+      -- AxiomMerge (.hasKey C rs) = Shallow C.
+      have hC_sh : Shallow C := hax_m
+      -- HasKey semantics: ∀ a b. eval C (indiv a) → eval C (indiv b) →
+      --   (∀ R ∈ rs, ∃ c, ext_role R (indiv a) (indiv c) ∧
+      --                    ext_role R (indiv b) (indiv c)) →
+      --   indiv a = indiv b.
+      intro a b h_aC h_bC h_roles
+      -- Reduce indiv a and indiv b under AllNomInhabited.
+      have ha_indiv : (mergedCanon O default).indiv a =
+          .nominal (nomCls O a) :=
+        mergedCanon_indiv_eq O default a (hO_inhab a)
+      have hb_indiv : (mergedCanon O default).indiv b =
+          .nominal (nomCls O b) :=
+        mergedCanon_indiv_eq O default b (hO_inhab b)
+      -- Translate role witnesses to Sat-typed facts.
+      have h_aC_sat : Sat O (.nom a) C := by
+        rw [ha_indiv] at h_aC
+        have h_msC : MergedSat O C (.nominal (nomCls O a)) :=
+          (merged_canon_eval O default hO_inhab C hC_sh _).mp h_aC
+        exact h_msC
+      have h_bC_sat : Sat O (.nom b) C := by
+        rw [hb_indiv] at h_bC
+        have h_msC : MergedSat O C (.nominal (nomCls O b)) :=
+          (merged_canon_eval O default hO_inhab C hC_sh _).mp h_bC
+        exact h_msC
+      -- For each R ∈ rs, classical-choose the witness c (Nat).
+      -- Build a Skolem witness function cs : Role → Nat.
+      have h_pair : ∀ R, R ∈ rs → ∃ c : Nat,
+          Sat O (.nom a) (.exist R (.nom c)) ∧
+          Sat O (.nom b) (.exist R (.nom c)) := by
+        intro R hR
+        obtain ⟨c, hRa, hRb⟩ := h_roles R hR
+        -- hRa : ext_role R (indiv a) (indiv c).
+        -- mc_indiv c is either nominal (nomCls c) (consistent) or default.
+        -- Under AllNomInhabited, c is consistent.
+        have hc_indiv : (mergedCanon O default).indiv c =
+            .nominal (nomCls O c) :=
+          mergedCanon_indiv_eq O default c (hO_inhab c)
+        rw [ha_indiv, hc_indiv] at hRa
+        rw [hb_indiv, hc_indiv] at hRb
+        -- mc_ext_role R (nominal ⟦a⟧) (nominal ⟦c⟧) =
+        --   Sat O (.nom a) (.exist R (.nom c)).
+        exact ⟨c, hRa, hRb⟩
+      classical
+      let cs : Role → Nat := fun R =>
+        if hR : R ∈ rs then Classical.choose (h_pair R hR) else 0
+      have h_aR : ∀ R, R ∈ rs →
+          Sat O (.nom a) (.exist R (.nom (cs R))) := by
+        intro R hR
+        show Sat O (.nom a) (.exist R (.nom
+          (if hR' : R ∈ rs then Classical.choose (h_pair R hR') else 0)))
+        rw [dif_pos hR]
+        exact (Classical.choose_spec (h_pair R hR)).1
+      have h_bR : ∀ R, R ∈ rs →
+          Sat O (.nom b) (.exist R (.nom (cs R))) := by
+        intro R hR
+        show Sat O (.nom b) (.exist R (.nom
+          (if hR' : R ∈ rs then Classical.choose (h_pair R hR') else 0)))
+        rw [dif_pos hR]
+        exact (Classical.choose_spec (h_pair R hR)).2
+      -- Apply the new Sat.hasKey_apply rule.
+      have h_eq_sat : Sat O (.nom a) (.nom b) :=
+        Sat.hasKey_apply cs h_aC_sat h_bC_sat hax h_aR h_bR
+      -- Hence the nominal classes match.
+      have h_cls_eq : nomCls O a = nomCls O b := nomCls_sound h_eq_sat
+      -- Conclude the indiv equality.
+      rw [ha_indiv, hb_indiv, h_cls_eq]
 
 -- ============================================================
 -- 10. Completeness via the merged canonical model
@@ -753,6 +821,65 @@ theorem shape24_chain : Sat shape24_O (.atom 0) (.nom 1) := by
     Sat.base_gci (List.mem_cons.mpr (Or.inr List.mem_cons_self))
   exact Sat.trans h1 h2
 
+/-- *HasKey worked example* — a primary key on `Email` for `User`.
+
+    `O = { hasKey User [hasEmail], gci {alice} User, gci {bob} User,
+           gci {alice} (∃hasEmail.{e}), gci {bob} (∃hasEmail.{e}) }`
+
+    Reading: alice and bob are both Users, and both have email `e`.
+    HasKey(User, [hasEmail]) says email is a key for User, so
+    alice = bob.  Concept names: `User = atom 0`, `hasEmail = role 0`.
+    Individuals: `alice = nom 0`, `bob = nom 1`, `e = nom 2`. -/
+def hasKey_O : Ontology :=
+  [ Axiom.hasKey (.atom 0) [0],
+    Axiom.gci (.nom 0) (.atom 0),
+    Axiom.gci (.nom 1) (.atom 0),
+    Axiom.gci (.nom 0) (.exist 0 (.nom 2)),
+    Axiom.gci (.nom 1) (.exist 0 (.nom 2)) ]
+
+theorem hasKey_axiom_merge : OntologyMerge hasKey_O := by
+  intro ax hax
+  simp [hasKey_O] at hax
+  rcases hax with h | h | h | h | h
+  · subst h; exact Shallow.atom 0
+  · subst h; exact ⟨Shallow.nom 0, Shallow.atom 0⟩
+  · subst h; exact ⟨Shallow.nom 1, Shallow.atom 0⟩
+  · subst h; exact ⟨Shallow.nom 0, Shallow.exist_nom 0 2⟩
+  · subst h; exact ⟨Shallow.nom 1, Shallow.exist_nom 0 2⟩
+
+/-- HasKey forces `alice = bob` — Sat O {alice} ⊑ {bob}.
+
+    Combines the four GCIs with `Sat.hasKey_apply`: alice and bob
+    are both in `User`, and both have email `e`, so the HasKey axiom
+    fires and merges them. -/
+theorem hasKey_merges : Sat hasKey_O (.nom 0) (.nom 1) := by
+  -- Class memberships.
+  have h_aliceUser : Sat hasKey_O (.nom 0) (.atom 0) :=
+    Sat.base_gci (by simp [hasKey_O])
+  have h_bobUser : Sat hasKey_O (.nom 1) (.atom 0) :=
+    Sat.base_gci (by simp [hasKey_O])
+  -- Email-edges.
+  have h_aliceEmail : Sat hasKey_O (.nom 0) (.exist 0 (.nom 2)) :=
+    Sat.base_gci (by simp [hasKey_O])
+  have h_bobEmail : Sat hasKey_O (.nom 1) (.exist 0 (.nom 2)) :=
+    Sat.base_gci (by simp [hasKey_O])
+  -- HasKey axiom membership.
+  have h_hk : Axiom.hasKey (.atom 0) [0] ∈ hasKey_O := by simp [hasKey_O]
+  -- Skolem witness function: every role maps to email-target = 2.
+  let cs : Role → Nat := fun _ => 2
+  -- Apply Sat.hasKey_apply.
+  exact Sat.hasKey_apply (rs := [0]) cs h_aliceUser h_bobUser h_hk
+    (fun R hR => by
+      simp at hR
+      subst hR; exact h_aliceEmail)
+    (fun R hR => by
+      simp at hR
+      subst hR; exact h_bobEmail)
+
+/-- By `Sat.nom_symm`, `bob = alice` is also derivable. -/
+theorem hasKey_symm : Sat hasKey_O (.nom 1) (.nom 0) :=
+  Sat.nom_symm hasKey_merges
+
 end Examples
 
 -- ============================================================
@@ -772,6 +899,8 @@ end Examples
 #print axioms Examples.shape2_sat                     -- (no axioms)
 #print axioms Examples.shape4_sat_reverse             -- (no axioms — uses nom_symm)
 #print axioms Examples.shape24_chain                  -- (no axioms)
+#print axioms Examples.hasKey_merges                  -- (no axioms — uses hasKey_apply)
+#print axioms Examples.hasKey_symm                    -- (no axioms — adds nom_symm)
 
 end ELpp
 end ELKSDD

@@ -295,6 +295,39 @@ inductive Sat (O : Ontology) : Concept → Concept → Prop where
       the calculus, so it does not form a Setoid. -/
   | nom_symm : ∀ {i j},
       Sat O (.nom i) (.nom j) → Sat O (.nom j) (.nom i)
+  /-- **HasKey-induced nominal merging**.  If two nominals `a_i, a_j`
+      both lie in a key-class `C` and share named R-targets (provided
+      via a Skolem witness function `cs : Role → Nat`) for every key
+      role, then `a_i = a_j`.
+
+      OWL 2 EL `HasKey(C, R₁, …, Rₙ)`: any two named individuals that
+      are both in `C` and share `Rₖ`-fillers for every key role must
+      coincide.  The semantic reading: this is a *named-individual*
+      merge condition (it does not constrain anonymous successors).
+
+      The witness function `cs : Role → Nat` provides, per role `R ∈ rs`,
+      the shared individual index `cs R` for which both `a_i` and `a_j`
+      have an R-edge to `cs R`.  This is a Skolemized form of the
+      semantic ∃-witnesses; using a function avoids a nested `Exists`
+      under the recursive `Sat`, which Lean's kernel rejects in
+      strictly-positive inductive datatypes.
+
+      Soundness: in any `M⊨O`, the premises give `a_i^M ∈ C^M`,
+      `a_j^M ∈ C^M`, and shared `Rₖ`-targets at `(cs Rₖ)^M` for each k.
+      The HasKey axiom satisfaction in M then forces `a_i^M = a_j^M`.
+      Hence `Entails O (.nom i) (.nom j)`.
+
+      This rule is essential for the merging quotient with HasKey
+      (Kazakov 2014 §6, full version): without it, HasKey-induced
+      mergers between nominal classes are not derivable in the
+      calculus, so the canonical model cannot satisfy HasKey axioms. -/
+  | hasKey_apply : ∀ {a b : Nat} {C : Concept} {rs : List Role}
+      (cs : Role → Nat),
+      Sat O (.nom a) C → Sat O (.nom b) C →
+      Axiom.hasKey C rs ∈ O →
+      (∀ R, R ∈ rs → Sat O (.nom a) (.exist R (.nom (cs R)))) →
+      (∀ R, R ∈ rs → Sat O (.nom b) (.exist R (.nom (cs R)))) →
+      Sat O (.nom a) (.nom b)
 
 -- ============================================================
 -- 3. Soundness of the calculus
@@ -401,6 +434,36 @@ theorem sound (O : Ontology) {C D : Concept} (h : Sat O C D) :
       show x = I.indiv i
       have hxj : x = I.indiv j := hx
       exact hxj.trans hij.symm
+  | @hasKey_apply a b C rs cs _ _ h_ax _ _ ih_aC ih_bC ih_a_roles ih_b_roles =>
+      intro α I hO x hx
+      -- hx : I.eval (.nom a) x, i.e., x = I.indiv a.
+      -- Goal: I.eval (.nom b) x, i.e., x = I.indiv b.
+      show x = I.indiv b
+      -- Establish premises of HasKey in I.
+      have h_aC_M : I.eval C (I.indiv a) :=
+        ih_aC I hO _ (rfl : I.indiv a = I.indiv a)
+      have h_bC_M : I.eval C (I.indiv b) :=
+        ih_bC I hO _ (rfl : I.indiv b = I.indiv b)
+      have h_roles_M : ∀ R, R ∈ rs → ∃ c : Nat,
+          I.ext_role R (I.indiv a) (I.indiv c) ∧
+          I.ext_role R (I.indiv b) (I.indiv c) := by
+        intro R hR
+        -- Use the Skolem witness cs R; both a, b have R-edge to cs R.
+        have h_a_M : I.eval (.exist R (.nom (cs R))) (I.indiv a) :=
+          ih_a_roles R hR I hO _ (rfl : I.indiv a = I.indiv a)
+        have h_b_M : I.eval (.exist R (.nom (cs R))) (I.indiv b) :=
+          ih_b_roles R hR I hO _ (rfl : I.indiv b = I.indiv b)
+        -- I.eval (.exist R (.nom c)) y = ∃ z, R(y, z) ∧ z = I.indiv c.
+        obtain ⟨y_a, hRa, hya⟩ := h_a_M
+        obtain ⟨y_b, hRb, hyb⟩ := h_b_M
+        subst hya; subst hyb
+        exact ⟨cs R, hRa, hRb⟩
+      -- Apply HasKey axiom satisfaction in I.
+      have hHK_axiom : I.satisfiesAxiom (.hasKey C rs) := hO _ h_ax
+      have h_eq : I.indiv a = I.indiv b :=
+        hHK_axiom a b h_aC_M h_bC_M h_roles_M
+      have hxa : x = I.indiv a := hx
+      exact hxa.trans h_eq
 
 -- ============================================================
 -- 4. Canonical (term) model — ELK 2014 Definition 2

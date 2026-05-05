@@ -138,6 +138,8 @@ theorem Sat_mono {O₁ O₂ : Ontology} (hsub : Subontology O₁ O₂)
   | rinc_self_star _ hAnc ih =>
       exact Sat.rinc_self_star ih (RincAncestor_mono hsub hAnc)
   | nom_symm _ ih => exact Sat.nom_symm ih
+  | @hasKey_apply a b C rs cs _ _ h_ax _ _ ih_aC ih_bC ih_aR ih_bR =>
+      exact Sat.hasKey_apply cs ih_aC ih_bC (hsub _ h_ax) ih_aR ih_bR
 
 /-- Concrete corollary: appending O₂ to O₁ preserves Sat-derivability. -/
 theorem Sat_mono_append_left {O₁ : Ontology} (O₂ : Ontology)
