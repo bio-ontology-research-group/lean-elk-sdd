@@ -75,6 +75,12 @@ namespace ELKSDD
 #print axioms ELpp.complete_via_canon
 #print axioms ELpp.canon_satisfies_strict
 #print axioms ELpp.complete_via_canon_strict
+-- LHS-nominal extension (ClassAssertion-style: gci (nom i) D allowed)
+#print axioms ELpp.AxiomNominalFree_imp_NomLHS
+#print axioms ELpp.OntologyNominalFree_imp_NomLHS
+#print axioms ELpp.canon_indiv_eq
+#print axioms ELpp.canon_satisfies_nomLHS
+#print axioms ELpp.complete_via_canon_nomLHS
 
 -- ============================================================
 -- RangeNorm — Path B (BBL 2008 §3.3) range elimination

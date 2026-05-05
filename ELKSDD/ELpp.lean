@@ -676,6 +676,169 @@ theorem canon_satisfies (O : Ontology) (default : CanonDom O)
       exact hax_nf.elim
 
 -- ============================================================
+-- 6c. LHS-nominal extension — ABox-style nominals
+-- ============================================================
+--
+-- **Coverage**: GCIs of shape `gci (nom i) D` (with D nominal-free) —
+-- i.e., `ClassAssertion(D, a_i)` in OWL terms.  This is a common
+-- ABox pattern: asserting that individual `a_i` is a member of
+-- class `D`.  Combined with `Sat.rinc_apply` etc., this also
+-- handles role assertions like `gci (nom i) (∃R.C)` (under
+-- the existing canon's exist_role construction).
+--
+-- **What is NOT covered**: GCIs with direct nominal RHS
+-- (`gci C (nom i)`, `gci (nom i) (nom j)`).  These require
+-- the merging canonical model (Kazakov 2014 §6) — distinct
+-- canonical concepts that share a nominal must be identified
+-- via a quotient construction — which remains future work.
+--
+-- **Soundness gate**: `AllNomInhabited O` — every nominal index
+-- in O is consistent (no `Sat O (nom i) ⊥`).  This ensures
+-- `canon.indiv i = ⟨nom i, _⟩` (no fallback to default), which
+-- is what the proof relies on.  Globally consistent ontologies
+-- automatically satisfy this.
+
+/-- Loose axiom-level nominal-freeness: the LHS of a GCI may be
+    a nominal `nom i` (instead of being nominal-free).  RHS, ranges,
+    and other axiom positions remain nominal-free. -/
+def AxiomNomLHS : Axiom → Prop
+  | .gci C D       => (NominalFree C ∨ ∃ i, C = .nom i) ∧ NominalFree D
+  | .rinc _ _      => True
+  | .rchain _ _ _  => True
+  | .range _ E     => NominalFree E
+  | .reflexive _   => True
+  | .hasKey _ _    => False
+
+/-- An ontology has only LHS-nominal-permissive axioms. -/
+def OntologyNomLHS (O : Ontology) : Prop :=
+  ∀ ax ∈ O, AxiomNomLHS ax
+
+/-- AxiomNominalFree implies AxiomNomLHS (strict ⇒ permissive). -/
+theorem AxiomNominalFree_imp_NomLHS (ax : Axiom) :
+    AxiomNominalFree ax → AxiomNomLHS ax := by
+  cases ax with
+  | gci C D       => intro h; exact ⟨Or.inl h.1, h.2⟩
+  | rinc _ _      => intro _; trivial
+  | rchain _ _ _  => intro _; trivial
+  | range _ _     => intro h; exact h
+  | reflexive _   => intro _; trivial
+  | hasKey _ _    => intro h; exact h.elim
+
+theorem OntologyNominalFree_imp_NomLHS {O : Ontology}
+    (hO : OntologyNominalFree O) : OntologyNomLHS O :=
+  fun ax hax => AxiomNominalFree_imp_NomLHS ax (hO ax hax)
+
+/-- All nominal indices in `O` are *inhabited*: not derivably empty.
+    Globally consistent ontologies satisfy this; in OWL semantics
+    individuals always interpret to non-empty singletons, so any
+    `Sat O (nom i) ⊥` would mean the ontology contradicts itself
+    on `a_i`. -/
+def AllNomInhabited (O : Ontology) : Prop :=
+  ∀ i, ¬ Sat O (.nom i) .bot
+
+/-- **canon.indiv reduction lemma**.  Under `AllNomInhabited`, every
+    nominal index reduces to its specific canonical element. -/
+theorem canon_indiv_eq (O : Ontology) (default : CanonDom O) (i : Nat)
+    (h : ¬ Sat O (.nom i) .bot) :
+    (canon O default).indiv i = ⟨.nom i, h⟩ := by
+  unfold canon
+  simp [dif_pos h]
+
+/-- **Theorem 2 extended — LHS-nominal coverage.**
+
+    Under `OntologyNomLHS O ∧ RangeChainSafe O ∧ AllNomInhabited O`,
+    the canonical model satisfies all of `O` — including LHS-nominal
+    GCIs (i.e., `ClassAssertion`-style axioms).
+
+    Strategy: the gci case now has two sub-cases:
+      * `C` nominal-free: identical to `canon_satisfies`'s gci proof.
+      * `C = nom i`: specialise `x` to `canon.indiv i = ⟨nom i, _⟩`
+        (forced by `eval (nom i) x = (x = indiv i)`); apply
+        `canon_eval` on the nominal-free RHS plus `base_gci` to close.
+    -/
+theorem canon_satisfies_nomLHS (O : Ontology) (default : CanonDom O)
+    (hO : OntologyNomLHS O) (hO_safe : RangeChainSafe O)
+    (hO_inhab : AllNomInhabited O) : (canon O default).satisfies O := by
+  intro ax hax
+  have hax_nf : AxiomNomLHS ax := hO ax hax
+  cases ax with
+  | gci C D =>
+      obtain ⟨hC_or, hD_nf⟩ := hax_nf
+      rcases hC_or with hC_nf | ⟨i, hCi⟩
+      · -- Standard nominal-free LHS — identical to canon_satisfies.
+        intro x hx
+        rw [canon_eval _ _ _ hC_nf] at hx
+        have hSat : Sat O x.val D := Sat.trans hx (Sat.base_gci hax)
+        exact (canon_eval O default D hD_nf x).mpr hSat
+      · -- LHS is `.nom i`.
+        subst hCi
+        intro x hx
+        -- hx : (canon O default).eval (.nom i) x.  By def of eval on nom,
+        -- this is `x = (canon O default).indiv i`.
+        have hxEq : x = (canon O default).indiv i := hx
+        -- Reduce indiv via AllNomInhabited.
+        have hi : ¬ Sat O (.nom i) .bot := hO_inhab i
+        rw [canon_indiv_eq O default i hi] at hxEq
+        -- Now hxEq : x = ⟨.nom i, hi⟩.  Specialise x.
+        subst hxEq
+        -- Goal: eval D ⟨.nom i, hi⟩ in canon.  Use canon_eval on D.
+        rw [canon_eval _ _ _ hD_nf]
+        -- Goal: Sat O (.nom i) D.  By base_gci on the axiom.
+        exact Sat.base_gci hax
+  | rinc R S =>
+      intro x y hRxy
+      obtain ⟨hRxySat, hRxyAncRanges⟩ := hRxy
+      refine ⟨Sat.rinc_apply hRxySat hax, ?_⟩
+      intro T E hAncST hRange
+      have hAncRS : RincAncestor O R S := RincAncestor.step (RincAncestor.refl R) hax
+      have hAncRT : RincAncestor O R T := RincAncestor.trans hAncRS hAncST
+      exact hRxyAncRanges T E hAncRT hRange
+  | rchain R₁ R₂ S =>
+      intro x y z hR1 hR2
+      obtain ⟨hR1Sat, _⟩ := hR1
+      obtain ⟨hR2Sat, _⟩ := hR2
+      refine ⟨Sat.rchain_apply hR1Sat hR2Sat hax, ?_⟩
+      intro T E hAnc hRange
+      exact (hO_safe R₁ R₂ S T E hax hAnc hRange).elim
+  | range R C =>
+      have hC_nf : NominalFree C := hax_nf
+      intro x y hxy
+      have hSatYC : Sat O y.val C :=
+        hxy.2 R C (RincAncestor.refl R) hax
+      exact (canon_eval O default C hC_nf y).mpr hSatYC
+  | reflexive R =>
+      intro x
+      refine ⟨Sat.reflexive_apply hax, ?_⟩
+      intro T E hAnc hE
+      have hSelfR : Sat O x.val (.self R) := Sat.reflexive_self hax
+      have hSelfT : Sat O x.val (.self T) := Sat.rinc_self_star hSelfR hAnc
+      exact Sat.self_range hSelfT hE
+  | hasKey C rs =>
+      exact hax_nf.elim
+
+/-- **Completeness with LHS-nominal axioms.**
+
+    Combines `canon_satisfies_nomLHS` with the standard canonical-
+    model recipe.  Queries are still nominal-free (the canonical
+    model's `eval` for direct nominal RHS would require merging,
+    which is future work). -/
+theorem complete_via_canon_nomLHS (O : Ontology) (C D : Concept)
+    (hO : OntologyNomLHS O) (hO_safe : RangeChainSafe O)
+    (hO_inhab : AllNomInhabited O)
+    (hC_nf : NominalFree C) (hD_nf : NominalFree D)
+    (h : Entails O C D) : Sat O C D := by
+  classical
+  by_cases hCbot : Sat O C .bot
+  · exact Sat.bot_elim hCbot
+  · let x : CanonDom O := ⟨C, hCbot⟩
+    have hcanon := canon_satisfies_nomLHS O x hO hO_safe hO_inhab
+    have hxC : (canon O x).eval C x := by
+      rw [canon_eval _ _ _ hC_nf]; exact Sat.refl _
+    have hxD : (canon O x).eval D x := h _ hcanon x hxC
+    rw [canon_eval _ _ _ hD_nf] at hxD
+    exact hxD
+
+-- ============================================================
 -- 7. Completeness — ELK 2014 §3.3 (Theorem 1)
 -- ============================================================
 
