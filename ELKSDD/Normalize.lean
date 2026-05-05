@@ -533,6 +533,14 @@ theorem freshAtomFor_fresh (O : Ontology) (extra : List Nat := []) :
   have hle := mem_foldr_max_le _ _ hmem
   exact Nat.not_succ_le_self _ (Nat.succ_le_of_lt (Nat.lt_succ_of_le hle))
 
+/-- Public bound: every atom in `ontologyAtoms O` is strictly less
+    than `freshAtomFor O`.  Useful for clients that need to construct
+    fresh atoms with offsets (e.g., `RangeNorm.rangeMarker`). -/
+theorem mem_ontologyAtoms_lt_freshAtomFor (O : Ontology) (n : Nat)
+    (h : n ∈ ontologyAtoms O) : n < freshAtomFor O := by
+  unfold freshAtomFor
+  exact Nat.lt_succ_of_le (mem_foldr_max_le _ _ (List.mem_append.mpr (Or.inl h)))
+
 theorem freshAtomFor_not_in_ontologyAtoms (O : Ontology) :
     freshAtomFor O ∉ ontologyAtoms O := by
   intro h

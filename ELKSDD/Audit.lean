@@ -15,6 +15,7 @@ import ELKSDD.MiniEL
 import ELKSDD.EL
 import ELKSDD.ELpp
 import ELKSDD.Normalize
+import ELKSDD.RangeNorm
 import ELKSDD.Stratified
 import ELKSDD.SCC
 import ELKSDD.SDD
@@ -69,6 +70,23 @@ namespace ELKSDD
 #print axioms ELpp.canon_eval
 #print axioms ELpp.canon_satisfies
 #print axioms ELpp.complete_via_canon
+#print axioms ELpp.canon_satisfies_strict
+#print axioms ELpp.complete_via_canon_strict
+
+-- ============================================================
+-- RangeNorm — Path B (BBL 2008 §3.3) range elimination
+-- ============================================================
+-- The forward kernel `complete_via_canon_strict` is sorry-free.
+-- The Path-B reduction (`complete_via_canon_owl2el`) uses sorrys
+-- in conservativity proofs; closing them is bounded engineering.
+#print axioms RangeNorm.modifyConcept_NominalFree
+#print axioms RangeNorm.rangeMarker_inj
+#print axioms RangeNorm.rangeMarker_fresh
+#print axioms RangeNorm.eliminateRanges_no_range
+#print axioms RangeNorm.eliminateRanges_strict
+#print axioms RangeNorm.atom_MarkerFree_of_in_O
+#print axioms RangeNorm.complete_via_canon_owl2el
+#print axioms RangeNorm.complete_via_canon_owl2el_atom
 #print axioms ELpp.sound_atomSub
 #print axioms ELpp.complete_atomSub
 #print axioms ELpp.correct_atomSub

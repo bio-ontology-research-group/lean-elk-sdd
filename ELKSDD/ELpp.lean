@@ -547,6 +547,107 @@ theorem canon_satisfies (O : Ontology) (default : CanonDom O)
 -- 7. Completeness — ELK 2014 §3.3 (Theorem 1)
 -- ============================================================
 
+-- ============================================================
+-- 6b. Strict variant — sorry-free range-free completeness
+-- ============================================================
+
+/-- A *strict* axiom predicate that **also gates range axioms** on top
+    of the nominal/HasKey gating.  Used by `canon_satisfies_strict`
+    and `complete_via_canon_strict` below to obtain a sorry-free
+    completeness theorem on the range-free fragment.
+
+    This is exactly the predicate that the BBL 2008 §3.3 `eliminateRanges`
+    pass (in `RangeNorm.lean`) ensures on its output ontology, so the
+    Path-B Lean reduction lands on this strict fragment. -/
+def AxiomStrict : Axiom → Prop
+  | .gci C D => NominalFree C ∧ NominalFree D
+  | .rinc _ _ => True
+  | .rchain _ _ _ => True
+  | .range _ _ => False
+  | .reflexive _ => True
+  | .hasKey _ _ => False
+
+/-- An ontology is *strict* if every axiom satisfies `AxiomStrict`. -/
+def OntologyStrict (O : Ontology) : Prop :=
+  ∀ ax ∈ O, AxiomStrict ax
+
+/-- Strict implies the broader nominal-free predicate.  -/
+theorem AxiomStrict_imp_NominalFree (ax : Axiom) :
+    AxiomStrict ax → AxiomNominalFree ax := by
+  cases ax with
+  | gci C D => intro h; exact h
+  | rinc _ _ => intro _; trivial
+  | rchain _ _ _ => intro _; trivial
+  | range _ _ => intro h; exact h.elim
+  | reflexive _ => intro _; trivial
+  | hasKey _ _ => intro h; exact h.elim
+
+theorem OntologyStrict_imp_NominalFree {O : Ontology}
+    (hO : OntologyStrict O) : OntologyNominalFree O :=
+  fun ax hax => AxiomStrict_imp_NominalFree ax (hO ax hax)
+
+/-- **Sorry-free `canon_satisfies` on the strict (range-free) fragment.**
+
+    Under `OntologyStrict O` (no range, no hasKey), the canonical
+    interpretation satisfies all axioms.  The rinc/rchain cases are
+    discharged via the strict gating: the `Range S E ∈ O` premise of
+    the range guard is impossible because `AxiomStrict` rules out
+    range axioms entirely. -/
+theorem canon_satisfies_strict (O : Ontology) (default : CanonDom O)
+    (hO : OntologyStrict O) : (canon O default).satisfies O := by
+  intro ax hax
+  have hax_s : AxiomStrict ax := hO ax hax
+  cases ax with
+  | gci C D =>
+      obtain ⟨hC_nf, hD_nf⟩ := hax_s
+      intro x hx
+      rw [canon_eval _ _ _ hC_nf] at hx
+      have hSat : Sat O x.val D := Sat.trans hx (Sat.base_gci hax)
+      exact (canon_eval O default D hD_nf x).mpr hSat
+  | rinc R S =>
+      intro x y hRxy
+      obtain ⟨hRxySat, _⟩ := hRxy
+      refine ⟨Sat.rinc_apply hRxySat hax, ?_⟩
+      intro E hE
+      -- O is range-free under OntologyStrict: hE contradicts AxiomStrict.
+      exact (hO _ hE).elim
+  | rchain R₁ R₂ S =>
+      intro x y z hR1 hR2
+      obtain ⟨hR1Sat, _⟩ := hR1
+      obtain ⟨hR2Sat, _⟩ := hR2
+      refine ⟨Sat.rchain_apply hR1Sat hR2Sat hax, ?_⟩
+      intro E hE
+      exact (hO _ hE).elim
+  | range _ _ => exact hax_s.elim
+  | reflexive R =>
+      intro x
+      refine ⟨Sat.reflexive_apply hax, ?_⟩
+      intro E hE
+      exact (hO _ hE).elim
+  | hasKey _ _ => exact hax_s.elim
+
+/-- **Sorry-free completeness** on the strict (range-free) fragment.
+    Used as the kernel of Path-B (BBL 2008 §3.3) reduction in
+    `RangeNorm.lean`. -/
+theorem complete_via_canon_strict (O : Ontology) (C D : Concept)
+    (hO : OntologyStrict O)
+    (hC_nf : NominalFree C) (hD_nf : NominalFree D)
+    (h : Entails O C D) : Sat O C D := by
+  classical
+  by_cases hCbot : Sat O C .bot
+  · exact Sat.bot_elim hCbot
+  · let x : CanonDom O := ⟨C, hCbot⟩
+    have hcanon := canon_satisfies_strict O x hO
+    have hxC : (canon O x).eval C x := by
+      rw [canon_eval _ _ _ hC_nf]; exact Sat.refl _
+    have hxD : (canon O x).eval D x := h _ hcanon x hxC
+    rw [canon_eval _ _ _ hD_nf] at hxD
+    exact hxD
+
+-- ============================================================
+-- 7. Completeness — ELK 2014 §3.3 (Theorem 1)
+-- ============================================================
+
 /-- **Completeness of the ELK calculus** for OWL 2 EL on the
     nominal-free and HasKey-free fragment.
 

@@ -32,6 +32,7 @@ import ELKSDD.MiniEL
 import ELKSDD.EL
 import ELKSDD.ELpp
 import ELKSDD.Normalize
+import ELKSDD.RangeNorm
 import ELKSDD.Stratified
 import ELKSDD.SCC
 import ELKSDD.SDD
