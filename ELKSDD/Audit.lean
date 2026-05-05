@@ -158,17 +158,24 @@ namespace ELKSDD
 --
 --         Sat (O₁ ++ O₂) C D  ↔  Sat O₁ C D ∨ Sat O₂ ⊤ ⊥
 --
---       under DisjointSigs O₁ O₂ and ConceptInSig O₁ C/D.
+--       under DisjointSigs O₁ O₂, ConceptInSig O₁ C/D, plus
+--       NominalFree C/D and OntologyNominalFree O₁/O₂.
 --
 --       Both directions PROVED:
 --         (mp)  monotonicity + global-inconsistency propagation
 --         (mpr) product-interpretation construction over
 --               α × CanonDom O₂, with eval-invariance lemmas
 --               for both signatures.  Holds for full OWL 2 EL
---               (= EL_⊥^+); no ⊤- or ⊥-side restrictions.
+--               (= EL_⊥^+) on the *nominal-free* fragment; no
+--               ⊤- or ⊥-side restrictions on GCIs / role axioms.
 --
---       Auxiliary: signature predicates, sub-ontology relation,
---       axiom-membership-implies-signature lemma, prodInterp.
+--       OWL 2 EL nominals are added to the *language* (Concept.nom,
+--       Interp.indiv, conceptIndividuals, ontologyIndividuals);
+--       the formal factorisation extends to the nominal-free
+--       fragment.  Full nominal-aware completeness requires the
+--       merging-canonical-model construction (Kazakov 2014 §6) —
+--       infrastructure is in place; theorem extension is future
+--       work.
 -- ============================================================
 #print axioms SCC.Subontology.refl
 #print axioms SCC.Subontology.append_left

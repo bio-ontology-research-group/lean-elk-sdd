@@ -82,6 +82,7 @@ inductive BasicConcept : Concept → Prop where
 instance (C : Concept) : Decidable (BasicConcept C) := by
   cases C with
   | atom n => exact isTrue (BasicConcept.atom n)
+  | nom _ => exact isFalse (by intro h; cases h)
   | top    => exact isTrue BasicConcept.top
   | bot    => exact isTrue BasicConcept.bot
   | conj _ _ => exact isFalse (by intro h; cases h)
@@ -179,6 +180,8 @@ theorem applyNF7_satisfies_orig {α : Type} (I : Interp α) (O : Ontology)
           exact ⟨h1 x hx, h2 x hx⟩
       | atom n =>
           exact hN' _ (by simp [applyNF7One])
+      | nom i =>
+          exact hN' _ (by simp [applyNF7One])
       | top =>
           exact hN' _ (by simp [applyNF7One])
       | bot =>
@@ -220,6 +223,12 @@ theorem orig_satisfies_applyNF7 {α : Type} (I : Interp α) (O : Ontology)
       | atom n =>
           have hOax : I.satisfiesAxiom (.gci C₀ (.atom n)) := hO _ hax_in_O
           have : ax' = .gci C₀ (.atom n) := by
+            simp [applyNF7One] at hax'_in_one
+            exact hax'_in_one
+          rw [this]; exact hOax
+      | nom i =>
+          have hOax : I.satisfiesAxiom (.gci C₀ (.nom i)) := hO _ hax_in_O
+          have : ax' = .gci C₀ (.nom i) := by
             simp [applyNF7One] at hax'_in_one
             exact hax'_in_one
           rw [this]; exact hOax
@@ -310,6 +319,11 @@ theorem applyNF4_satisfies_orig {α : Type} (I : Interp α) (O : Ontology)
           unfold applyNF4
           simp only [List.mem_filter]
           exact ⟨hax, by decide⟩
+      | nom i =>
+          apply hN
+          unfold applyNF4
+          simp only [List.mem_filter]
+          exact ⟨hax, by decide⟩
       | top =>
           apply hN
           unfold applyNF4
@@ -365,13 +379,37 @@ theorem applyNF4_entails_iff (O : Ontology) (C D : Concept) :
 -- rules NF2, NF3, NF5, NF6 (which introduce a fresh concept name)
 -- and NF1 (which introduces a fresh role name).
 
-/-- Concept atoms: the set of atomic-concept names appearing in C. -/
+/-- Concept atoms: the set of atomic-concept names appearing in C.
+    Nominals contribute no concept atoms (their identity is tracked
+    by `conceptIndividuals`, which is in the *individual* signature
+    rather than the concept-atom signature). -/
 def conceptAtoms : Concept → List Nat
   | .atom n     => [n]
+  | .nom _      => []
   | .top        => []
   | .bot        => []
   | .conj A B   => conceptAtoms A ++ conceptAtoms B
   | .exist _ E  => conceptAtoms E
+
+/-- Concept individuals: the set of individual names appearing in C
+    (only nominals contribute). -/
+def conceptIndividuals : Concept → List Nat
+  | .atom _     => []
+  | .nom i      => [i]
+  | .top        => []
+  | .bot        => []
+  | .conj A B   => conceptIndividuals A ++ conceptIndividuals B
+  | .exist _ E  => conceptIndividuals E
+
+/-- Axiom individuals (nominals appearing in the axiom). -/
+def axiomIndividuals : Axiom → List Nat
+  | .gci C D       => conceptIndividuals C ++ conceptIndividuals D
+  | .rinc _ _      => []
+  | .rchain _ _ _  => []
+
+/-- Ontology individuals. -/
+def ontologyIndividuals (O : Ontology) : List Nat :=
+  O.flatMap axiomIndividuals
 
 /-- Axiom atoms: atomic-concept names appearing in the axiom. -/
 def axiomAtoms : Axiom → List Nat
@@ -386,6 +424,7 @@ def ontologyAtoms (O : Ontology) : List Nat :=
 /-- Concept roles: the role names appearing in C. -/
 def conceptRoles : Concept → List Role
   | .atom _     => []
+  | .nom _      => []
   | .top        => []
   | .bot        => []
   | .conj A B   => conceptRoles A ++ conceptRoles B
@@ -447,6 +486,7 @@ noncomputable def extendInterp {α : Type} (I : Interp α)
   exact {
     ext_concept := fun m x => if m = n then P x else I.ext_concept m x
     ext_role := I.ext_role
+    indiv := I.indiv
   }
 
 /-- Eval is invariant under `extendInterp` for concepts that don't
@@ -464,6 +504,8 @@ theorem eval_extendInterp_of_fresh {α : Type} (I : Interp α)
       simp only [Interp.eval, extendInterp]
       have hne : ¬ (m = n) := fun h => hfresh h.symm
       rw [if_neg hne]
+  | nom i =>
+      intro x; exact Iff.rfl
   | top => intro x; exact Iff.rfl
   | bot => intro x; exact Iff.rfl
   | conj A B ihA ihB =>
@@ -829,6 +871,7 @@ theorem applyNF7One_id_of_nonconj_gci (C₀ D : Concept)
     applyNF7One (.gci C₀ D) = [.gci C₀ D] := by
   cases D with
   | atom n => rfl
+  | nom i => rfl
   | top => rfl
   | bot => rfl
   | exist R E => rfl

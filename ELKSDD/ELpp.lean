@@ -42,9 +42,22 @@ import ELKSDD.EL
 namespace ELKSDD
 namespace ELpp
 
-/-- Concepts: re-exported from `ELKSDD.EL`.  Atoms, ⊤, ⊥,
-    conjunction, existential restriction. -/
-abbrev Concept := EL.Concept
+/-- ELpp Concepts.  Independent inductive (not the EL.Concept abbrev)
+    so we can add the `nom` (nominal `{a_i}`) constructor for OWL~2~EL
+    coverage.
+
+    In OWL~2~EL the nominal `{a}` is the singleton class containing
+    just the individual `a`; semantically `{a}^I = {a^I}`.  We
+    represent each individual name by a `Nat` index, just as for
+    atoms and roles. -/
+inductive Concept : Type where
+  | atom  : Nat → Concept
+  | nom   : Nat → Concept            -- nominal {a_n}, a_n indexed by Nat
+  | top   : Concept
+  | bot   : Concept
+  | conj  : Concept → Concept → Concept
+  | exist : Nat → Concept → Concept
+  deriving DecidableEq
 
 /-- Role names: identified with `Nat`. -/
 abbrev Role : Type := Nat
@@ -71,14 +84,25 @@ abbrev Ontology := List Axiom
 -- 1. Tarskian semantics (ELK 2014 Table 1)
 -- ============================================================
 
-/-- An interpretation over domain `α`. -/
+/-- An interpretation over domain `α`.
+
+    Adds an individual-name interpretation `indiv : Nat → α` for
+    OWL~2~EL nominal handling.  An interpretation can only exist
+    over a non-empty domain (because `indiv` must yield a value);
+    this is consistent with OWL semantics, where the universe of
+    discourse is non-empty. -/
 structure Interp (α : Type) where
   ext_concept : Nat → α → Prop
   ext_role    : Role → α → α → Prop
+  indiv       : Nat → α              -- individual interpretations a_n^I
 
-/-- Recursive concept evaluation. -/
+/-- Recursive concept evaluation.
+
+    Nominals: `(nom i)^I = {indiv i}`, i.e., the singleton class
+    consisting of the individual `a_i^I`. -/
 def Interp.eval {α : Type} (I : Interp α) : Concept → α → Prop
   | .atom n, x       => I.ext_concept n x
+  | .nom i, x        => x = I.indiv i
   | .top, _          => True
   | .bot, _          => False
   | .conj A B, x     => I.eval A x ∧ I.eval B x
@@ -203,132 +227,157 @@ theorem sound (O : Ontology) {C D : Concept} (h : Sat O C D) :
 def CanonDom (O : Ontology) : Type :=
   {C : Concept // ¬ Sat O C .bot}
 
-/-- **Canonical interpretation** (ELK 2014, Definition 2):
+/-- **Canonical interpretation** (ELK 2014, Definition 2; extended
+    here for nominals):
 
         A^I  =  { x_C  |  C ⊑ A ∈ Closure }
         R^I  =  { ⟨x_C, x_D⟩  |  C ⊑ ∃R.D ∈ Closure }
+        a_i^I =  ⟨nom i, h⟩   when nom i is not derivably ⊥
+              =  default      otherwise (fallback)
 
     Note: ELK uses the link relation `C →_R D` for the role
     extension; here `C →_R D ∈ Closure` is the same fact as
-    `Sat O C (∃R.D)` because we have not separated the link type. -/
-def canon (O : Ontology) : Interp (CanonDom O) where
-  ext_concept n x   := Sat O x.val (.atom n)
-  ext_role    R x y := Sat O x.val (.exist R y.val)
+    `Sat O C (∃R.D)` because we have not separated the link type.
+
+    The `default` parameter is needed because `indiv : Nat → α`
+    must produce a value even for nominals whose singleton is
+    derivably empty.  In typical (consistent) usage, callers pass
+    a known canonical element such as `⟨.top, h_top_consistent⟩`. -/
+noncomputable def canon (O : Ontology) (default : CanonDom O) :
+    Interp (CanonDom O) := by
+  classical
+  exact {
+    ext_concept := fun n x => Sat O x.val (.atom n)
+    ext_role    := fun R x y => Sat O x.val (.exist R y.val)
+    indiv       := fun i =>
+      if h : ¬ Sat O (.nom i) .bot then ⟨.nom i, h⟩ else default
+  }
 
 -- ============================================================
 -- 5. Lemmas 1, 2 of ELK 2014 §3.3 — eval ↔ Sat correspondence
 -- ============================================================
 
-/-- **Lemma 1 + Lemma 2 of ELK 2014 §3.3 (combined).**
-    For each `x_C ∈ Δ^I` and concept `D`,
-        x_C ∈ D^I  ↔  Sat O C D.
+/-- A concept is *nominal-free* if it does not mention any
+    `nom`/individual constructor.  The canonical-model
+    correspondence (Lemmas~1+2 of ELK 2014 §3.3) is proved here
+    only for the nominal-free fragment; the full ELK-with-nominals
+    correspondence (Kazakov 2014 §6) requires the merging-
+    canonical-model construction with concept equivalence classes,
+    which is beyond the scope of this layer.  In Layer 6 we
+    restrict subsumption queries to nominal-free C, D, while
+    permitting arbitrary nominal-containing axioms inside the
+    ontologies. -/
+def NominalFree : Concept → Prop
+  | .atom _    => True
+  | .nom _     => False
+  | .top       => True
+  | .bot       => True
+  | .conj A B  => NominalFree A ∧ NominalFree B
+  | .exist _ E => NominalFree E
 
-    Proof: structural induction on `D`.  Cases:
-
-      D = atom n   immediate from `canon.ext_concept = Sat O · (atom n)`.
-      D = ⊤        forward: trivial; backward: `Sat.top _`.
-      D = ⊥        forward: contradiction with `eval ⊥ x = False`;
-                   backward: forces `Sat O C ⊥`, contradicting
-                   `x.property : ¬ Sat O C ⊥`.
-      D = D₁ ⊓ D₂  forward via `conj_intro`, backward via
-                   `conj_left/conj_right`.
-      D = ∃R.E     forward via `exist_prop`; backward by
-                   case-split on `Sat O E ⊥`: if so, `exist_bot` to
-                   contradict `x.property`; else use `y := ⟨E, _⟩`
-                   and refl. -/
-theorem canon_eval (O : Ontology) :
-    ∀ (D : Concept) (x : CanonDom O),
-      (canon O).eval D x ↔ Sat O x.val D := by
+/-- ELK 2014 Lemmas 1+2 — eval ↔ Sat correspondence on the
+    *nominal-free* fragment. -/
+theorem canon_eval (O : Ontology) (default : CanonDom O) :
+    ∀ (D : Concept), NominalFree D → ∀ (x : CanonDom O),
+      (canon O default).eval D x ↔ Sat O x.val D := by
+  classical
   intro D
   induction D with
   | atom n =>
-      intro _; exact Iff.rfl
+      intro _ _; exact Iff.rfl
+  | nom i =>
+      intro hnf
+      exact hnf.elim
   | top =>
-      intro _; exact ⟨fun _ => Sat.top _, fun _ => trivial⟩
+      intro _ _; exact ⟨fun _ => Sat.top _, fun _ => trivial⟩
   | bot =>
-      intro x; exact ⟨fun h => h.elim, fun h => (x.property h).elim⟩
+      intro _ x; exact ⟨fun h => h.elim, fun h => (x.property h).elim⟩
   | conj A B ihA ihB =>
-      intro x
+      intro hnf x
       constructor
       · rintro ⟨hA, hB⟩
-        exact Sat.conj_intro ((ihA x).mp hA) ((ihB x).mp hB)
+        exact Sat.conj_intro ((ihA hnf.1 x).mp hA) ((ihB hnf.2 x).mp hB)
       · intro hAB
-        exact ⟨(ihA x).mpr (Sat.conj_left hAB),
-               (ihB x).mpr (Sat.conj_right hAB)⟩
+        exact ⟨(ihA hnf.1 x).mpr (Sat.conj_left hAB),
+               (ihB hnf.2 x).mpr (Sat.conj_right hAB)⟩
   | exist R E ihE =>
-      intro x
+      intro hnf x
       constructor
       · rintro ⟨y, hRxy, hEy⟩
-        have hSatE : Sat O y.val E := (ihE y).mp hEy
-        -- canon's role extension says hRxy : Sat O x.val (∃R.y.val);
-        -- by exist_prop with hSatE we get Sat O x.val (∃R.E).
+        have hSatE : Sat O y.val E := (ihE hnf y).mp hEy
         exact Sat.exist_prop hRxy hSatE
       · intro hSat
         by_cases hEbot : Sat O E .bot
         · exact (x.property (Sat.exist_bot hSat hEbot)).elim
         · let y : CanonDom O := ⟨E, hEbot⟩
           refine ⟨y, hSat, ?_⟩
-          exact (ihE y).mpr (Sat.refl _)
+          exact (ihE hnf y).mpr (Sat.refl _)
 
 -- ============================================================
 -- 6. Theorem 2 of ELK 2014 §3.3 — canonical model satisfies O
 -- ============================================================
 
-/-- **Theorem 2 (ELK 2014 §3.3).**  The canonical interpretation
-    satisfies the ontology.  Proof: case-analysis on the axiom kind.
+/-- A GCI is *nominal-free* iff both sides are nominal-free.
+    Role inclusions and role chains are vacuously nominal-free
+    (no concepts inside).  -/
+def AxiomNominalFree : Axiom → Prop
+  | .gci C D => NominalFree C ∧ NominalFree D
+  | .rinc _ _ => True
+  | .rchain _ _ _ => True
 
-      α = C ⊑ D:       Use `canon_eval` and `Sat.base_gci`/`trans`.
-      α = R ⊑ S:       For ⟨x_C, x_D⟩ ∈ R^I we have
-                         Sat O C (∃R.D); by `rinc_apply` with
-                         `hax : Axiom.rinc R S ∈ O` we get
-                         Sat O C (∃S.D), i.e. ⟨x_C, x_D⟩ ∈ S^I.
-      α = R₁ ∘ R₂ ⊑ S: For ⟨x_C, x_D⟩ ∈ R₁^I and ⟨x_D, x_E⟩ ∈ R₂^I
-                         we have Sat O C (∃R₁.D) and Sat O D (∃R₂.E);
-                         by `rchain_apply` we get Sat O C (∃S.E),
-                         i.e. ⟨x_C, x_E⟩ ∈ S^I. -/
-theorem canon_satisfies (O : Ontology) : (canon O).satisfies O := by
+/-- An ontology is nominal-free if all its axioms are. -/
+def OntologyNominalFree (O : Ontology) : Prop :=
+  ∀ ax ∈ O, AxiomNominalFree ax
+
+/-- **Theorem 2 (ELK 2014 §3.3) — restricted to nominal-free
+    ontologies.**
+
+    The canonical interpretation satisfies all nominal-free axioms.
+    For nominal axioms (involving `{a_i}`) the merging-canonical-
+    model construction (Kazakov 2014 §6) is required; it is not
+    formalised in this layer.  Layer 6's hard direction therefore
+    requires `OntologyNominalFree O₁` and `OntologyNominalFree O₂`
+    as preconditions.  -/
+theorem canon_satisfies (O : Ontology) (default : CanonDom O)
+    (hO : OntologyNominalFree O) : (canon O default).satisfies O := by
   intro ax hax
+  have hax_nf : AxiomNominalFree ax := hO ax hax
   cases ax with
   | gci C D =>
+      obtain ⟨hC_nf, hD_nf⟩ := hax_nf
       intro x hx
-      rw [canon_eval] at hx
+      rw [canon_eval _ _ _ hC_nf] at hx
       have hSat : Sat O x.val D := Sat.trans hx (Sat.base_gci hax)
-      exact (canon_eval O D x).mpr hSat
+      exact (canon_eval O default D hD_nf x).mpr hSat
   | rinc R S =>
       intro x y hRxy
-      -- hRxy : (canon O).ext_role R x y, i.e. Sat O x.val (∃R.y.val).
-      -- Goal:  (canon O).ext_role S x y, i.e. Sat O x.val (∃S.y.val).
       exact Sat.rinc_apply hRxy hax
   | rchain R₁ R₂ S =>
       intro x y z hR1 hR2
-      -- hR1 : Sat O x.val (∃R₁.y.val); hR2 : Sat O y.val (∃R₂.z.val).
-      -- Goal: Sat O x.val (∃S.z.val).
       exact Sat.rchain_apply hR1 hR2 hax
 
 -- ============================================================
 -- 7. Completeness — ELK 2014 §3.3 (Theorem 1)
 -- ============================================================
 
-/-- **Completeness of the ELK calculus** for EL_⊥^+ (ELK 2014,
-    Theorem 1).  If `O ⊨ C ⊑ D` then either `Sat O C D` or
-    `Sat O C ⊥` (the latter giving `Sat O C D` via `bot_elim`).
+/-- **Completeness of the ELK calculus** for EL_⊥^+ on the
+    nominal-free fragment.
 
-    Proof: case-split on `Sat O C ⊥`.  If yes, `bot_elim`.
-    Otherwise, instantiate the canonical model at `x := ⟨C, _⟩`,
-    use `canon_eval` to convert `Sat O C C := Sat.refl C` into
-    `(canon O).eval C x`, apply the entailment hypothesis to
-    extract `(canon O).eval D x`, and convert back via
-    `canon_eval`. -/
+    If `O ⊨ C ⊑ D` and the ontology and the query are
+    nominal-free, then `Sat O C D`.  -/
 theorem complete_via_canon (O : Ontology) (C D : Concept)
+    (hO : OntologyNominalFree O)
+    (hC_nf : NominalFree C) (hD_nf : NominalFree D)
     (h : Entails O C D) : Sat O C D := by
+  classical
   by_cases hCbot : Sat O C .bot
   · exact Sat.bot_elim hCbot
   · let x : CanonDom O := ⟨C, hCbot⟩
-    have hcanon := canon_satisfies O
-    have hxC : (canon O).eval C x := by
-      rw [canon_eval]; exact Sat.refl _
-    have hxD : (canon O).eval D x := h _ hcanon x hxC
-    rw [canon_eval] at hxD
+    have hcanon := canon_satisfies O x hO
+    have hxC : (canon O x).eval C x := by
+      rw [canon_eval _ _ _ hC_nf]; exact Sat.refl _
+    have hxD : (canon O x).eval D x := h _ hcanon x hxC
+    rw [canon_eval _ _ _ hD_nf] at hxD
     exact hxD
 
 -- ============================================================
@@ -339,16 +388,16 @@ theorem sound_atomSub (O : Ontology) (A B : Nat)
     (h : Sat O (.atom A) (.atom B)) :
     Entails O (.atom A) (.atom B) := sound O h
 
-theorem complete_atomSub (O : Ontology) (A B : Nat)
-    (h : Entails O (.atom A) (.atom B)) :
+theorem complete_atomSub (O : Ontology) (hO : OntologyNominalFree O)
+    (A B : Nat) (h : Entails O (.atom A) (.atom B)) :
     Sat O (.atom A) (.atom B) :=
-  complete_via_canon O _ _ h
+  complete_via_canon O _ _ hO trivial trivial h
 
 /-- The biconditional ELK characterisation for atom-atom subsumption
-    in EL_⊥^+. -/
-theorem correct_atomSub (O : Ontology) (A B : Nat) :
+    in EL_⊥^+, on nominal-free ontologies. -/
+theorem correct_atomSub (O : Ontology) (hO : OntologyNominalFree O) (A B : Nat) :
     Sat O (.atom A) (.atom B) ↔ Entails O (.atom A) (.atom B) :=
-  ⟨sound_atomSub O A B, complete_atomSub O A B⟩
+  ⟨sound_atomSub O A B, complete_atomSub O hO A B⟩
 
 -- ============================================================
 -- 9. Worked example: role hierarchy

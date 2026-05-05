@@ -441,15 +441,35 @@ theorem Sat_factor_refined_mp {O₁ O₂ : Ontology} {C D : Concept}
     others to the canonical model of O₂'s second projection.
     Roles in O₁'s sig propagate I₁'s edges only along same-O₂
     components; roles outside O₁'s sig propagate canonical-O₂
-    edges only along same-α components. -/
-def prodInterp {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp α) :
-    Interp (α × CanonDom O₂) where
-  ext_concept := fun n p =>
-    if n ∈ ontologyAtoms O₁ then I₁.ext_concept n p.1
-    else (canon O₂).ext_concept n p.2
-  ext_role := fun r p q =>
-    if r ∈ ontologyRoles O₁ then I₁.ext_role r p.1 q.1 ∧ p.2 = q.2
-    else p.1 = q.1 ∧ (canon O₂).ext_role r p.2 q.2
+    edges only along same-α components.
+
+    `default₂ : CanonDom O₂` is required because `canon` (extended
+    here for nominals) takes a default-element parameter; pass any
+    canonical-domain element of O₂.  In the typical Layer 6 use
+    site this is `⟨.top, hcons⟩` for `hcons : ¬ Sat O₂ ⊤ ⊥`.
+
+    `indiv` (for nominals): individuals in O₁'s individual sig are
+    placed on the inl side; others on the inr side.  This is the
+    structural skeleton; the full semantic correctness for nominal
+    *axioms* requires the merging-canonical-model construction
+    (Kazakov 2014 §6) and is therefore not proved here.  Layer 6's
+    main theorem accordingly requires `OntologyNominalFree O₁` and
+    `OntologyNominalFree O₂`. -/
+noncomputable def prodInterp {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp α)
+    (default₂ : CanonDom O₂) :
+    Interp (α × CanonDom O₂) := by
+  classical
+  exact {
+    ext_concept := fun n p =>
+      if n ∈ ontologyAtoms O₁ then I₁.ext_concept n p.1
+      else (canon O₂ default₂).ext_concept n p.2
+    ext_role := fun r p q =>
+      if r ∈ ontologyRoles O₁ then I₁.ext_role r p.1 q.1 ∧ p.2 = q.2
+      else p.1 = q.1 ∧ (canon O₂ default₂).ext_role r p.2 q.2
+    indiv := fun i =>
+      if i ∈ ontologyIndividuals O₁ then ⟨I₁.indiv i, default₂⟩
+      else ⟨I₁.indiv 0, (canon O₂ default₂).indiv i⟩
+  }
 
 -- ----------------------------------------------------------------
 -- 9.1  Sub-concept signature lemmas
@@ -504,72 +524,85 @@ theorem ConceptInSig.exist_inner {O : Ontology} {R : Role} {E : Concept}
 -- ----------------------------------------------------------------
 
 theorem prodInterp_atom_O₁ {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp α)
+    (default₂ : CanonDom O₂)
     {n : Nat} (hn : n ∈ ontologyAtoms O₁)
     (a : α) (b : CanonDom O₂) :
-    (prodInterp O₁ O₂ I₁).ext_concept n ⟨a, b⟩ ↔ I₁.ext_concept n a := by
+    (prodInterp O₁ O₂ I₁ default₂).ext_concept n ⟨a, b⟩ ↔ I₁.ext_concept n a := by
   show (if n ∈ ontologyAtoms O₁ then I₁.ext_concept n a
-        else (canon O₂).ext_concept n b) ↔ _
+        else (canon O₂ default₂).ext_concept n b) ↔ _
   rw [if_pos hn]
 
 theorem prodInterp_atom_not_O₁ {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp α)
+    (default₂ : CanonDom O₂)
     {n : Nat} (hn : n ∉ ontologyAtoms O₁)
     (a : α) (b : CanonDom O₂) :
-    (prodInterp O₁ O₂ I₁).ext_concept n ⟨a, b⟩ ↔ (canon O₂).ext_concept n b := by
+    (prodInterp O₁ O₂ I₁ default₂).ext_concept n ⟨a, b⟩ ↔
+      (canon O₂ default₂).ext_concept n b := by
   show (if n ∈ ontologyAtoms O₁ then I₁.ext_concept n a
-        else (canon O₂).ext_concept n b) ↔ _
+        else (canon O₂ default₂).ext_concept n b) ↔ _
   rw [if_neg hn]
 
 theorem prodInterp_role_O₁ {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp α)
+    (default₂ : CanonDom O₂)
     {R : Role} (hR : R ∈ ontologyRoles O₁)
     (a a' : α) (b b' : CanonDom O₂) :
-    (prodInterp O₁ O₂ I₁).ext_role R ⟨a, b⟩ ⟨a', b'⟩ ↔
+    (prodInterp O₁ O₂ I₁ default₂).ext_role R ⟨a, b⟩ ⟨a', b'⟩ ↔
       (I₁.ext_role R a a' ∧ b = b') := by
   show (if R ∈ ontologyRoles O₁ then I₁.ext_role R a a' ∧ b = b'
-        else a = a' ∧ (canon O₂).ext_role R b b') ↔ _
+        else a = a' ∧ (canon O₂ default₂).ext_role R b b') ↔ _
   rw [if_pos hR]
 
 theorem prodInterp_role_not_O₁ {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp α)
+    (default₂ : CanonDom O₂)
     {R : Role} (hR : R ∉ ontologyRoles O₁)
     (a a' : α) (b b' : CanonDom O₂) :
-    (prodInterp O₁ O₂ I₁).ext_role R ⟨a, b⟩ ⟨a', b'⟩ ↔
-      (a = a' ∧ (canon O₂).ext_role R b b') := by
+    (prodInterp O₁ O₂ I₁ default₂).ext_role R ⟨a, b⟩ ⟨a', b'⟩ ↔
+      (a = a' ∧ (canon O₂ default₂).ext_role R b b') := by
   show (if R ∈ ontologyRoles O₁ then I₁.ext_role R a a' ∧ b = b'
-        else a = a' ∧ (canon O₂).ext_role R b b') ↔ _
+        else a = a' ∧ (canon O₂ default₂).ext_role R b b') ↔ _
   rw [if_neg hR]
 
 -- ----------------------------------------------------------------
 -- 9.3  Eval-invariance for O₁'s signature (P2)
 -- ----------------------------------------------------------------
 
-/-- Concepts in O₁'s atom-and-role signature evaluate on
-    `prodInterp O₁ O₂ I₁` at `⟨a, b⟩` exactly as on `I₁` at `a`. -/
-theorem eval_prodInterp_O₁ {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp α) :
-    ∀ (E : Concept), ConceptInSig O₁ E → ∀ (a : α) (b : CanonDom O₂),
-      (prodInterp O₁ O₂ I₁).eval E ⟨a, b⟩ ↔ I₁.eval E a := by
+/-- Concepts in O₁'s atom-and-role signature, restricted to the
+    nominal-free fragment, evaluate on `prodInterp O₁ O₂ I₁ default₂`
+    at `⟨a, b⟩` exactly as on `I₁` at `a`.
+
+    The nominal-free restriction allows us to avoid the singleton-
+    domain issue with `⊤ ⊑ {a}` axioms (Kazakov 2014 §6 needed for
+    the full case). -/
+theorem eval_prodInterp_O₁ {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp α)
+    (default₂ : CanonDom O₂) :
+    ∀ (E : Concept), NominalFree E → ConceptInSig O₁ E →
+      ∀ (a : α) (b : CanonDom O₂),
+      (prodInterp O₁ O₂ I₁ default₂).eval E ⟨a, b⟩ ↔ I₁.eval E a := by
   intro E
   induction E with
   | atom n =>
-      intro hE a b
+      intro _ hE a b
       have hn : n ∈ ontologyAtoms O₁ := hE.atom_mem
-      exact prodInterp_atom_O₁ O₁ O₂ I₁ hn a b
-  | top => intro _ _ _; exact Iff.rfl
-  | bot => intro _ _ _; exact Iff.rfl
+      exact prodInterp_atom_O₁ O₁ O₂ I₁ default₂ hn a b
+  | nom i => intro hnf _ _ _; exact hnf.elim
+  | top => intro _ _ _ _; exact Iff.rfl
+  | bot => intro _ _ _ _; exact Iff.rfl
   | conj A B ihA ihB =>
-      intro hE a b
-      show (prodInterp O₁ O₂ I₁).eval A ⟨a, b⟩ ∧ _ ↔ I₁.eval A a ∧ _
-      rw [ihA hE.conj_left a b, ihB hE.conj_right a b]
+      intro hnf hE a b
+      show (prodInterp O₁ O₂ I₁ default₂).eval A ⟨a, b⟩ ∧ _ ↔ I₁.eval A a ∧ _
+      rw [ihA hnf.1 hE.conj_left a b, ihB hnf.2 hE.conj_right a b]
   | exist R E' ihE' =>
-      intro hE a b
+      intro hnf hE a b
       have hR : R ∈ ontologyRoles O₁ := hE.exist_role
       have hE'_sig := hE.exist_inner
       constructor
       · rintro ⟨⟨a', b'⟩, hrole, heval⟩
-        rw [prodInterp_role_O₁ O₁ O₂ I₁ hR a a' b b'] at hrole
+        rw [prodInterp_role_O₁ O₁ O₂ I₁ default₂ hR a a' b b'] at hrole
         refine ⟨a', hrole.1, ?_⟩
-        exact (ihE' hE'_sig a' b').mp heval
+        exact (ihE' hnf hE'_sig a' b').mp heval
       · rintro ⟨a', hrole, heval⟩
-        refine ⟨⟨a', b⟩, ?_, (ihE' hE'_sig a' b).mpr heval⟩
-        rw [prodInterp_role_O₁ O₁ O₂ I₁ hR a a' b b]
+        refine ⟨⟨a', b⟩, ?_, (ihE' hnf hE'_sig a' b).mpr heval⟩
+        rw [prodInterp_role_O₁ O₁ O₂ I₁ default₂ hR a a' b b]
         exact ⟨hrole, rfl⟩
 
 -- ----------------------------------------------------------------
@@ -579,41 +612,44 @@ theorem eval_prodInterp_O₁ {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp �
 -- non-membership in O₁'s sig (so the prodInterp falls into the
 -- "else" branch).
 
-/-- Concepts in O₂'s atom-and-role signature evaluate on
-    `prodInterp O₁ O₂ I₁` at `⟨a, b⟩` exactly as on `canon O₂`
-    at `b`.  Uses `DisjointSigs` to map O₂-side atoms/roles into
-    the "else" branch of `prodInterp`. -/
+/-- Concepts in O₂'s atom-and-role signature (nominal-free
+    fragment) evaluate on `prodInterp O₁ O₂ I₁ default₂` at
+    `⟨a, b⟩` exactly as on `canon O₂ default₂` at `b`. -/
 theorem eval_prodInterp_O₂ {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp α)
+    (default₂ : CanonDom O₂)
     (hdisj : DisjointSigs O₁ O₂) :
-    ∀ (E : Concept), ConceptInSig O₂ E → ∀ (a : α) (b : CanonDom O₂),
-      (prodInterp O₁ O₂ I₁).eval E ⟨a, b⟩ ↔ (canon O₂).eval E b := by
+    ∀ (E : Concept), NominalFree E → ConceptInSig O₂ E →
+      ∀ (a : α) (b : CanonDom O₂),
+      (prodInterp O₁ O₂ I₁ default₂).eval E ⟨a, b⟩ ↔
+        (canon O₂ default₂).eval E b := by
   intro E
   induction E with
   | atom n =>
-      intro hE a b
+      intro _ hE a b
       have hn_O₂ : n ∈ ontologyAtoms O₂ := hE.atom_mem
       have hn_not_O₁ : n ∉ ontologyAtoms O₁ := fun h₁ => hdisj.1 n h₁ hn_O₂
-      have h := prodInterp_atom_not_O₁ O₁ O₂ I₁ hn_not_O₁ a b
-      exact h
-  | top => intro _ _ _; exact Iff.rfl
-  | bot => intro _ _ _; exact Iff.rfl
+      exact prodInterp_atom_not_O₁ O₁ O₂ I₁ default₂ hn_not_O₁ a b
+  | nom i => intro hnf _ _ _; exact hnf.elim
+  | top => intro _ _ _ _; exact Iff.rfl
+  | bot => intro _ _ _ _; exact Iff.rfl
   | conj A B ihA ihB =>
-      intro hE a b
-      show (prodInterp O₁ O₂ I₁).eval A ⟨a, b⟩ ∧ _ ↔ (canon O₂).eval A b ∧ _
-      rw [ihA hE.conj_left a b, ihB hE.conj_right a b]
+      intro hnf hE a b
+      show (prodInterp O₁ O₂ I₁ default₂).eval A ⟨a, b⟩ ∧ _ ↔
+           (canon O₂ default₂).eval A b ∧ _
+      rw [ihA hnf.1 hE.conj_left a b, ihB hnf.2 hE.conj_right a b]
   | exist R E' ihE' =>
-      intro hE a b
+      intro hnf hE a b
       have hR_O₂ : R ∈ ontologyRoles O₂ := hE.exist_role
       have hR_not_O₁ : R ∉ ontologyRoles O₁ := fun h₁ => hdisj.2 R h₁ hR_O₂
       have hE'_sig := hE.exist_inner
       constructor
       · rintro ⟨⟨a', b'⟩, hrole, heval⟩
-        rw [prodInterp_role_not_O₁ O₁ O₂ I₁ hR_not_O₁ a a' b b'] at hrole
+        rw [prodInterp_role_not_O₁ O₁ O₂ I₁ default₂ hR_not_O₁ a a' b b'] at hrole
         refine ⟨b', hrole.2, ?_⟩
-        exact (ihE' hE'_sig a' b').mp heval
+        exact (ihE' hnf hE'_sig a' b').mp heval
       · rintro ⟨b', hrole, heval⟩
-        refine ⟨⟨a, b'⟩, ?_, (ihE' hE'_sig a b').mpr heval⟩
-        rw [prodInterp_role_not_O₁ O₁ O₂ I₁ hR_not_O₁ a a b b']
+        refine ⟨⟨a, b'⟩, ?_, (ihE' hnf hE'_sig a b').mpr heval⟩
+        rw [prodInterp_role_not_O₁ O₁ O₂ I₁ default₂ hR_not_O₁ a a b b']
         exact ⟨rfl, hrole⟩
 
 -- ----------------------------------------------------------------
@@ -677,27 +713,32 @@ theorem rchain_role₃_in_sig {O : Ontology} {R₁ R₂ S : Role}
 -- ----------------------------------------------------------------
 
 theorem prodInterp_satisfies_O₁_axiom {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp α)
+    (default₂ : CanonDom O₂)
+    (hO₁_nf : OntologyNominalFree O₁)
     (hI₁ : I₁.satisfies O₁) {ax : Axiom} (hax : ax ∈ O₁) :
-    (prodInterp O₁ O₂ I₁).satisfiesAxiom ax := by
+    (prodInterp O₁ O₂ I₁ default₂).satisfiesAxiom ax := by
   have hax_sig : AxiomInSig O₁ ax := axiom_in_self_sig hax
+  have hax_nf : AxiomNominalFree ax := hO₁_nf ax hax
   cases ax with
   | gci C D =>
       intro p hC
       obtain ⟨a, b⟩ := p
       obtain ⟨hC_sig, hD_sig⟩ := ConceptInSig_of_AxiomInSig_gci hax_sig
-      have h_I₁_C : I₁.eval C a := (eval_prodInterp_O₁ O₁ O₂ I₁ C hC_sig a b).mp hC
+      obtain ⟨hC_nf, hD_nf⟩ := hax_nf
+      have h_I₁_C : I₁.eval C a :=
+        (eval_prodInterp_O₁ O₁ O₂ I₁ default₂ C hC_nf hC_sig a b).mp hC
       have h_I₁_D : I₁.eval D a := hI₁ _ hax a h_I₁_C
-      exact (eval_prodInterp_O₁ O₁ O₂ I₁ D hD_sig a b).mpr h_I₁_D
+      exact (eval_prodInterp_O₁ O₁ O₂ I₁ default₂ D hD_nf hD_sig a b).mpr h_I₁_D
   | rinc R S =>
       intro p q hR_pq
       obtain ⟨a, b⟩ := p
       obtain ⟨a', b'⟩ := q
       have hR_O₁ : R ∈ ontologyRoles O₁ := rinc_role_left_in_sig hax_sig
       have hS_O₁ : S ∈ ontologyRoles O₁ := rinc_role_right_in_sig hax_sig
-      rw [prodInterp_role_O₁ O₁ O₂ I₁ hR_O₁ a a' b b'] at hR_pq
+      rw [prodInterp_role_O₁ O₁ O₂ I₁ default₂ hR_O₁ a a' b b'] at hR_pq
       obtain ⟨hR_aa', hb⟩ := hR_pq
       have hS_aa' : I₁.ext_role S a a' := hI₁ _ hax a a' hR_aa'
-      rw [prodInterp_role_O₁ O₁ O₂ I₁ hS_O₁ a a' b b']
+      rw [prodInterp_role_O₁ O₁ O₂ I₁ default₂ hS_O₁ a a' b b']
       exact ⟨hS_aa', hb⟩
   | rchain R₁ R₂ S =>
       intro p q r hR₁_pq hR₂_qr
@@ -707,12 +748,12 @@ theorem prodInterp_satisfies_O₁_axiom {α : Type} (O₁ O₂ : Ontology) (I₁
       have hR₁_O₁ : R₁ ∈ ontologyRoles O₁ := rchain_role₁_in_sig hax_sig
       have hR₂_O₁ : R₂ ∈ ontologyRoles O₁ := rchain_role₂_in_sig hax_sig
       have hS_O₁  : S  ∈ ontologyRoles O₁ := rchain_role₃_in_sig hax_sig
-      rw [prodInterp_role_O₁ O₁ O₂ I₁ hR₁_O₁ a a' b b'] at hR₁_pq
-      rw [prodInterp_role_O₁ O₁ O₂ I₁ hR₂_O₁ a' a'' b' b''] at hR₂_qr
+      rw [prodInterp_role_O₁ O₁ O₂ I₁ default₂ hR₁_O₁ a a' b b'] at hR₁_pq
+      rw [prodInterp_role_O₁ O₁ O₂ I₁ default₂ hR₂_O₁ a' a'' b' b''] at hR₂_qr
       obtain ⟨hR₁_aa', hb_eq_b'⟩ := hR₁_pq
       obtain ⟨hR₂_a'a'', hb'_eq_b''⟩ := hR₂_qr
       have hS_aa'' : I₁.ext_role S a a'' := hI₁ _ hax a a' a'' hR₁_aa' hR₂_a'a''
-      rw [prodInterp_role_O₁ O₁ O₂ I₁ hS_O₁ a a'' b b'']
+      rw [prodInterp_role_O₁ O₁ O₂ I₁ default₂ hS_O₁ a a'' b b'']
       exact ⟨hS_aa'', hb_eq_b'.trans hb'_eq_b''⟩
 
 -- ----------------------------------------------------------------
@@ -720,20 +761,24 @@ theorem prodInterp_satisfies_O₁_axiom {α : Type} (O₁ O₂ : Ontology) (I₁
 -- ----------------------------------------------------------------
 
 theorem prodInterp_satisfies_O₂_axiom {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp α)
+    (default₂ : CanonDom O₂)
+    (hO₂_nf : OntologyNominalFree O₂)
     (hdisj : DisjointSigs O₁ O₂)
     {ax : Axiom} (hax : ax ∈ O₂) :
-    (prodInterp O₁ O₂ I₁).satisfiesAxiom ax := by
+    (prodInterp O₁ O₂ I₁ default₂).satisfiesAxiom ax := by
   have hax_sig : AxiomInSig O₂ ax := axiom_in_self_sig hax
-  have hcanon : (canon O₂).satisfies O₂ := canon_satisfies O₂
+  have hax_nf : AxiomNominalFree ax := hO₂_nf ax hax
+  have hcanon : (canon O₂ default₂).satisfies O₂ := canon_satisfies O₂ default₂ hO₂_nf
   cases ax with
   | gci C D =>
       intro p hC
       obtain ⟨a, b⟩ := p
       obtain ⟨hC_sig, hD_sig⟩ := ConceptInSig_of_AxiomInSig_gci hax_sig
-      have h_canon_C : (canon O₂).eval C b :=
-        (eval_prodInterp_O₂ O₁ O₂ I₁ hdisj C hC_sig a b).mp hC
-      have h_canon_D : (canon O₂).eval D b := hcanon _ hax b h_canon_C
-      exact (eval_prodInterp_O₂ O₁ O₂ I₁ hdisj D hD_sig a b).mpr h_canon_D
+      obtain ⟨hC_nf, hD_nf⟩ := hax_nf
+      have h_canon_C : (canon O₂ default₂).eval C b :=
+        (eval_prodInterp_O₂ O₁ O₂ I₁ default₂ hdisj C hC_nf hC_sig a b).mp hC
+      have h_canon_D : (canon O₂ default₂).eval D b := hcanon _ hax b h_canon_C
+      exact (eval_prodInterp_O₂ O₁ O₂ I₁ default₂ hdisj D hD_nf hD_sig a b).mpr h_canon_D
   | rinc R S =>
       intro p q hR_pq
       obtain ⟨a, b⟩ := p
@@ -742,10 +787,11 @@ theorem prodInterp_satisfies_O₂_axiom {α : Type} (O₁ O₂ : Ontology) (I₁
       have hS_O₂ : S ∈ ontologyRoles O₂ := rinc_role_right_in_sig hax_sig
       have hR_not_O₁ : R ∉ ontologyRoles O₁ := fun h₁ => hdisj.2 R h₁ hR_O₂
       have hS_not_O₁ : S ∉ ontologyRoles O₁ := fun h₁ => hdisj.2 S h₁ hS_O₂
-      rw [prodInterp_role_not_O₁ O₁ O₂ I₁ hR_not_O₁ a a' b b'] at hR_pq
+      rw [prodInterp_role_not_O₁ O₁ O₂ I₁ default₂ hR_not_O₁ a a' b b'] at hR_pq
       obtain ⟨ha, hRcanon⟩ := hR_pq
-      have hScanon : (canon O₂).ext_role S b b' := hcanon _ hax b b' hRcanon
-      rw [prodInterp_role_not_O₁ O₁ O₂ I₁ hS_not_O₁ a a' b b']
+      have hScanon : (canon O₂ default₂).ext_role S b b' :=
+        hcanon _ hax b b' hRcanon
+      rw [prodInterp_role_not_O₁ O₁ O₂ I₁ default₂ hS_not_O₁ a a' b b']
       exact ⟨ha, hScanon⟩
   | rchain R₁ R₂ S =>
       intro p q r hR₁_pq hR₂_qr
@@ -758,13 +804,13 @@ theorem prodInterp_satisfies_O₂_axiom {α : Type} (O₁ O₂ : Ontology) (I₁
       have hR₁_not_O₁ : R₁ ∉ ontologyRoles O₁ := fun h₁ => hdisj.2 R₁ h₁ hR₁_O₂
       have hR₂_not_O₁ : R₂ ∉ ontologyRoles O₁ := fun h₁ => hdisj.2 R₂ h₁ hR₂_O₂
       have hS_not_O₁  : S  ∉ ontologyRoles O₁ := fun h₁ => hdisj.2 S  h₁ hS_O₂
-      rw [prodInterp_role_not_O₁ O₁ O₂ I₁ hR₁_not_O₁ a a' b b'] at hR₁_pq
-      rw [prodInterp_role_not_O₁ O₁ O₂ I₁ hR₂_not_O₁ a' a'' b' b''] at hR₂_qr
+      rw [prodInterp_role_not_O₁ O₁ O₂ I₁ default₂ hR₁_not_O₁ a a' b b'] at hR₁_pq
+      rw [prodInterp_role_not_O₁ O₁ O₂ I₁ default₂ hR₂_not_O₁ a' a'' b' b''] at hR₂_qr
       obtain ⟨ha_eq_a', hR₁canon⟩ := hR₁_pq
       obtain ⟨ha'_eq_a'', hR₂canon⟩ := hR₂_qr
-      have hScanon : (canon O₂).ext_role S b b'' :=
+      have hScanon : (canon O₂ default₂).ext_role S b b'' :=
         hcanon _ hax b b' b'' hR₁canon hR₂canon
-      rw [prodInterp_role_not_O₁ O₁ O₂ I₁ hS_not_O₁ a a'' b b'']
+      rw [prodInterp_role_not_O₁ O₁ O₂ I₁ default₂ hS_not_O₁ a a'' b b'']
       exact ⟨ha_eq_a'.trans ha'_eq_a'', hScanon⟩
 
 -- ----------------------------------------------------------------
@@ -772,12 +818,14 @@ theorem prodInterp_satisfies_O₂_axiom {α : Type} (O₁ O₂ : Ontology) (I₁
 -- ----------------------------------------------------------------
 
 theorem prodInterp_satisfies {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp α)
+    (default₂ : CanonDom O₂)
+    (hO₁_nf : OntologyNominalFree O₁) (hO₂_nf : OntologyNominalFree O₂)
     (hI₁ : I₁.satisfies O₁) (hdisj : DisjointSigs O₁ O₂) :
-    (prodInterp O₁ O₂ I₁).satisfies (O₁ ++ O₂) := by
+    (prodInterp O₁ O₂ I₁ default₂).satisfies (O₁ ++ O₂) := by
   intro ax hax
   rcases List.mem_append.mp hax with h | h
-  · exact prodInterp_satisfies_O₁_axiom O₁ O₂ I₁ hI₁ h
-  · exact prodInterp_satisfies_O₂_axiom O₁ O₂ I₁ hdisj h
+  · exact prodInterp_satisfies_O₁_axiom O₁ O₂ I₁ default₂ hO₁_nf hI₁ h
+  · exact prodInterp_satisfies_O₂_axiom O₁ O₂ I₁ default₂ hO₂_nf hdisj h
 
 -- ----------------------------------------------------------------
 -- 9.9  Hard direction (mpr) of the refined factorization
@@ -810,24 +858,26 @@ theorem prodInterp_satisfies {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp �
     M'.eval C ⟨a, b₀⟩; the entailment then gives M'.eval D ⟨a, b₀⟩;
     by `eval_prodInterp_O₁` at D, we descend to I₁.eval D a. -/
 theorem Sat_factor_refined_mpr {O₁ O₂ : Ontology}
+    (hO₁_nf : OntologyNominalFree O₁) (hO₂_nf : OntologyNominalFree O₂)
     (hdisj : DisjointSigs O₁ O₂)
-    {C D : Concept} (hC : ConceptInSig O₁ C) (hD : ConceptInSig O₁ D)
+    {C D : Concept} (hC_nf : NominalFree C) (hD_nf : NominalFree D)
+    (hC : ConceptInSig O₁ C) (hD : ConceptInSig O₁ D)
     (h : Sat (O₁ ++ O₂) C D) :
     Sat O₁ C D ∨ Sat O₂ .top .bot := by
   classical
   by_cases hcons : Sat O₂ .top .bot
   · exact Or.inr hcons
-  · refine Or.inl (complete_via_canon O₁ C D ?_)
+  · refine Or.inl (complete_via_canon O₁ C D hO₁_nf hC_nf hD_nf ?_)
     intro α I₁ hI₁ a ha
     let b₀ : CanonDom O₂ := ⟨.top, hcons⟩
-    let M' : Interp (α × CanonDom O₂) := prodInterp O₁ O₂ I₁
+    let M' : Interp (α × CanonDom O₂) := prodInterp O₁ O₂ I₁ b₀
     have hM' : M'.satisfies (O₁ ++ O₂) :=
-      prodInterp_satisfies O₁ O₂ I₁ hI₁ hdisj
+      prodInterp_satisfies O₁ O₂ I₁ b₀ hO₁_nf hO₂_nf hI₁ hdisj
     have hentail : Entails (O₁ ++ O₂) C D := sound _ h
     have hCab : M'.eval C ⟨a, b₀⟩ :=
-      (eval_prodInterp_O₁ O₁ O₂ I₁ C hC a b₀).mpr ha
+      (eval_prodInterp_O₁ O₁ O₂ I₁ b₀ C hC_nf hC a b₀).mpr ha
     have hDab : M'.eval D ⟨a, b₀⟩ := hentail M' hM' ⟨a, b₀⟩ hCab
-    exact (eval_prodInterp_O₁ O₁ O₂ I₁ D hD a b₀).mp hDab
+    exact (eval_prodInterp_O₁ O₁ O₂ I₁ b₀ D hD_nf hD a b₀).mp hDab
 
 -- ----------------------------------------------------------------
 -- 9.10  The full refined factorization theorem (iff)
@@ -835,9 +885,10 @@ theorem Sat_factor_refined_mpr {O₁ O₂ : Ontology}
 
 /-- **Refined SCC factorization theorem.**
 
-    Under disjoint atom and role signatures, for any concepts C, D
-    in O₁'s signature, the closure of `O₁ ++ O₂` over the pair
-    factors exactly:
+    Under disjoint atom and role signatures, for nominal-free
+    concepts C, D in O₁'s signature, with O₁ and O₂ both nominal-
+    free at the axiom level (`OntologyNominalFree`), the closure
+    of `O₁ ++ O₂` over the pair factors exactly:
 
       Sat (O₁ ++ O₂) C D   ↔   Sat O₁ C D ∨ Sat O₂ ⊤ ⊥.
 
@@ -847,13 +898,22 @@ theorem Sat_factor_refined_mpr {O₁ O₂ : Ontology}
     When O₂ is consistent, this disjunct is false and we recover
     the clean factorization.
 
-    Holds for full OWL 2 EL (= EL_⊥^+) — no ⊤-side or ⊥-side
-    restriction. -/
+    No ⊤-side or ⊥-side restriction on the role/atom GCIs is
+    imposed.  The nominal-free preconditions limit the result to
+    the OWL 2 EL fragment without nominals; full nominal coverage
+    requires the merging-canonical-model construction (Kazakov 2014
+    §6) plus a refined `prodInterp` that handles individuals — see
+    the `nom`-aware infrastructure (`indiv` field, `conceptIndividuals`,
+    `ontologyIndividuals`) which is in place but whose semantic
+    correctness for nominal axioms is future work. -/
 theorem Sat_factor_refined {O₁ O₂ : Ontology}
+    (hO₁_nf : OntologyNominalFree O₁) (hO₂_nf : OntologyNominalFree O₂)
     (hdisj : DisjointSigs O₁ O₂)
-    {C D : Concept} (hC : ConceptInSig O₁ C) (hD : ConceptInSig O₁ D) :
+    {C D : Concept} (hC_nf : NominalFree C) (hD_nf : NominalFree D)
+    (hC : ConceptInSig O₁ C) (hD : ConceptInSig O₁ D) :
     Sat (O₁ ++ O₂) C D ↔ Sat O₁ C D ∨ Sat O₂ .top .bot :=
-  ⟨Sat_factor_refined_mpr hdisj hC hD, Sat_factor_refined_mp⟩
+  ⟨Sat_factor_refined_mpr hO₁_nf hO₂_nf hdisj hC_nf hD_nf hC hD,
+   Sat_factor_refined_mp⟩
 
 -- ============================================================
 -- 10. SCC compositionality via topological order — STATEMENT
