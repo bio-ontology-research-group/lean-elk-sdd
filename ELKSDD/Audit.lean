@@ -81,6 +81,11 @@ namespace ELKSDD
 #print axioms ELpp.canon_indiv_eq
 #print axioms ELpp.canon_satisfies_nomLHS
 #print axioms ELpp.complete_via_canon_nomLHS
+-- Shallow-exist-nominal RHS extension (ObjectPropertyAssertion-style:
+-- gci C (∃R.(nom j)) allowed, range axioms forbidden in this fragment)
+#print axioms ELpp.AxiomNomLR_no_range
+#print axioms ELpp.canon_satisfies_nomLR
+#print axioms ELpp.complete_via_canon_nomLR
 
 -- ============================================================
 -- RangeNorm — Path B (BBL 2008 §3.3) range elimination

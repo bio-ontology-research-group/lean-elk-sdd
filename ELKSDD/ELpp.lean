@@ -839,6 +839,155 @@ theorem complete_via_canon_nomLHS (O : Ontology) (C D : Concept)
     exact hxD
 
 -- ============================================================
+-- 6d. Shallow-exist-nominal RHS — ObjectPropertyAssertion-style
+-- ============================================================
+--
+-- **Coverage**: GCIs of shape `gci C (∃R.(nom i))` —
+-- `ObjectPropertyAssertion`-style: every C-element has an R-edge
+-- to individual a_i.  This complements LHS-nominal support to
+-- cover the bulk of OWL 2 EL ABox patterns.
+--
+-- **Soundness gate**: this fragment forbids range axioms entirely.
+-- The reason is the `ext_role` range-guard: an R-edge to `indiv i =
+-- ⟨nom i, _⟩` would need `Sat O (nom i) E` for every range axiom
+-- on R's rinc-hierarchy.  Without merging-aware Sat rules, this
+-- isn't generally derivable.  Range support over nominal targets
+-- requires the merging quotient (future work).
+
+/-- Loose axiom-level predicate covering shape 1 (LHS nominal) AND
+    shape 3 (RHS shallow-exist with nominal target):
+      * `gci (NF or nom) (NF or ∃R.(nom j))`.
+
+    Range axioms are forbidden in this fragment (the range guard
+    on a nominal target requires nominal-merging machinery). -/
+def AxiomNomLR : Axiom → Prop
+  | .gci C D =>
+      (NominalFree C ∨ ∃ i, C = .nom i) ∧
+      (NominalFree D ∨ ∃ R i, D = .exist R (.nom i))
+  | .rinc _ _ => True
+  | .rchain _ _ _ => True
+  | .range _ _ => False
+  | .reflexive _ => True
+  | .hasKey _ _ => False
+
+def OntologyNomLR (O : Ontology) : Prop :=
+  ∀ ax ∈ O, AxiomNomLR ax
+
+/-- Under `OntologyNomLR`, no range axioms exist in `O`. -/
+theorem AxiomNomLR_no_range {O : Ontology}
+    (hO : OntologyNomLR O) : ∀ R E, Axiom.range R E ∉ O := by
+  intro R E hax
+  have := hO _ hax
+  exact this  -- AxiomNomLR (range R E) = False
+
+/-- **Theorem 2 — shallow-exist-nominal RHS coverage.**
+
+    Under `OntologyNomLR ∧ AllNomInhabited`, the canonical model
+    satisfies all ABox-flavoured axioms (shape 1 LHS-nominal, plus
+    shape 3 RHS-shallow-exist-with-nominal).  The `range _ _` and
+    `RangeChainSafe` cases are vacuous here (no range axioms by
+    `AxiomNomLR.range = False`). -/
+theorem canon_satisfies_nomLR (O : Ontology) (default : CanonDom O)
+    (hO : OntologyNomLR O) (hO_inhab : AllNomInhabited O) :
+    (canon O default).satisfies O := by
+  intro ax hax
+  have hax_nf : AxiomNomLR ax := hO ax hax
+  cases ax with
+  | gci C D =>
+      obtain ⟨hC_or, hD_or⟩ := hax_nf
+      rcases hC_or with hC_nf | ⟨i, hCi⟩
+      · -- LHS nominal-free.
+        rcases hD_or with hD_nf | ⟨R, j, hDj⟩
+        · -- (NF, NF): standard canon_satisfies gci proof.
+          intro x hx
+          rw [canon_eval _ _ _ hC_nf] at hx
+          have hSat : Sat O x.val D := Sat.trans hx (Sat.base_gci hax)
+          exact (canon_eval O default D hD_nf x).mpr hSat
+        · -- (NF, ∃R.(nom j)): shape 3.
+          subst hDj
+          intro x hx
+          have hxC : Sat O x.val C := (canon_eval _ _ _ hC_nf x).mp hx
+          have hxRj : Sat O x.val (.exist R (.nom j)) :=
+            Sat.trans hxC (Sat.base_gci hax)
+          have hj : ¬ Sat O (.nom j) .bot := hO_inhab j
+          -- Witness: indiv j = ⟨nom j, hj⟩.  Show ext_role R x (indiv j).
+          refine ⟨(canon O default).indiv j, ?_, ?_⟩
+          · -- ext_role R x (indiv j)
+            rw [canon_indiv_eq O default j hj]
+            refine ⟨hxRj, ?_⟩
+            -- Range guard: vacuous under no-range.
+            intro T E _ hRange
+            exact (AxiomNomLR_no_range hO T E hRange).elim
+          · -- y = indiv j
+            rfl
+      · -- LHS = nom i.
+        subst hCi
+        rcases hD_or with hD_nf | ⟨R, j, hDj⟩
+        · -- (nom i, NF): shape 1.
+          intro x hx
+          have hxEq : x = (canon O default).indiv i := hx
+          have hi : ¬ Sat O (.nom i) .bot := hO_inhab i
+          rw [canon_indiv_eq O default i hi] at hxEq
+          subst hxEq
+          rw [canon_eval _ _ _ hD_nf]
+          exact Sat.base_gci hax
+        · -- (nom i, ∃R.(nom j)): combined shapes 1+3.
+          subst hDj
+          intro x hx
+          have hxEq : x = (canon O default).indiv i := hx
+          have hi : ¬ Sat O (.nom i) .bot := hO_inhab i
+          rw [canon_indiv_eq O default i hi] at hxEq
+          subst hxEq
+          -- Goal: eval (∃R.(nom j)) ⟨nom i, hi⟩.
+          have hSat_iRj : Sat O (.nom i) (.exist R (.nom j)) := Sat.base_gci hax
+          have hj : ¬ Sat O (.nom j) .bot := hO_inhab j
+          refine ⟨(canon O default).indiv j, ?_, ?_⟩
+          · rw [canon_indiv_eq O default j hj]
+            refine ⟨hSat_iRj, ?_⟩
+            intro T E _ hRange
+            exact (AxiomNomLR_no_range hO T E hRange).elim
+          · rfl
+  | rinc R S =>
+      intro x y hRxy
+      obtain ⟨hRxySat, _⟩ := hRxy
+      refine ⟨Sat.rinc_apply hRxySat hax, ?_⟩
+      intro T E _ hRange
+      exact (AxiomNomLR_no_range hO T E hRange).elim
+  | rchain R₁ R₂ S =>
+      intro x y z hR1 hR2
+      obtain ⟨hR1Sat, _⟩ := hR1
+      obtain ⟨hR2Sat, _⟩ := hR2
+      refine ⟨Sat.rchain_apply hR1Sat hR2Sat hax, ?_⟩
+      intro T E _ hRange
+      exact (AxiomNomLR_no_range hO T E hRange).elim
+  | range R C => exact hax_nf.elim
+  | reflexive R =>
+      intro x
+      refine ⟨Sat.reflexive_apply hax, ?_⟩
+      intro T E _ hRange
+      exact (AxiomNomLR_no_range hO T E hRange).elim
+  | hasKey _ _ => exact hax_nf.elim
+
+/-- **Completeness with LHS-and-RHS-shallow nominal axioms**, on
+    nominal-free queries.  Direct nominal queries (e.g.,
+    `Entails O C (nom i)`) still require the merging canonical
+    model and remain future work. -/
+theorem complete_via_canon_nomLR (O : Ontology) (C D : Concept)
+    (hO : OntologyNomLR O) (hO_inhab : AllNomInhabited O)
+    (hC_nf : NominalFree C) (hD_nf : NominalFree D)
+    (h : Entails O C D) : Sat O C D := by
+  classical
+  by_cases hCbot : Sat O C .bot
+  · exact Sat.bot_elim hCbot
+  · let x : CanonDom O := ⟨C, hCbot⟩
+    have hcanon := canon_satisfies_nomLR O x hO hO_inhab
+    have hxC : (canon O x).eval C x := by
+      rw [canon_eval _ _ _ hC_nf]; exact Sat.refl _
+    have hxD : (canon O x).eval D x := h _ hcanon x hxC
+    rw [canon_eval _ _ _ hD_nf] at hxD
+    exact hxD
+
+-- ============================================================
 -- 7. Completeness — ELK 2014 §3.3 (Theorem 1)
 -- ============================================================
 
