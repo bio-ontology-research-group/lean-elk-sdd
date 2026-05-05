@@ -408,15 +408,27 @@ namespace ELKSDD
 #print axioms ELpp.disponte_eq_wmc_via_compileSat
 
 -- ============================================================
--- CompilationWMC — Shannon-recursive WMC building blocks toward
---                  unconditional DISPONTE.  wmc compileSat reduces
---                  to a clean recursive form (shannonSatSum).
---                  Perm-foldr-add infrastructure (zero-axiom)
---                  ready for the final bridge to enumerateWorlds.
+-- CompilationWMC — Shannon-recursive WMC + UNCONDITIONAL DISPONTE
+--                  correspondence.  Bridges shannonSatSum to
+--                  enumerateWorlds via Perm; closes the final
+--                  unconditional theorem
+--                  `wmc_compileSat_eq_disponteWMC`.
 -- ============================================================
 #print axioms ELpp.wmc_compileSatAux_eq
 #print axioms ELpp.wmc_compileSat_eq_shannonSatSum
 #print axioms ELpp.Perm_foldr_add_eq
 #print axioms ELpp.Perm_foldr_add_eq_fn
+#print axioms ELpp.shannonSatSum_eq_foldr_extensionList
+#print axioms ELpp.weightAlong_finRange_eq_worldWeight
+#print axioms ELpp.extensionList_length
+#print axioms ELpp.enumerateWorlds_length
+#print axioms ELpp.mem_extensionList_finRange
+#print axioms ELpp.mem_enumerateWorlds
+#print axioms ELpp.extensionList_Nodup
+#print axioms ELpp.enumerateWorlds_Nodup
+#print axioms ELpp.extensionList_finRange_perm_enumerateWorlds
+#print axioms ELpp.wmc_compileSat_eq_disponteWMC
+#print axioms ELpp.compileSat_disponte_correspondence
+#print axioms ELpp.exists_disponte_correspondence
 
 end ELKSDD
