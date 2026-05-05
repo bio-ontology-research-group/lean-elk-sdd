@@ -38,6 +38,7 @@ import ELKSDD.OWL2EL
 import ELKSDD.ELKBoundary
 import ELKSDD.DISPONTE
 import ELKSDD.Complexity
+import ELKSDD.SatComplexity
 import ELKSDD.Stratified
 import ELKSDD.SCC
 import ELKSDD.SDD

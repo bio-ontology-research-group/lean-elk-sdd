@@ -20,34 +20,17 @@
       are folklore in the SDD literature; those are not formalised
       here.
 
-  *What this module does NOT prove.*
+  *Companion module.*  The polynomial closure-size bound on the new
+  inductive `Sat` (covering shapes 1-4 + HasKey + range + reflexive
+  + Self) is proved in `ELKSDD.SatComplexity`.  The bound is
 
-    * A polynomial closure-size bound on the *new* `Sat` (the inductive
-      `Prop` from `ELKSDD.ELpp`, which extends standard ELK with
-      nominals, HasKey, range, reflexive, Self, plus the `nom_symm`
-      and `hasKey_apply` rules from `ELKSDD.Merging`).
+    `(boundedAtomSet O).length ≤ 5 · n³ · (r + 1)`,
 
-      The polynomial bound `(|sub(O)|+2)² + |sub(O)|²·|R| + |sub(O)|`
-      is proved as `elk_closure_size_bound` in the *older* library at
-      `proofs/lean/Moose/Prior.lean`, on a *different* formalisation
-      of `Sat` as an explicit `List SatAtom` (rather than an inductive
-      `Prop`).  Carrying that bound to the new inductive `Sat` requires
-      either:
-        (a) a forward simulation new-Sat → old-Sat (each new
-            derivation maps to an old one, so the new closure ⊆ old
-            enumeration);
-        (b) re-proving the bound directly via a fresh enumeration
-            list and length computation.
-
-      Both paths are mechanical but substantial; the present module
-      flags the bound as a documented gap rather than introducing a
-      `sorry`.
-
-  *Cross-library reference.*
-
-    * `Moose.Prior.elk_closure_size_bound`:
-        `(Sat O).length ≤ (numSubexprs O + 2)^2 + numSubexprs O^2 *
-                          numRoles O + numSubexprs O`.
+  where `n = numSubexprs O` and `r = numRoles O`.  This is the
+  cardinality bound on the syntactic atom-set over which the ELK
+  calculus operates (path (b): fresh enumeration on the new Sat).
+  See `SatComplexity.boundedAtomSet_polynomial` and
+  `SatComplexity.sat_named_atom_cardinality_bound`.
 
   Working over `Nat`; no Mathlib dependency.
 -/
