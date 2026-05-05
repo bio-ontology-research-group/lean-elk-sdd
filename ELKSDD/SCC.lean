@@ -123,6 +123,8 @@ theorem Sat_mono {O₁ O₂ : Ontology} (hsub : Subontology O₁ O₂)
   | range_apply _ hax ih => exact Sat.range_apply ih (hsub _ hax)
   | reflexive_apply hax => exact Sat.reflexive_apply (hsub _ hax)
   | self_intro _ ih => exact Sat.self_intro ih
+  | reflexive_self hax => exact Sat.reflexive_self (hsub _ hax)
+  | self_range _ hax ih => exact Sat.self_range ih (hsub _ hax)
 
 /-- Concrete corollary: appending O₂ to O₁ preserves Sat-derivability. -/
 theorem Sat_mono_append_left {O₁ : Ontology} (O₂ : Ontology)
@@ -760,8 +762,22 @@ theorem prodInterp_satisfies_O₁_axiom {α : Type} (O₁ O₂ : Ontology) (I₁
       have hS_aa'' : I₁.ext_role S a a'' := hI₁ _ hax a a' a'' hR₁_aa' hR₂_a'a''
       rw [prodInterp_role_O₁ O₁ O₂ I₁ default₂ hS_O₁ a a'' b b'']
       exact ⟨hS_aa'', hb_eq_b'.trans hb'_eq_b''⟩
-  | range _ _ => exact hax_nf.elim
-  | reflexive _ => exact hax_nf.elim
+  | range R C =>
+      -- AxiomNominalFree (.range R C) = NominalFree C now allows
+      -- range axioms.  Mirroring the rinc structure:
+      -- ext_role R p q ↔ I₁.ext_role R a a' ∧ b = b'.
+      -- I₁ ⊨ Range R C, so I₁.eval C a'.
+      -- By eval_prodInterp_O₁ (with hC_nf + hC_sig), prodInterp.eval C ⟨a',b'⟩.
+      -- Need helpers `range_role_in_sig` + `range_concept_in_sig`
+      -- (analogous to existing rinc/rchain helpers).  Future work.
+      sorry
+  | reflexive R =>
+      -- AxiomNominalFree (.reflexive _) = True.
+      -- For each p = ⟨a,b⟩: prodInterp.ext_role R p p must hold.
+      -- ext_role R p p ↔ I₁.ext_role R a a ∧ b = b (R ∈ O₁).
+      -- I₁ ⊨ Reflexive R gives I₁.ext_role R a a; b = b is rfl.
+      -- Future Lean work; analogous to rinc structure.
+      sorry
   | hasKey _ _ => exact hax_nf.elim
 
 -- ----------------------------------------------------------------
@@ -820,8 +836,15 @@ theorem prodInterp_satisfies_O₂_axiom {α : Type} (O₁ O₂ : Ontology) (I₁
         hcanon _ hax b b' b'' hR₁canon hR₂canon
       rw [prodInterp_role_not_O₁ O₁ O₂ I₁ default₂ hS_not_O₁ a a'' b b'']
       exact ⟨ha_eq_a'.trans ha'_eq_a'', hScanon⟩
-  | range _ _ => exact hax_nf.elim
-  | reflexive _ => exact hax_nf.elim
+  | range R C =>
+      -- For O₂ range axioms: use canon O₂ ⊨ Range R C (proved in
+      -- canon_satisfies above) plus eval_prodInterp_O₂ to lift.
+      -- Future Lean work; analogous to rinc structure for O₂.
+      sorry
+  | reflexive R =>
+      -- For O₂ reflexive axioms: use canon O₂ ⊨ Reflexive R + lift.
+      -- Future Lean work.
+      sorry
   | hasKey _ _ => exact hax_nf.elim
 
 -- ----------------------------------------------------------------
