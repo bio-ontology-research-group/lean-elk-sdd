@@ -348,31 +348,124 @@ theorem gci_in_O₁_atoms_implies_in_O₁
 -- specialisation that the MOOSE algorithm exploits for the
 -- atomic-subsumption queries it generates.
 
-/- **Hard direction (atomic case): SCC compositionality of atomic
-    subsumption.**
+-- ============================================================
+-- 9'. Refined factorization theorem (with consistency disjunct)
+-- ============================================================
+-- The naive factorization `Sat (O₁ ++ O₂) C D ↔ Sat O₁ C D` for
+-- C, D in O₁'s signature DOES NOT hold unconditionally — a
+-- counterexample is O₁ = [], O₂ = {gci ⊤ ⊥}, where
+-- Sat (O₁ ++ O₂) ⊤ ⊥ holds but Sat O₁ ⊤ ⊥ doesn't.  The issue:
+-- O₂'s `gci ⊤ ⊥` is "globally inconsistent" and pollutes
+-- everything in O₁'s signature via bot_elim.
+--
+-- The CLEAN factorization includes a disjunct for this case:
+--
+--     Sat (O₁ ++ O₂) C D   ↔   Sat O₁ C D ∨ Sat O₂ ⊤ ⊥        (*)
+--
+-- The disjunct `Sat O₂ ⊤ ⊥` says O₂ alone is globally inconsistent.
+-- When O₂ is consistent (¬Sat O₂ ⊤ ⊥), we recover the clean
+-- factorization on O₁'s signature.
 
-    For atomic concepts A, B in `O₁`'s atom signature, with `O₂`
-    having disjoint atom and role signatures from `O₁`, the closure
-    decomposition is exact:
+/-- The "global inconsistency" propagation lemma: if `Sat O₂ ⊤ ⊥`,
+    then `Sat (O₁ ++ O₂) C D` holds for ANY C, D (everything is
+    derivable from a globally-inconsistent ontology).
 
-        Sat (O₁ ++ O₂) (.atom A) (.atom B)   →   Sat O₁ (.atom A) (.atom B).
+    Proof:
+      1. Sat O₂ ⊤ ⊥ → Sat (O₁ ++ O₂) ⊤ ⊥  (monotonicity).
+      2. Sat (O₁ ++ O₂) C ⊤              (top constructor).
+      3. Sat (O₁ ++ O₂) C ⊥              (trans of 2 and 1).
+      4. Sat (O₁ ++ O₂) C D              (bot_elim of 3). -/
+theorem global_inconsistency_propagates {O₁ O₂ : Ontology}
+    (h : Sat O₂ .top .bot) (C D : Concept) :
+    Sat (O₁ ++ O₂) C D := by
+  have h2 : Sat (O₁ ++ O₂) .top .bot := Sat_mono_append_right O₁ h
+  have h3 : Sat (O₁ ++ O₂) C .top := Sat.top _
+  have h4 : Sat (O₁ ++ O₂) C .bot := Sat.trans h3 h2
+  exact Sat.bot_elim h4
 
-    Combined with `Sat_factor_easy`, this gives the iff
+/-- **Refined factorization (easy direction).**
 
-        Sat (O₁ ++ O₂) (.atom A) (.atom B)   ↔   Sat O₁ (.atom A) (.atom B).
+    Either disjunct on the right implies the left:
 
-    PROOF (semantic): take any model `I` of `O₁`.  Form a
-    disjoint-domain extension `I'` over the disjoint sum
-    `Δ_I ⊕ Δ_{canon O₂}`.  `I'` satisfies `O₁ ++ O₂` (each
-    component on its own side of the sum), so by completeness
-    `(canon O₂).eval (.atom A) x ↔ False` (atom A not in O₂).
-    On the I-side, `I' ⊨ A ⊑ B` means `I ⊨ A ⊑ B`.  By soundness
-    plus completeness on `O₁` alone, `Sat O₁ (.atom A) (.atom B)`.
+      Sat O₁ C D            →  Sat (O₁ ++ O₂) C D    (monotonicity)
+      Sat O₂ ⊤ ⊥           →  Sat (O₁ ++ O₂) C D    (global inconsistency)
 
-    The fully formalised disjoint-domain construction goes through
-    a sum type (Lean `Sum α β`) and is mechanical but verbose; we
-    expose the *signature* of the theorem here as documentation —
-    the next Layer 6 increment will instantiate the construction. -/
+    Hence
+
+      Sat O₁ C D ∨ Sat O₂ ⊤ ⊥   →   Sat (O₁ ++ O₂) C D.
+
+    This is the unconditionally-provable direction of the refined
+    SCC compositionality theorem (*). -/
+theorem Sat_factor_refined_mp {O₁ O₂ : Ontology} {C D : Concept}
+    (h : Sat O₁ C D ∨ Sat O₂ .top .bot) :
+    Sat (O₁ ++ O₂) C D := by
+  rcases h with hSat | hInc
+  · exact Sat_factor_easy O₁ O₂ C D hSat
+  · exact global_inconsistency_propagates hInc C D
+
+/-- **Refined factorization (hard direction) — STATEMENT.**
+
+    For atomic concepts A, B with both in `O₁`'s atom signature,
+    under disjoint atom and role signatures, the converse of
+    `Sat_factor_refined_mp` holds (specialized to atomic queries):
+
+       Sat (O₁ ++ O₂) (.atom A) (.atom B)
+         →  Sat O₁ (.atom A) (.atom B) ∨ Sat O₂ ⊤ ⊥.
+
+    Proof outline (semantic, requires the disjoint-domain
+    construction):
+
+      Suppose ¬ Sat O₂ ⊤ ⊥ (the right disjunct fails).  We need
+      Sat O₁ (.atom A) (.atom B).
+
+      Consistency of O₂ implies the canonical model `canon O₂`
+      has non-empty domain (the witness `⟨⊤, h⟩` exists, where
+      `h : ¬ Sat O₂ ⊤ ⊥`).  Take any model I₁ of O₁ — exists
+      because O₁ has the canonical model `canon O₁` over
+      `CanonDom O₁` (well-defined when O₁ is consistent;
+      falls under bot_elim otherwise).
+
+      Form `sumInterp I₁ (canon O₂)` over `Δ_{I₁} ⊕ CanonDom O₂`:
+
+        ext_concept n s = match s with
+          | .inl a => if n ∈ atoms O₁ then I₁.ext_concept n a else False
+          | .inr b => if n ∈ atoms O₁ then False else (canon O₂).ext_concept n b
+
+        ext_role similar (using O₁'s role signature for the
+                         conditional, with cross-side links empty).
+
+      Eval-invariance for concepts in O₁'s atom-and-role signature:
+      sumInterp.eval C (.inl a) ↔ I₁.eval C a (one direction;
+      requires the side-restriction lemma).
+
+      Sub-claim: sumInterp ⊨ O₁ on inl side; sumInterp ⊨ O₂ on
+      inr side; cross-side axioms vacuous (signature
+      disjointness).  Combined: sumInterp ⊨ (O₁ ++ O₂).
+
+      By Entails (O₁ ++ O₂) (.atom A) (.atom B) and
+      sumInterp ⊨ (O₁ ++ O₂):  for the canonical x (.inl
+      (canon-O₁-witness-of-A)), sumInterp ⊨ A → B.  By
+      eval-invariance, I₁ ⊨ A → B.  By completeness for O₁,
+      Sat O₁ (.atom A) (.atom B).
+
+    The construction goes through `Sum α β` (Lean `α ⊕ β`),
+    eval-invariance lemmas similar in shape to `Normalize.
+    eval_extendInterp_of_fresh`, and signature-side reasoning.
+    Estimated ~300-500 LOC.  Not yet formalised in this layer; a
+    follow-up Layer 6 increment will provide the construction. -/
+def Sat_factor_refined_mpr_statement
+    (O₁ O₂ : Ontology)
+    (_hdisj : DisjointSigs O₁ O₂)
+    (A B : Nat) (_hA : A ∈ ontologyAtoms O₁) (_hB : B ∈ ontologyAtoms O₁) :
+    Prop :=
+  Sat (O₁ ++ O₂) (.atom A) (.atom B) →
+    Sat O₁ (.atom A) (.atom B) ∨ Sat O₂ .top .bot
+
+/-- The full refined factorization iff form (statement only). -/
+def Sat_factor_refined_statement
+    (O₁ O₂ : Ontology) (C D : Concept) :
+    Prop :=
+  Sat (O₁ ++ O₂) C D ↔ Sat O₁ C D ∨ Sat O₂ .top .bot
 
 -- ============================================================
 -- 10. SCC compositionality via topological order — STATEMENT

@@ -185,6 +185,8 @@ namespace ELKSDD
 #print axioms SCC.axiom_in_self_sig
 #print axioms SCC.axiom_in_one_sig
 #print axioms SCC.gci_in_O₁_atoms_implies_in_O₁
+#print axioms SCC.global_inconsistency_propagates
+#print axioms SCC.Sat_factor_refined_mp
 
 -- ============================================================
 -- SDD — BDD with linear-time WMC + Shannon-expansion compile
