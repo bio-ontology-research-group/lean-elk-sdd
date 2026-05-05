@@ -715,6 +715,31 @@ theorem rchain_role₃_in_sig {O : Ontology} {R₁ R₂ S : Role}
   show S ∈ [R₁, R₂, S]
   exact List.mem_cons.mpr (Or.inr (List.mem_cons.mpr (Or.inr List.mem_cons_self)))
 
+theorem range_role_in_sig {O : Ontology} {R : Role} {C : Concept}
+    (h : AxiomInSig O (Axiom.range R C)) : R ∈ ontologyRoles O := by
+  apply h.2
+  show R ∈ R :: conceptRoles C
+  exact List.mem_cons_self
+
+theorem range_concept_in_sig {O : Ontology} {R : Role} {C : Concept}
+    (h : AxiomInSig O (Axiom.range R C)) : ConceptInSig O C := by
+  refine ⟨?_, ?_⟩
+  · intro n hn
+    apply h.1
+    show n ∈ conceptAtoms C
+    -- axiomAtoms (Axiom.range R C) = conceptAtoms C, so this is identity.
+    exact hn
+  · intro r hr
+    apply h.2
+    show r ∈ R :: conceptRoles C
+    exact List.mem_cons.mpr (Or.inr hr)
+
+theorem reflexive_role_in_sig {O : Ontology} {R : Role}
+    (h : AxiomInSig O (Axiom.reflexive R)) : R ∈ ontologyRoles O := by
+  apply h.2
+  show R ∈ [R]
+  exact List.mem_cons_self
+
 -- ----------------------------------------------------------------
 -- 9.6  prodInterp satisfies axioms in O₁ (uses I₁ ⊨ O₁ + P2)
 -- ----------------------------------------------------------------
@@ -763,21 +788,27 @@ theorem prodInterp_satisfies_O₁_axiom {α : Type} (O₁ O₂ : Ontology) (I₁
       rw [prodInterp_role_O₁ O₁ O₂ I₁ default₂ hS_O₁ a a'' b b'']
       exact ⟨hS_aa'', hb_eq_b'.trans hb'_eq_b''⟩
   | range R C =>
-      -- AxiomNominalFree (.range R C) = NominalFree C now allows
-      -- range axioms.  Mirroring the rinc structure:
-      -- ext_role R p q ↔ I₁.ext_role R a a' ∧ b = b'.
-      -- I₁ ⊨ Range R C, so I₁.eval C a'.
-      -- By eval_prodInterp_O₁ (with hC_nf + hC_sig), prodInterp.eval C ⟨a',b'⟩.
-      -- Need helpers `range_role_in_sig` + `range_concept_in_sig`
-      -- (analogous to existing rinc/rchain helpers).  Future work.
-      sorry
+      -- AxiomNominalFree (.range R C) = NominalFree C.
+      have hC_nf : NominalFree C := hax_nf
+      intro p q hR_pq
+      obtain ⟨a, b⟩ := p
+      obtain ⟨a', b'⟩ := q
+      have hR_O₁ : R ∈ ontologyRoles O₁ := range_role_in_sig hax_sig
+      have hC_sig : ConceptInSig O₁ C := range_concept_in_sig hax_sig
+      rw [prodInterp_role_O₁ O₁ O₂ I₁ default₂ hR_O₁ a a' b b'] at hR_pq
+      obtain ⟨hR_aa', _hb⟩ := hR_pq
+      -- I₁ ⊨ Range R C in O₁: I₁.ext_role R a a' → I₁.eval C a'.
+      have hI₁_C : I₁.eval C a' := hI₁ _ hax a a' hR_aa'
+      -- Lift to prodInterp via eval_prodInterp_O₁.
+      exact (eval_prodInterp_O₁ O₁ O₂ I₁ default₂ C hC_nf hC_sig a' b').mpr hI₁_C
   | reflexive R =>
       -- AxiomNominalFree (.reflexive _) = True.
-      -- For each p = ⟨a,b⟩: prodInterp.ext_role R p p must hold.
-      -- ext_role R p p ↔ I₁.ext_role R a a ∧ b = b (R ∈ O₁).
-      -- I₁ ⊨ Reflexive R gives I₁.ext_role R a a; b = b is rfl.
-      -- Future Lean work; analogous to rinc structure.
-      sorry
+      intro p
+      obtain ⟨a, b⟩ := p
+      have hR_O₁ : R ∈ ontologyRoles O₁ := reflexive_role_in_sig hax_sig
+      rw [prodInterp_role_O₁ O₁ O₂ I₁ default₂ hR_O₁ a a b b]
+      -- I₁ ⊨ Reflexive R in O₁: ∀ x, I₁.ext_role R x x.
+      exact ⟨hI₁ _ hax a, rfl⟩
   | hasKey _ _ => exact hax_nf.elim
 
 -- ----------------------------------------------------------------
@@ -837,14 +868,30 @@ theorem prodInterp_satisfies_O₂_axiom {α : Type} (O₁ O₂ : Ontology) (I₁
       rw [prodInterp_role_not_O₁ O₁ O₂ I₁ default₂ hS_not_O₁ a a'' b b'']
       exact ⟨ha_eq_a'.trans ha'_eq_a'', hScanon⟩
   | range R C =>
-      -- For O₂ range axioms: use canon O₂ ⊨ Range R C (proved in
-      -- canon_satisfies above) plus eval_prodInterp_O₂ to lift.
-      -- Future Lean work; analogous to rinc structure for O₂.
-      sorry
+      -- For O₂ range axioms: use canon O₂ ⊨ Range R C + eval_prodInterp_O₂.
+      have hC_nf : NominalFree C := hax_nf
+      intro p q hR_pq
+      obtain ⟨a, b⟩ := p
+      obtain ⟨a', b'⟩ := q
+      have hR_O₂ : R ∈ ontologyRoles O₂ := range_role_in_sig hax_sig
+      have hC_sig : ConceptInSig O₂ C := range_concept_in_sig hax_sig
+      have hR_not_O₁ : R ∉ ontologyRoles O₁ := fun h₁ => hdisj.2 R h₁ hR_O₂
+      rw [prodInterp_role_not_O₁ O₁ O₂ I₁ default₂ hR_not_O₁ a a' b b'] at hR_pq
+      obtain ⟨_ha, hRcanon⟩ := hR_pq
+      -- canon O₂ ⊨ Range R C: ∀ b b'. canon.ext_role R b b' → canon.eval C b'.
+      have h_canon_C : (canon O₂ default₂).eval C b' :=
+        hcanon _ hax b b' hRcanon
+      -- Lift via eval_prodInterp_O₂.
+      exact (eval_prodInterp_O₂ O₁ O₂ I₁ default₂ hdisj C hC_nf hC_sig a' b').mpr h_canon_C
   | reflexive R =>
       -- For O₂ reflexive axioms: use canon O₂ ⊨ Reflexive R + lift.
-      -- Future Lean work.
-      sorry
+      intro p
+      obtain ⟨a, b⟩ := p
+      have hR_O₂ : R ∈ ontologyRoles O₂ := reflexive_role_in_sig hax_sig
+      have hR_not_O₁ : R ∉ ontologyRoles O₁ := fun h₁ => hdisj.2 R h₁ hR_O₂
+      rw [prodInterp_role_not_O₁ O₁ O₂ I₁ default₂ hR_not_O₁ a a b b]
+      -- canon O₂ ⊨ Reflexive R: ∀ b, canon.ext_role R b b.
+      exact ⟨rfl, hcanon _ hax b⟩
   | hasKey _ _ => exact hax_nf.elim
 
 -- ----------------------------------------------------------------
