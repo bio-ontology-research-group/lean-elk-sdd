@@ -15,6 +15,7 @@ import ELKSDD.MiniEL
 import ELKSDD.EL
 import ELKSDD.ELpp
 import ELKSDD.Normalize
+import ELKSDD.Stratified
 import ELKSDD.SDD
 
 namespace ELKSDD
@@ -133,6 +134,22 @@ namespace ELKSDD
 
 -- NF1 (vacuous in our binary-chain Axiom representation)
 #print axioms Normalize.rchain_already_in_nf1
+
+-- ============================================================
+-- Stratified — Layers 4-5: time-stamped Clark completion of the
+--              EL_⊥^+ calculus.  `SatAt O k C D` makes the
+--              derivation depth explicit; `Sat_iff_SatAt` shows
+--              every closed atom has a finite derivation depth,
+--              witnessing fixpoint convergence of the iterative
+--              completion procedure.
+-- ============================================================
+#print axioms Stratified.SatAt_succ
+#print axioms Stratified.SatAt_mono
+#print axioms Stratified.Sat_to_SatAt
+#print axioms Stratified.SatAt_to_Sat
+#print axioms Stratified.Sat_iff_SatAt
+#print axioms Stratified.Sat_iff_SatUpTo
+#print axioms Stratified.IsFixpointDepth_imp_IsClosedDepth
 
 -- ============================================================
 -- SDD — BDD with linear-time WMC + Shannon-expansion compile

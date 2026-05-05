@@ -32,4 +32,5 @@ import ELKSDD.MiniEL
 import ELKSDD.EL
 import ELKSDD.ELpp
 import ELKSDD.Normalize
+import ELKSDD.Stratified
 import ELKSDD.SDD
