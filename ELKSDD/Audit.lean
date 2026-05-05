@@ -16,6 +16,13 @@ import ELKSDD.EL
 import ELKSDD.ELpp
 import ELKSDD.Normalize
 import ELKSDD.RangeNorm
+import ELKSDD.Merging
+import ELKSDD.OWL2EL
+import ELKSDD.ELKBoundary
+import ELKSDD.DISPONTE
+import ELKSDD.Complexity
+import ELKSDD.SatComplexity
+import ELKSDD.Saturation
 import ELKSDD.Stratified
 import ELKSDD.SCC
 import ELKSDD.SDD
@@ -282,5 +289,103 @@ namespace ELKSDD
 #print axioms SDD.wmc_linear
 #print axioms SDD.compileWithCtx_correct
 #print axioms SDD.compile_correct
+
+-- ============================================================
+-- Merging — Kazakov 2014 §6 merging quotient canonical model.
+--           Adds shapes 1-4 (gci with nominals on either side or
+--           inside ∃R.nom) and HasKey.  The quotient setoid uses
+--           Sat.nom_symm + transitivity; HasKey uses Sat.hasKey_apply
+--           (the new rule from ELpp).  Restricted to Shallow concepts
+--           (no deep ∃-targets with non-nominal fillers).
+-- ============================================================
+#print axioms ELpp.nomCls_eq_iff
+#print axioms ELpp.nomCls_sound
+#print axioms ELpp.nomCls_exact
+#print axioms ELpp.sat_nomLHS_respects
+#print axioms ELpp.sat_nomRHS_respects
+#print axioms ELpp.sat_existNomRHS_respects
+#print axioms ELpp.sat_existNomBoth_respects
+#print axioms ELpp.mergedCanon_indiv_eq
+#print axioms ELpp.merged_canon_eval
+#print axioms ELpp.mergedCanon_satisfies
+#print axioms ELpp.complete_via_mergedCanon_regular
+#print axioms ELpp.complete_via_mergedCanon_nom
+
+-- ============================================================
+-- OWL2EL — unified user-facing dispatch over the five fragment
+--          completeness theorems (NF / nomLHS / nomLR / strict /
+--          merge).  Soundness is uniform; completeness dispatches
+--          on a fragment witness.
+-- ============================================================
+#print axioms ELpp.sound_owl2el
+#print axioms ELpp.complete_owl2el
+#print axioms ELpp.correct_owl2el
+
+-- ============================================================
+-- ELKBoundary — Sat ↔ ∀-quantified-over-models indicator semantics.
+--               The boundary between calculus and model theory.
+-- ============================================================
+#print axioms ELpp.sat_imp_model
+#print axioms ELpp.satIndicator_iff
+#print axioms ELpp.satIndicator_isModel
+#print axioms ELpp.boundary_theorem
+#print axioms ELpp.sat_eq_minimal_model
+
+-- ============================================================
+-- DISPONTE — Riguzzi 2015 distribution-semantics correspondence.
+--            DISPONTE WMC == SDD WMC over the per-axiom inclusion
+--            world distribution (Nat-valued; Mathlib lift to ℝ is
+--            mechanical follow-on).
+-- ============================================================
+#print axioms ELpp.selectedAxioms_subset
+#print axioms ELpp.sat_world_mono
+#print axioms ELpp.disponte_eq_wmc_of_correctness
+#print axioms ELpp.worldWeight_uniform
+
+-- ============================================================
+-- Complexity — Shannon-tree SDD size bound.  WMC time = O(|tree|)
+--              (linear in the SDD).
+-- ============================================================
+#print axioms SDD.compileWithCtx_size_bound
+#print axioms SDD.compile_size_bound
+#print axioms SDD.wmc_compile_time_bound
+
+-- ============================================================
+-- SatComplexity — polynomial closure-size bound on the new
+--                 inductive Sat (shapes 1-4 + HasKey + range +
+--                 reflexive + Self).  Per-shape exact lengths:
+--                   atomEnum       n²
+--                   linkEnum       n²·r
+--                   rangeLinkEnum  n³·r
+--                   reflEnum       n·r
+--                   selfEnum       n·r
+--                 Total: ≤ 5·n³·(r+1).
+-- ============================================================
+#print axioms ELpp.atomEnum_length
+#print axioms ELpp.linkEnum_length
+#print axioms ELpp.rangeLinkEnum_length
+#print axioms ELpp.reflEnum_length
+#print axioms ELpp.selfEnum_length
+#print axioms ELpp.boundedAtomSet_length
+#print axioms ELpp.boundedAtomSet_polynomial
+#print axioms ELpp.sat_named_atom_in_bound
+#print axioms ELpp.sat_named_atom_cardinality_bound
+#print axioms ELpp.sat_closure_total_polynomial_bound
+
+-- ============================================================
+-- Saturation — saturation termination theorem: a polynomial-size
+--              list contains exactly the Sat-derivable named atoms
+--              over Sub(O).  Stratified-depth corollary via
+--              Sat_iff_SatAt.  Cut elimination as the canonical
+--              syntactic sharpening is documented as follow-on.
+-- ============================================================
+#print axioms ELpp.derivableClosure_length
+#print axioms ELpp.derivableClosure_sound
+#print axioms ELpp.derivableClosure_complete
+#print axioms ELpp.saturation_terminates
+#print axioms ELpp.sat_iff_in_derivableClosure
+#print axioms ELpp.bounded_sat_depth
+#print axioms ELpp.mem_derivableClosure_iff
+#print axioms ELpp.sat_polynomial_decidable
 
 end ELKSDD

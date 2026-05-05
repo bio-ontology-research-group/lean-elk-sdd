@@ -40,5 +40,6 @@ import ELKSDD.DISPONTE
 import ELKSDD.Complexity
 import ELKSDD.SatComplexity
 import ELKSDD.Stratified
+import ELKSDD.Saturation
 import ELKSDD.SCC
 import ELKSDD.SDD
