@@ -154,17 +154,21 @@ namespace ELKSDD
 
 -- ============================================================
 -- SCC — Layer 6: signature-based factorization of the closure.
---       The novel SCC compositionality theorem in two parts:
+--       The novel SCC compositionality theorem, full IFF form:
 --
---         (a) easy direction: Sat O₁ ⊆ Sat (O₁ ++ O₂)
---             (Sat is monotone in the ontology — proved here)
---         (b) hard direction: Sat (O₁ ++ O₂) factors when
---             signatures are disjoint
---             (statement+proof-sketch documented; full disjoint-
---             domain construction in next increment)
+--         Sat (O₁ ++ O₂) C D  ↔  Sat O₁ C D ∨ Sat O₂ ⊤ ⊥
+--
+--       under DisjointSigs O₁ O₂ and ConceptInSig O₁ C/D.
+--
+--       Both directions PROVED:
+--         (mp)  monotonicity + global-inconsistency propagation
+--         (mpr) product-interpretation construction over
+--               α × CanonDom O₂, with eval-invariance lemmas
+--               for both signatures.  Holds for full OWL 2 EL
+--               (= EL_⊥^+); no ⊤- or ⊥-side restrictions.
 --
 --       Auxiliary: signature predicates, sub-ontology relation,
---       axiom-membership-implies-signature lemma.
+--       axiom-membership-implies-signature lemma, prodInterp.
 -- ============================================================
 #print axioms SCC.Subontology.refl
 #print axioms SCC.Subontology.append_left
@@ -187,6 +191,30 @@ namespace ELKSDD
 #print axioms SCC.gci_in_O₁_atoms_implies_in_O₁
 #print axioms SCC.global_inconsistency_propagates
 #print axioms SCC.Sat_factor_refined_mp
+-- Hard-direction infrastructure
+#print axioms SCC.ConceptInSig.atom_mem
+#print axioms SCC.ConceptInSig.conj_left
+#print axioms SCC.ConceptInSig.conj_right
+#print axioms SCC.ConceptInSig.exist_role
+#print axioms SCC.ConceptInSig.exist_inner
+#print axioms SCC.prodInterp_atom_O₁
+#print axioms SCC.prodInterp_atom_not_O₁
+#print axioms SCC.prodInterp_role_O₁
+#print axioms SCC.prodInterp_role_not_O₁
+#print axioms SCC.eval_prodInterp_O₁
+#print axioms SCC.eval_prodInterp_O₂
+#print axioms SCC.ConceptInSig_of_AxiomInSig_gci
+#print axioms SCC.rinc_role_left_in_sig
+#print axioms SCC.rinc_role_right_in_sig
+#print axioms SCC.rchain_role₁_in_sig
+#print axioms SCC.rchain_role₂_in_sig
+#print axioms SCC.rchain_role₃_in_sig
+#print axioms SCC.prodInterp_satisfies_O₁_axiom
+#print axioms SCC.prodInterp_satisfies_O₂_axiom
+#print axioms SCC.prodInterp_satisfies
+-- Hard-direction theorem (mpr) and full IFF form
+#print axioms SCC.Sat_factor_refined_mpr
+#print axioms SCC.Sat_factor_refined
 
 -- ============================================================
 -- SDD — BDD with linear-time WMC + Shannon-expansion compile
