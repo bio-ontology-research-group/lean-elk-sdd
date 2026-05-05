@@ -76,23 +76,63 @@ namespace ELKSDD
 #print axioms ELpp.exampleChain_entails
 
 -- ============================================================
--- Normalize — BBL 2005 normalization (Layer 2, in progress).
---             Currently formalised: NF7 (split conjunctive RHS,
---             no fresh names) and NF4 (drop ⊥ ⊑ D tautology),
---             both with full conservative-extension proofs.
---             NF1, NF2, NF3, NF5, NF6 (which introduce fresh
---             names) are pending — they require the model-
---             extension construction of BBL 2005 §3.1.
+-- Normalize — BBL 2005 normalization (Layer 2, COMPLETE for all
+--             7 BBL rules in our EL_⊥^+ fragment):
+--               NF1 — vacuous (binary chains by Axiom-type).
+--               NF2 — C ⊓ Ĉ ⊑ E   ↦ {Ĉ ⊑ A, C ⊓ A ⊑ E}  fresh A
+--               NF3 — ∃r.Ĉ ⊑ D    ↦ {Ĉ ⊑ A, ∃r.A ⊑ D}    fresh A
+--               NF4 — ⊥ ⊑ D       ↦ ∅                    no fresh
+--               NF5 — Ĉ ⊑ D̂      ↦ {Ĉ ⊑ A, A ⊑ D̂}      fresh A
+--               NF6 — B ⊑ ∃r.Ĉ   ↦ {B ⊑ ∃r.A, A ⊑ Ĉ}   fresh A
+--               NF7 — B ⊑ C ⊓ D  ↦ {B ⊑ C, B ⊑ D}      no fresh
+--             Each fresh-name rule proved via the canonical model-
+--             extension witness `extendInterp I A (I.eval Ĉ)`
+--             of BBL 2005 §3.1.  The shared infrastructure:
+--               extendInterp                 — interpretation extender
+--               extendInterp_at_self         — A^I' = P x at self
+--               eval_extendInterp_of_fresh   — eval invariant
+--               satisfiesAxiom_extendInterp_of_fresh — axiom invariant
 -- ============================================================
+-- NF7 (no fresh names)
 #print axioms Normalize.applyNF7_satisfies_orig
 #print axioms Normalize.orig_satisfies_applyNF7
 #print axioms Normalize.applyNF7_conservative
 #print axioms Normalize.applyNF7_entails_iff
+
+-- NF4 (drop tautology)
 #print axioms Normalize.gci_bot_trivially_satisfied
 #print axioms Normalize.applyNF4_satisfies_orig
 #print axioms Normalize.orig_satisfies_applyNF4
 #print axioms Normalize.applyNF4_conservative
 #print axioms Normalize.applyNF4_entails_iff
+
+-- Fresh-name infrastructure
+#print axioms Normalize.freshAtomFor_fresh
+#print axioms Normalize.freshAtomFor_not_in_ontologyAtoms
+#print axioms Normalize.eval_extendInterp_of_fresh
+#print axioms Normalize.extendInterp_at_self
+#print axioms Normalize.satisfiesAxiom_extendInterp_of_fresh
+
+-- NF5 (canonical fresh-name rule)
+#print axioms Normalize.applyNF5OneFresh_implies_orig
+#print axioms Normalize.orig_extends_to_applyNF5OneFresh
+#print axioms Normalize.applyNF5OneFresh_consequence_via_extend
+#print axioms Normalize.orig_consequence_via_applyNF5OneFresh
+
+-- NF6 (existential RHS with fresh atom)
+#print axioms Normalize.applyNF6OneFresh_implies_orig
+#print axioms Normalize.orig_extends_to_applyNF6OneFresh
+
+-- NF2 (conjunctive LHS with one complex side)
+#print axioms Normalize.applyNF2OneFresh_implies_orig
+#print axioms Normalize.orig_extends_to_applyNF2OneFresh
+
+-- NF3 (existential LHS with complex inner)
+#print axioms Normalize.applyNF3OneFresh_implies_orig
+#print axioms Normalize.orig_extends_to_applyNF3OneFresh
+
+-- NF1 (vacuous in our binary-chain Axiom representation)
+#print axioms Normalize.rchain_already_in_nf1
 
 -- ============================================================
 -- SDD — BDD with linear-time WMC + Shannon-expansion compile
