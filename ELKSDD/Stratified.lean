@@ -135,6 +135,8 @@ inductive SatAt (O : Ontology) : Nat → Concept → Concept → Prop where
   | rinc_self_star : ∀ {k C R S},
       SatAt O k C (.self R) → RincAncestor O R S →
       SatAt O (k+1) C (.self S)
+  | nom_symm : ∀ {k i j},
+      SatAt O k (.nom i) (.nom j) → SatAt O (k+1) (.nom j) (.nom i)
 
 -- ============================================================
 -- 2. Depth monotonicity
@@ -239,6 +241,9 @@ theorem Sat_to_SatAt {O : Ontology} {C D : Concept}
   | rinc_self_star _ hAnc ih =>
       obtain ⟨k, h⟩ := ih
       exact ⟨k+1, SatAt.rinc_self_star h hAnc⟩
+  | nom_symm _ ih =>
+      obtain ⟨k, h⟩ := ih
+      exact ⟨k+1, SatAt.nom_symm h⟩
 
 -- ============================================================
 -- 4. Backward: SatAt ⊆ Sat
@@ -271,6 +276,7 @@ theorem SatAt_to_Sat {O : Ontology} : ∀ {k C D},
   | self_range _ hax ih => exact Sat.self_range ih hax
   | range_via_rincStar _ hAnc hRange ih => exact Sat.range_via_rincStar ih hAnc hRange
   | rinc_self_star _ hAnc ih => exact Sat.rinc_self_star ih hAnc
+  | nom_symm _ ih => exact Sat.nom_symm ih
 
 -- ============================================================
 -- 5. The equivalence — Layer 5 main theorem

@@ -33,6 +33,7 @@ import ELKSDD.EL
 import ELKSDD.ELpp
 import ELKSDD.Normalize
 import ELKSDD.RangeNorm
+import ELKSDD.Merging
 import ELKSDD.Stratified
 import ELKSDD.SCC
 import ELKSDD.SDD

@@ -137,6 +137,7 @@ theorem Sat_mono {O₁ O₂ : Ontology} (hsub : Subontology O₁ O₂)
       exact Sat.range_via_rincStar ih (RincAncestor_mono hsub hAnc) (hsub _ hRange)
   | rinc_self_star _ hAnc ih =>
       exact Sat.rinc_self_star ih (RincAncestor_mono hsub hAnc)
+  | nom_symm _ ih => exact Sat.nom_symm ih
 
 /-- Concrete corollary: appending O₂ to O₁ preserves Sat-derivability. -/
 theorem Sat_mono_append_left {O₁ : Ontology} (O₂ : Ontology)

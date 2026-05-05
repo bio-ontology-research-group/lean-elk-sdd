@@ -280,6 +280,21 @@ inductive Sat (O : Ontology) : Concept → Concept → Prop where
       rinc-chain, `S(c, c)`.  So `c ∈ Self(S)`. -/
   | rinc_self_star : ∀ {C R S},
       Sat O C (.self R) → RincAncestor O R S → Sat O C (.self S)
+  /-- **Nominal symmetry**.  Subsumption between two nominals is
+      symmetric: `Sat O (.nom i) (.nom j) → Sat O (.nom j) (.nom i)`.
+
+      Soundness: `Entails O (.nom i) (.nom j)` says every model
+      satisfies `(nom i)^I ⊆ (nom j)^I`, i.e., `{a_i^I} ⊆ {a_j^I}`,
+      i.e., `a_i^I = a_j^I`.  Equality is symmetric, so
+      `a_j^I = a_i^I` ⇒ `(nom j)^I ⊆ (nom i)^I` ⇒ `Entails O (.nom j) (.nom i)`.
+
+      This rule is essential for the merging-quotient canonical model
+      (Kazakov 2014 §6) used to handle nominal-RHS GCIs (shapes 2 and 4
+      in `ELKSDD.Merging`).  Without it, the nominal-equivalence
+      relation `Sat O (.nom i) (.nom j)` is not provably symmetric in
+      the calculus, so it does not form a Setoid. -/
+  | nom_symm : ∀ {i j},
+      Sat O (.nom i) (.nom j) → Sat O (.nom j) (.nom i)
 
 -- ============================================================
 -- 3. Soundness of the calculus
@@ -374,6 +389,18 @@ theorem sound (O : Ontology) {C D : Concept} (h : Sat O C D) :
       have hRxx : I.ext_role _ x x := ih I hO x hx
       -- Transport the R-self-loop to an S-self-loop.
       exact ext_role_rincStar hO hAnc hRxx
+  | @nom_symm i j _ ih =>
+      intro α I hO x hx
+      -- hx : I.eval (.nom j) x, i.e., x = I.indiv j.
+      -- ih : ∀ y. I.eval (.nom i) y → I.eval (.nom j) y, i.e.,
+      --        y = I.indiv i → y = I.indiv j.
+      -- Apply ih on y = I.indiv i (using rfl) to get I.indiv i = I.indiv j.
+      -- Goal: I.eval (.nom i) x, i.e., x = I.indiv i.
+      have hii : I.eval (.nom i) (I.indiv i) := show I.indiv i = I.indiv i from rfl
+      have hij : I.indiv i = I.indiv j := ih I hO _ hii
+      show x = I.indiv i
+      have hxj : x = I.indiv j := hx
+      exact hxj.trans hij.symm
 
 -- ============================================================
 -- 4. Canonical (term) model — ELK 2014 Definition 2
