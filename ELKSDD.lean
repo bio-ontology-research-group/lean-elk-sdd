@@ -37,6 +37,7 @@ import ELKSDD.Merging
 import ELKSDD.OWL2EL
 import ELKSDD.ELKBoundary
 import ELKSDD.DISPONTE
+import ELKSDD.Complexity
 import ELKSDD.Stratified
 import ELKSDD.SCC
 import ELKSDD.SDD
