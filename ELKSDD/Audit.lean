@@ -14,6 +14,7 @@ import ELKSDD.Util
 import ELKSDD.MiniEL
 import ELKSDD.EL
 import ELKSDD.ELpp
+import ELKSDD.Normalize
 import ELKSDD.SDD
 
 namespace ELKSDD
@@ -73,6 +74,25 @@ namespace ELKSDD
 #print axioms ELpp.exampleRH_entails
 #print axioms ELpp.exampleChain_sat
 #print axioms ELpp.exampleChain_entails
+
+-- ============================================================
+-- Normalize — BBL 2005 normalization (Layer 2, in progress).
+--             Currently formalised: NF7 (split conjunctive RHS,
+--             no fresh names) and NF4 (drop ⊥ ⊑ D tautology),
+--             both with full conservative-extension proofs.
+--             NF1, NF2, NF3, NF5, NF6 (which introduce fresh
+--             names) are pending — they require the model-
+--             extension construction of BBL 2005 §3.1.
+-- ============================================================
+#print axioms Normalize.applyNF7_satisfies_orig
+#print axioms Normalize.orig_satisfies_applyNF7
+#print axioms Normalize.applyNF7_conservative
+#print axioms Normalize.applyNF7_entails_iff
+#print axioms Normalize.gci_bot_trivially_satisfied
+#print axioms Normalize.applyNF4_satisfies_orig
+#print axioms Normalize.orig_satisfies_applyNF4
+#print axioms Normalize.applyNF4_conservative
+#print axioms Normalize.applyNF4_entails_iff
 
 -- ============================================================
 -- SDD — BDD with linear-time WMC + Shannon-expansion compile

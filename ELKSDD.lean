@@ -31,4 +31,5 @@ import ELKSDD.Util
 import ELKSDD.MiniEL
 import ELKSDD.EL
 import ELKSDD.ELpp
+import ELKSDD.Normalize
 import ELKSDD.SDD
