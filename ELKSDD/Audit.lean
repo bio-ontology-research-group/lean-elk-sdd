@@ -13,6 +13,7 @@
 import ELKSDD.Util
 import ELKSDD.MiniEL
 import ELKSDD.EL
+import ELKSDD.ELpp
 import ELKSDD.SDD
 
 namespace ELKSDD
@@ -52,6 +53,26 @@ namespace ELKSDD
 #print axioms EL.cyclicO_unbounded_sat
 #print axioms EL.nestedExist_atom_inj
 #print axioms EL.example_entails
+
+-- ============================================================
+-- ELpp — full EL_⊥^+ (= EL++ minus nominals/concrete domains):
+--        EL with role inclusions R ⊑ S and role chains R₁ ∘ R₂ ⊑ S.
+--        ELK 2014 calculus end-to-end (sound + complete via the
+--        canonical-model construction of ELK 2014 §3.3).
+-- Expected axiom surface: propext, Classical.choice, Quot.sound
+-- (Lean foundation axioms only).
+-- ============================================================
+#print axioms ELpp.sound
+#print axioms ELpp.canon_eval
+#print axioms ELpp.canon_satisfies
+#print axioms ELpp.complete_via_canon
+#print axioms ELpp.sound_atomSub
+#print axioms ELpp.complete_atomSub
+#print axioms ELpp.correct_atomSub
+#print axioms ELpp.exampleRH_sat
+#print axioms ELpp.exampleRH_entails
+#print axioms ELpp.exampleChain_sat
+#print axioms ELpp.exampleChain_entails
 
 -- ============================================================
 -- SDD — BDD with linear-time WMC + Shannon-expansion compile
