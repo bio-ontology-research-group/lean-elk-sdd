@@ -136,7 +136,7 @@ foundation axiom, not a project-specific admit.
 These modules were extracted from the Lean proof skeleton
 accompanying the Moose paper (KAUST Bio-Ontology Research Group)
 and generalised for reuse. The Moose paper's domain-specific
-machinery (concept-instance Boolean atoms, Γ_EL/Φ_CWA extractors,
+machinery (concept-instance Boolean atoms, Γ_EL/Φ_clos extractors,
 ABox individuals) is not included here — only the parts that are
 generic enough to plug into other projects.
 
