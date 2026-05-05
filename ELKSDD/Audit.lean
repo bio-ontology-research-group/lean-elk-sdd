@@ -23,6 +23,7 @@ import ELKSDD.DISPONTE
 import ELKSDD.Complexity
 import ELKSDD.SatComplexity
 import ELKSDD.Saturation
+import ELKSDD.Compilation
 import ELKSDD.Stratified
 import ELKSDD.SCC
 import ELKSDD.SDD
@@ -387,5 +388,23 @@ namespace ELKSDD
 #print axioms ELpp.bounded_sat_depth
 #print axioms ELpp.mem_derivableClosure_iff
 #print axioms ELpp.sat_polynomial_decidable
+
+-- ============================================================
+-- Compilation — verified ELK→SDD compilation.  compileSat O C D
+--               is a Shannon-expanded Tree (DispAtom O) such that
+--               model t M ↔ Sat (selectedAxioms O M) C D for every
+--               world M.  Closes the SDDEncodesQuery hypothesis;
+--               the conditional DISPONTE correspondence reduces
+--               disponte_eq_wmc_of_correctness to the standard
+--               SDD WMC sum-form identity (h_wmc_form, follow-on).
+-- ============================================================
+#print axioms ELpp.compileSatAux_correct
+#print axioms ELpp.compileSat_correct
+#print axioms ELpp.exists_sdd_encoding
+#print axioms ELpp.compileSatAux_size_bound
+#print axioms ELpp.compileSat_size_bound
+#print axioms ELpp.compileSat_models_iff_sat
+#print axioms ELpp.compileSat_disponte_eq_of_wmc_form
+#print axioms ELpp.disponte_eq_wmc_via_compileSat
 
 end ELKSDD
