@@ -829,13 +829,14 @@ theorem prodInterp_satisfies_O₁_axiom {α : Type} (O₁ O₂ : Ontology) (I₁
 
 theorem prodInterp_satisfies_O₂_axiom {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp α)
     (default₂ : CanonDom O₂)
-    (hO₂_nf : OntologyNominalFree O₂)
+    (hO₂_nf : OntologyNominalFree O₂) (hO₂_safe : RangeChainSafe O₂)
     (hdisj : DisjointSigs O₁ O₂)
     {ax : Axiom} (hax : ax ∈ O₂) :
     (prodInterp O₁ O₂ I₁ default₂).satisfiesAxiom ax := by
   have hax_sig : AxiomInSig O₂ ax := axiom_in_self_sig hax
   have hax_nf : AxiomNominalFree ax := hO₂_nf ax hax
-  have hcanon : (canon O₂ default₂).satisfies O₂ := canon_satisfies O₂ default₂ hO₂_nf
+  have hcanon : (canon O₂ default₂).satisfies O₂ :=
+    canon_satisfies O₂ default₂ hO₂_nf hO₂_safe
   cases ax with
   | gci C D =>
       intro p hC
@@ -913,12 +914,13 @@ theorem prodInterp_satisfies_O₂_axiom {α : Type} (O₁ O₂ : Ontology) (I₁
 theorem prodInterp_satisfies {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp α)
     (default₂ : CanonDom O₂)
     (hO₁_nf : OntologyNominalFree O₁) (hO₂_nf : OntologyNominalFree O₂)
+    (hO₂_safe : RangeChainSafe O₂)
     (hI₁ : I₁.satisfies O₁) (hdisj : DisjointSigs O₁ O₂) :
     (prodInterp O₁ O₂ I₁ default₂).satisfies (O₁ ++ O₂) := by
   intro ax hax
   rcases List.mem_append.mp hax with h | h
   · exact prodInterp_satisfies_O₁_axiom O₁ O₂ I₁ default₂ hO₁_nf hI₁ h
-  · exact prodInterp_satisfies_O₂_axiom O₁ O₂ I₁ default₂ hO₂_nf hdisj h
+  · exact prodInterp_satisfies_O₂_axiom O₁ O₂ I₁ default₂ hO₂_nf hO₂_safe hdisj h
 
 -- ----------------------------------------------------------------
 -- 9.9  Hard direction (mpr) of the refined factorization
@@ -952,6 +954,7 @@ theorem prodInterp_satisfies {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp �
     by `eval_prodInterp_O₁` at D, we descend to I₁.eval D a. -/
 theorem Sat_factor_refined_mpr {O₁ O₂ : Ontology}
     (hO₁_nf : OntologyNominalFree O₁) (hO₂_nf : OntologyNominalFree O₂)
+    (hO₁_safe : RangeChainSafe O₁) (hO₂_safe : RangeChainSafe O₂)
     (hdisj : DisjointSigs O₁ O₂)
     {C D : Concept} (hC_nf : NominalFree C) (hD_nf : NominalFree D)
     (hC : ConceptInSig O₁ C) (hD : ConceptInSig O₁ D)
@@ -960,12 +963,12 @@ theorem Sat_factor_refined_mpr {O₁ O₂ : Ontology}
   classical
   by_cases hcons : Sat O₂ .top .bot
   · exact Or.inr hcons
-  · refine Or.inl (complete_via_canon O₁ C D hO₁_nf hC_nf hD_nf ?_)
+  · refine Or.inl (complete_via_canon O₁ C D hO₁_nf hO₁_safe hC_nf hD_nf ?_)
     intro α I₁ hI₁ a ha
     let b₀ : CanonDom O₂ := ⟨.top, hcons⟩
     let M' : Interp (α × CanonDom O₂) := prodInterp O₁ O₂ I₁ b₀
     have hM' : M'.satisfies (O₁ ++ O₂) :=
-      prodInterp_satisfies O₁ O₂ I₁ b₀ hO₁_nf hO₂_nf hI₁ hdisj
+      prodInterp_satisfies O₁ O₂ I₁ b₀ hO₁_nf hO₂_nf hO₂_safe hI₁ hdisj
     have hentail : Entails (O₁ ++ O₂) C D := sound _ h
     have hCab : M'.eval C ⟨a, b₀⟩ :=
       (eval_prodInterp_O₁ O₁ O₂ I₁ b₀ C hC_nf hC a b₀).mpr ha
@@ -1001,11 +1004,12 @@ theorem Sat_factor_refined_mpr {O₁ O₂ : Ontology}
     correctness for nominal axioms is future work. -/
 theorem Sat_factor_refined {O₁ O₂ : Ontology}
     (hO₁_nf : OntologyNominalFree O₁) (hO₂_nf : OntologyNominalFree O₂)
+    (hO₁_safe : RangeChainSafe O₁) (hO₂_safe : RangeChainSafe O₂)
     (hdisj : DisjointSigs O₁ O₂)
     {C D : Concept} (hC_nf : NominalFree C) (hD_nf : NominalFree D)
     (hC : ConceptInSig O₁ C) (hD : ConceptInSig O₁ D) :
     Sat (O₁ ++ O₂) C D ↔ Sat O₁ C D ∨ Sat O₂ .top .bot :=
-  ⟨Sat_factor_refined_mpr hO₁_nf hO₂_nf hdisj hC_nf hD_nf hC hD,
+  ⟨Sat_factor_refined_mpr hO₁_nf hO₂_nf hO₁_safe hO₂_safe hdisj hC_nf hD_nf hC hD,
    Sat_factor_refined_mp⟩
 
 -- ============================================================

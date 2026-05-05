@@ -64,7 +64,10 @@ namespace ELKSDD
 --        ELK 2014 calculus end-to-end (sound + complete via the
 --        canonical-model construction of ELK 2014 §3.3).
 -- Expected axiom surface: propext, Classical.choice, Quot.sound
--- (Lean foundation axioms only).
+-- (Lean foundation axioms only) — sorry-free across this entire
+-- module (range and chain are gated together via RangeChainSafe
+-- on the completeness theorems; the strict variants exclude range
+-- entirely and remain unconditionally sorry-free).
 -- ============================================================
 #print axioms ELpp.sound
 #print axioms ELpp.canon_eval
