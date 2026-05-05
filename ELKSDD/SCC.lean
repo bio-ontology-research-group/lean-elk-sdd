@@ -120,6 +120,9 @@ theorem Sat_mono {O₁ O₂ : Ontology} (hsub : Subontology O₁ O₂)
   | rinc_apply _ hax ih => exact Sat.rinc_apply ih (hsub _ hax)
   | rchain_apply _ _ hax ihCR1 ihDR2 =>
       exact Sat.rchain_apply ihCR1 ihDR2 (hsub _ hax)
+  | range_apply _ hax ih => exact Sat.range_apply ih (hsub _ hax)
+  | reflexive_apply hax => exact Sat.reflexive_apply (hsub _ hax)
+  | self_intro _ ih => exact Sat.self_intro ih
 
 /-- Concrete corollary: appending O₂ to O₁ preserves Sat-derivability. -/
 theorem Sat_mono_append_left {O₁ : Ontology} (O₂ : Ontology)
@@ -585,6 +588,7 @@ theorem eval_prodInterp_O₁ {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp �
       have hn : n ∈ ontologyAtoms O₁ := hE.atom_mem
       exact prodInterp_atom_O₁ O₁ O₂ I₁ default₂ hn a b
   | nom i => intro hnf _ _ _; exact hnf.elim
+  | self R => intro hnf _ _ _; exact hnf.elim
   | top => intro _ _ _ _; exact Iff.rfl
   | bot => intro _ _ _ _; exact Iff.rfl
   | conj A B ihA ihB =>
@@ -630,6 +634,7 @@ theorem eval_prodInterp_O₂ {α : Type} (O₁ O₂ : Ontology) (I₁ : Interp �
       have hn_not_O₁ : n ∉ ontologyAtoms O₁ := fun h₁ => hdisj.1 n h₁ hn_O₂
       exact prodInterp_atom_not_O₁ O₁ O₂ I₁ default₂ hn_not_O₁ a b
   | nom i => intro hnf _ _ _; exact hnf.elim
+  | self R => intro hnf _ _ _; exact hnf.elim
   | top => intro _ _ _ _; exact Iff.rfl
   | bot => intro _ _ _ _; exact Iff.rfl
   | conj A B ihA ihB =>
@@ -755,6 +760,9 @@ theorem prodInterp_satisfies_O₁_axiom {α : Type} (O₁ O₂ : Ontology) (I₁
       have hS_aa'' : I₁.ext_role S a a'' := hI₁ _ hax a a' a'' hR₁_aa' hR₂_a'a''
       rw [prodInterp_role_O₁ O₁ O₂ I₁ default₂ hS_O₁ a a'' b b'']
       exact ⟨hS_aa'', hb_eq_b'.trans hb'_eq_b''⟩
+  | range _ _ => exact hax_nf.elim
+  | reflexive _ => exact hax_nf.elim
+  | hasKey _ _ => exact hax_nf.elim
 
 -- ----------------------------------------------------------------
 -- 9.7  prodInterp satisfies axioms in O₂ (uses canon O₂ ⊨ O₂ + P3)
@@ -812,6 +820,9 @@ theorem prodInterp_satisfies_O₂_axiom {α : Type} (O₁ O₂ : Ontology) (I₁
         hcanon _ hax b b' b'' hR₁canon hR₂canon
       rw [prodInterp_role_not_O₁ O₁ O₂ I₁ default₂ hS_not_O₁ a a'' b b'']
       exact ⟨ha_eq_a'.trans ha'_eq_a'', hScanon⟩
+  | range _ _ => exact hax_nf.elim
+  | reflexive _ => exact hax_nf.elim
+  | hasKey _ _ => exact hax_nf.elim
 
 -- ----------------------------------------------------------------
 -- 9.8  prodInterp ⊨ O₁ ++ O₂ (P1)

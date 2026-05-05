@@ -117,6 +117,13 @@ inductive SatAt (O : Ontology) : Nat → Concept → Concept → Prop where
   | rchain_apply : ∀ {k C R₁ R₂ S D E},
       SatAt O k C (.exist R₁ D) → SatAt O k D (.exist R₂ E) →
       Axiom.rchain R₁ R₂ S ∈ O → SatAt O (k+1) C (.exist S E)
+  | range_apply : ∀ {k C R D E},
+      SatAt O k C (.exist R D) → Axiom.range R E ∈ O →
+        SatAt O (k+1) C (.exist R (.conj D E))
+  | reflexive_apply : ∀ {k C R},
+      Axiom.reflexive R ∈ O → SatAt O (k+1) C (.exist R C)
+  | self_intro : ∀ {k C R},
+      SatAt O k C (.self R) → SatAt O (k+1) C (.exist R C)
 
 -- ============================================================
 -- 2. Depth monotonicity
@@ -202,6 +209,14 @@ theorem Sat_to_SatAt {O : Ontology} {C D : Concept}
                (SatAt_mono hCR1 (Nat.le_max_left _ _))
                (SatAt_mono hDR2 (Nat.le_max_right _ _))
                hax⟩
+  | range_apply _ hax ih =>
+      obtain ⟨k, h⟩ := ih
+      exact ⟨k+1, SatAt.range_apply h hax⟩
+  | reflexive_apply hax =>
+      exact ⟨1, SatAt.reflexive_apply hax⟩
+  | self_intro _ ih =>
+      obtain ⟨k, h⟩ := ih
+      exact ⟨k+1, SatAt.self_intro h⟩
 
 -- ============================================================
 -- 4. Backward: SatAt ⊆ Sat
@@ -227,6 +242,9 @@ theorem SatAt_to_Sat {O : Ontology} : ∀ {k C D},
   | exist_bot _ _ ihCRD ihDbot => exact Sat.exist_bot ihCRD ihDbot
   | rinc_apply _ hax ih => exact Sat.rinc_apply ih hax
   | rchain_apply _ _ hax ihCR1 ihDR2 => exact Sat.rchain_apply ihCR1 ihDR2 hax
+  | range_apply _ hax ih => exact Sat.range_apply ih hax
+  | reflexive_apply hax => exact Sat.reflexive_apply hax
+  | self_intro _ ih => exact Sat.self_intro ih
 
 -- ============================================================
 -- 5. The equivalence — Layer 5 main theorem

@@ -83,6 +83,7 @@ instance (C : Concept) : Decidable (BasicConcept C) := by
   cases C with
   | atom n => exact isTrue (BasicConcept.atom n)
   | nom _ => exact isFalse (by intro h; cases h)
+  | self _ => exact isFalse (by intro h; cases h)
   | top    => exact isTrue BasicConcept.top
   | bot    => exact isTrue BasicConcept.bot
   | conj _ _ => exact isFalse (by intro h; cases h)
@@ -119,6 +120,9 @@ def IsNormalAxiom : Axiom → Prop
   | .gci C D => IsNormalGCI C D
   | .rinc _ _ => True
   | .rchain _ _ _ => True
+  | .range _ _ => True
+  | .reflexive _ => True
+  | .hasKey _ _ => True
 
 /-- An ontology is *normal* iff every one of its axioms is
     in normal form. -/
@@ -182,6 +186,8 @@ theorem applyNF7_satisfies_orig {α : Type} (I : Interp α) (O : Ontology)
           exact hN' _ (by simp [applyNF7One])
       | nom i =>
           exact hN' _ (by simp [applyNF7One])
+      | self R =>
+          exact hN' _ (by simp [applyNF7One])
       | top =>
           exact hN' _ (by simp [applyNF7One])
       | bot =>
@@ -191,6 +197,12 @@ theorem applyNF7_satisfies_orig {α : Type} (I : Interp α) (O : Ontology)
   | rinc R S =>
       exact hN' _ (by simp [applyNF7One])
   | rchain R₁ R₂ S =>
+      exact hN' _ (by simp [applyNF7One])
+  | range R C =>
+      exact hN' _ (by simp [applyNF7One])
+  | reflexive R =>
+      exact hN' _ (by simp [applyNF7One])
+  | hasKey C rs =>
       exact hN' _ (by simp [applyNF7One])
 
 /-- Backward direction (also easy for NF7): every interpretation
@@ -232,6 +244,12 @@ theorem orig_satisfies_applyNF7 {α : Type} (I : Interp α) (O : Ontology)
             simp [applyNF7One] at hax'_in_one
             exact hax'_in_one
           rw [this]; exact hOax
+      | self R =>
+          have hOax : I.satisfiesAxiom (.gci C₀ (.self R)) := hO _ hax_in_O
+          have : ax' = .gci C₀ (.self R) := by
+            simp [applyNF7One] at hax'_in_one
+            exact hax'_in_one
+          rw [this]; exact hOax
       | top =>
           have hOax : I.satisfiesAxiom (.gci C₀ .top) := hO _ hax_in_O
           have : ax' = .gci C₀ .top := by
@@ -259,6 +277,24 @@ theorem orig_satisfies_applyNF7 {α : Type} (I : Interp α) (O : Ontology)
   | rchain R₁ R₂ S =>
       have hOax : I.satisfiesAxiom (.rchain R₁ R₂ S) := hO _ hax_in_O
       have : ax' = .rchain R₁ R₂ S := by
+        simp [applyNF7One] at hax'_in_one
+        exact hax'_in_one
+      rw [this]; exact hOax
+  | range R C =>
+      have hOax : I.satisfiesAxiom (.range R C) := hO _ hax_in_O
+      have : ax' = .range R C := by
+        simp [applyNF7One] at hax'_in_one
+        exact hax'_in_one
+      rw [this]; exact hOax
+  | reflexive R =>
+      have hOax : I.satisfiesAxiom (.reflexive R) := hO _ hax_in_O
+      have : ax' = .reflexive R := by
+        simp [applyNF7One] at hax'_in_one
+        exact hax'_in_one
+      rw [this]; exact hOax
+  | hasKey C rs =>
+      have hOax : I.satisfiesAxiom (.hasKey C rs) := hO _ hax_in_O
+      have : ax' = .hasKey C rs := by
         simp [applyNF7One] at hax'_in_one
         exact hax'_in_one
       rw [this]; exact hOax
@@ -324,6 +360,11 @@ theorem applyNF4_satisfies_orig {α : Type} (I : Interp α) (O : Ontology)
           unfold applyNF4
           simp only [List.mem_filter]
           exact ⟨hax, by decide⟩
+      | self R =>
+          apply hN
+          unfold applyNF4
+          simp only [List.mem_filter]
+          exact ⟨hax, by decide⟩
       | top =>
           apply hN
           unfold applyNF4
@@ -345,6 +386,21 @@ theorem applyNF4_satisfies_orig {α : Type} (I : Interp α) (O : Ontology)
       simp only [List.mem_filter]
       exact ⟨hax, by decide⟩
   | rchain R₁ R₂ S =>
+      apply hN
+      unfold applyNF4
+      simp only [List.mem_filter]
+      exact ⟨hax, by decide⟩
+  | range R C =>
+      apply hN
+      unfold applyNF4
+      simp only [List.mem_filter]
+      exact ⟨hax, by decide⟩
+  | reflexive R =>
+      apply hN
+      unfold applyNF4
+      simp only [List.mem_filter]
+      exact ⟨hax, by decide⟩
+  | hasKey C rs =>
       apply hN
       unfold applyNF4
       simp only [List.mem_filter]
@@ -386,6 +442,7 @@ theorem applyNF4_entails_iff (O : Ontology) (C D : Concept) :
 def conceptAtoms : Concept → List Nat
   | .atom n     => [n]
   | .nom _      => []
+  | .self _     => []
   | .top        => []
   | .bot        => []
   | .conj A B   => conceptAtoms A ++ conceptAtoms B
@@ -396,6 +453,7 @@ def conceptAtoms : Concept → List Nat
 def conceptIndividuals : Concept → List Nat
   | .atom _     => []
   | .nom i      => [i]
+  | .self _     => []
   | .top        => []
   | .bot        => []
   | .conj A B   => conceptIndividuals A ++ conceptIndividuals B
@@ -406,6 +464,9 @@ def axiomIndividuals : Axiom → List Nat
   | .gci C D       => conceptIndividuals C ++ conceptIndividuals D
   | .rinc _ _      => []
   | .rchain _ _ _  => []
+  | .range _ C     => conceptIndividuals C
+  | .reflexive _   => []
+  | .hasKey C _    => conceptIndividuals C
 
 /-- Ontology individuals. -/
 def ontologyIndividuals (O : Ontology) : List Nat :=
@@ -416,6 +477,9 @@ def axiomAtoms : Axiom → List Nat
   | .gci C D       => conceptAtoms C ++ conceptAtoms D
   | .rinc _ _      => []
   | .rchain _ _ _  => []
+  | .range _ C     => conceptAtoms C
+  | .reflexive _   => []
+  | .hasKey C _    => conceptAtoms C
 
 /-- Ontology atoms: union (with multiplicity) of all axiom atom sets. -/
 def ontologyAtoms (O : Ontology) : List Nat :=
@@ -425,6 +489,7 @@ def ontologyAtoms (O : Ontology) : List Nat :=
 def conceptRoles : Concept → List Role
   | .atom _     => []
   | .nom _      => []
+  | .self R     => [R]
   | .top        => []
   | .bot        => []
   | .conj A B   => conceptRoles A ++ conceptRoles B
@@ -435,6 +500,9 @@ def axiomRoles : Axiom → List Role
   | .gci C D       => conceptRoles C ++ conceptRoles D
   | .rinc R S      => [R, S]
   | .rchain R S T  => [R, S, T]
+  | .range R C     => R :: conceptRoles C
+  | .reflexive R   => [R]
+  | .hasKey C rs   => conceptRoles C ++ rs
 
 /-- Ontology roles. -/
 def ontologyRoles (O : Ontology) : List Role :=
@@ -506,6 +574,9 @@ theorem eval_extendInterp_of_fresh {α : Type} (I : Interp α)
       rw [if_neg hne]
   | nom i =>
       intro x; exact Iff.rfl
+  | self R =>
+      intro x
+      simp only [Interp.eval, extendInterp]
   | top => intro x; exact Iff.rfl
   | bot => intro x; exact Iff.rfl
   | conj A B ihA ihB =>
@@ -553,6 +624,30 @@ theorem satisfiesAxiom_extendInterp_of_fresh {α : Type} (I : Interp α)
       simp only [Interp.satisfiesAxiom, extendInterp]
   | rchain R₁ R₂ S =>
       simp only [Interp.satisfiesAxiom, extendInterp]
+  | range R C =>
+      simp only [axiomAtoms] at hfresh
+      simp only [Interp.satisfiesAxiom, extendInterp]
+      constructor
+      · intro hsat x y hxy
+        exact (eval_extendInterp_of_fresh I n P C hfresh y).mpr (hsat x y hxy)
+      · intro hsat x y hxy
+        exact (eval_extendInterp_of_fresh I n P C hfresh y).mp (hsat x y hxy)
+  | reflexive R =>
+      simp only [Interp.satisfiesAxiom, extendInterp]
+  | hasKey C rs =>
+      simp only [axiomAtoms] at hfresh
+      simp only [Interp.satisfiesAxiom, extendInterp]
+      constructor
+      · intro hsat a b haC hbC hroles
+        apply hsat a b
+        · exact (eval_extendInterp_of_fresh I n P C hfresh _).mp haC
+        · exact (eval_extendInterp_of_fresh I n P C hfresh _).mp hbC
+        · exact hroles
+      · intro hsat a b haC hbC hroles
+        apply hsat a b
+        · exact (eval_extendInterp_of_fresh I n P C hfresh _).mpr haC
+        · exact (eval_extendInterp_of_fresh I n P C hfresh _).mpr hbC
+        · exact hroles
 
 -- ============================================================
 -- 8. NF5 rewrite — Ch ⊑ Dh → {Ch ⊑ A, A ⊑ Dh} — fresh atom
@@ -872,6 +967,7 @@ theorem applyNF7One_id_of_nonconj_gci (C₀ D : Concept)
   cases D with
   | atom n => rfl
   | nom i => rfl
+  | self R => rfl
   | top => rfl
   | bot => rfl
   | exist R E => rfl

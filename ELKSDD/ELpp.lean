@@ -53,6 +53,7 @@ namespace ELpp
 inductive Concept : Type where
   | atom  : Nat → Concept
   | nom   : Nat → Concept            -- nominal {a_n}, a_n indexed by Nat
+  | self  : Nat → Concept            -- ObjectHasSelf(R) — Self(R)
   | top   : Concept
   | bot   : Concept
   | conj  : Concept → Concept → Concept
@@ -62,19 +63,24 @@ inductive Concept : Type where
 /-- Role names: identified with `Nat`. -/
 abbrev Role : Type := Nat
 
-/-- EL_⊥^+ axioms.  Three kinds:
+/-- EL_⊥^+ axioms (extended for full OWL 2 EL minus datatypes):
 
-      gci    C D       — concept inclusion C ⊑ D
-      rinc   R S       — role inclusion R ⊑ S
-      rchain R₁ R₂ S   — role composition R₁ ∘ R₂ ⊑ S
-
-    (Domain restrictions, range restrictions, nominals, concrete
-    domains: not included in this layer; see Layer 2 for the
-    BBL 2008 range-restriction elimination.) -/
+      gci       C D        — concept inclusion C ⊑ D
+      rinc      R S        — role inclusion R ⊑ S
+      rchain    R₁ R₂ S    — role composition R₁ ∘ R₂ ⊑ S
+      range     R C        — ObjectPropertyRange(R, C):
+                             ∀x y. R(x, y) → y ∈ C
+      reflexive R          — ReflexiveObjectProperty(R):
+                             ∀x. R(x, x)
+      hasKey    C [R₁..Rₙ] — HasKey(C, R₁, …, Rₙ): named-individual
+                             merge condition. -/
 inductive Axiom : Type where
-  | gci    : Concept → Concept → Axiom
-  | rinc   : Role → Role → Axiom
-  | rchain : Role → Role → Role → Axiom
+  | gci       : Concept → Concept → Axiom
+  | rinc      : Role → Role → Axiom
+  | rchain    : Role → Role → Role → Axiom
+  | range     : Role → Concept → Axiom
+  | reflexive : Role → Axiom
+  | hasKey    : Concept → List Role → Axiom
   deriving DecidableEq
 
 /-- An EL_⊥^+ ontology is a list of axioms. -/
@@ -99,21 +105,38 @@ structure Interp (α : Type) where
 /-- Recursive concept evaluation.
 
     Nominals: `(nom i)^I = {indiv i}`, i.e., the singleton class
-    consisting of the individual `a_i^I`. -/
+    consisting of the individual `a_i^I`.
+
+    Self-restrictions: `(self R)^I = {x : R(x, x)}`, the set of
+    elements that are R-related to themselves. -/
 def Interp.eval {α : Type} (I : Interp α) : Concept → α → Prop
   | .atom n, x       => I.ext_concept n x
   | .nom i, x        => x = I.indiv i
+  | .self R, x       => I.ext_role R x x
   | .top, _          => True
   | .bot, _          => False
   | .conj A B, x     => I.eval A x ∧ I.eval B x
   | .exist R C, x    => ∃ y, I.ext_role R x y ∧ I.eval C y
 
-/-- Axiom satisfaction. -/
+/-- Axiom satisfaction.
+
+    For HasKey: OWL 2 EL semantics restricts the constraint to
+    *named individuals*; if a, b are named (i.e., interpreted via
+    `I.indiv`) and both lie in the key class, and they share named
+    R-targets for every key role, then they coincide.  -/
 def Interp.satisfiesAxiom {α : Type} (I : Interp α) : Axiom → Prop
   | .gci C D        => ∀ x, I.eval C x → I.eval D x
   | .rinc R S       => ∀ x y, I.ext_role R x y → I.ext_role S x y
   | .rchain R₁ R₂ S => ∀ x y z, I.ext_role R₁ x y → I.ext_role R₂ y z →
                                   I.ext_role S x z
+  | .range R C      => ∀ x y, I.ext_role R x y → I.eval C y
+  | .reflexive R    => ∀ x, I.ext_role R x x
+  | .hasKey C rs    => ∀ a b : Nat,
+      I.eval C (I.indiv a) → I.eval C (I.indiv b) →
+        (∀ R ∈ rs, ∃ c : Nat,
+          I.ext_role R (I.indiv a) (I.indiv c) ∧
+          I.ext_role R (I.indiv b) (I.indiv c)) →
+        I.indiv a = I.indiv b
 
 /-- Ontology satisfaction. -/
 def Interp.satisfies {α : Type} (I : Interp α) (O : Ontology) : Prop :=
@@ -165,6 +188,22 @@ inductive Sat (O : Ontology) : Concept → Concept → Prop where
   | rchain_apply : ∀ {C R₁ R₂ S D E},
       Sat O C (.exist R₁ D) → Sat O D (.exist R₂ E) →
       Axiom.rchain R₁ R₂ S ∈ O → Sat O C (.exist S E)
+  /-- **Range refinement** (BBL 2008 §3.3).  From `C ⊑ ∃R.D` and
+      `range R E ∈ O`, derive `C ⊑ ∃R.(D ⊓ E)`: the witness is in
+      both the original filler and the range concept.  Sound; the
+      analogous unconstrained `D ⊑ E` rule is **not** sound. -/
+  | range_apply : ∀ {C R D E},
+      Sat O C (.exist R D) → Axiom.range R E ∈ O →
+        Sat O C (.exist R (.conj D E))
+  /-- **Reflexive role**.  `reflexive R ∈ O` ⇒ for any concept `C`,
+      `C ⊑ ∃R.C` (every member has an R-self-loop, which is itself
+      an R-successor in `C`). -/
+  | reflexive_apply : ∀ {C R},
+      Axiom.reflexive R ∈ O → Sat O C (.exist R C)
+  /-- **Self introduction**.  From `C ⊑ Self(R)`, derive `C ⊑ ∃R.C`:
+      every member of `C` has R(c, c), so c is its own R-witness. -/
+  | self_intro : ∀ {C R},
+      Sat O C (.self R) → Sat O C (.exist R C)
 
 -- ============================================================
 -- 3. Soundness of the calculus
@@ -215,6 +254,23 @@ theorem sound (O : Ontology) {C D : Concept} (h : Sat O C D) :
       obtain ⟨z, hR2yz, hEz⟩ := ihDR2E I hO y hDy
       have hChainSat : I.satisfiesAxiom (Axiom.rchain _ _ _) := hO _ hax
       exact ⟨z, hChainSat x y z hR1xy hR2yz, hEz⟩
+  | range_apply _ hax ih =>
+      intro α I hO x hx
+      obtain ⟨y, hRxy, hDy⟩ := ih I hO x hx
+      have hRange : I.satisfiesAxiom (Axiom.range _ _) := hO _ hax
+      -- Witness y satisfies D (from ih) AND E (from range axiom),
+      -- hence the conjunction.
+      exact ⟨y, hRxy, hDy, hRange x y hRxy⟩
+  | reflexive_apply hax =>
+      intro α I hO x hx
+      have hRefl : I.satisfiesAxiom (Axiom.reflexive _) := hO _ hax
+      -- x is its own R-witness, and it lies in C by hypothesis.
+      exact ⟨x, hRefl x, hx⟩
+  | self_intro _ ih =>
+      intro α I hO x hx
+      -- ih gives us I.eval (.self R) x, i.e., R(x, x).
+      have hSelf : I.ext_role _ x x := ih I hO x hx
+      exact ⟨x, hSelf, hx⟩
 
 -- ============================================================
 -- 4. Canonical (term) model — ELK 2014 Definition 2
@@ -257,19 +313,16 @@ noncomputable def canon (O : Ontology) (default : CanonDom O) :
 -- 5. Lemmas 1, 2 of ELK 2014 §3.3 — eval ↔ Sat correspondence
 -- ============================================================
 
-/-- A concept is *nominal-free* if it does not mention any
-    `nom`/individual constructor.  The canonical-model
-    correspondence (Lemmas~1+2 of ELK 2014 §3.3) is proved here
-    only for the nominal-free fragment; the full ELK-with-nominals
-    correspondence (Kazakov 2014 §6) requires the merging-
-    canonical-model construction with concept equivalence classes,
-    which is beyond the scope of this layer.  In Layer 6 we
-    restrict subsumption queries to nominal-free C, D, while
-    permitting arbitrary nominal-containing axioms inside the
-    ontologies. -/
+/-- Predicate selecting the *core nominal-free fragment* — concepts
+    built from `atom`, `top`, `bot`, `conj`, `exist`.  This is the
+    fragment for which the canonical-model correspondence is proved.
+    Both `nom` (true nominals) and `self` (self-restrictions) require
+    additional canonical-model machinery (Kazakov 2014 §6) and are
+    excluded.  -/
 def NominalFree : Concept → Prop
   | .atom _    => True
   | .nom _     => False
+  | .self _    => False
   | .top       => True
   | .bot       => True
   | .conj A B  => NominalFree A ∧ NominalFree B
@@ -286,6 +339,9 @@ theorem canon_eval (O : Ontology) (default : CanonDom O) :
   | atom n =>
       intro _ _; exact Iff.rfl
   | nom i =>
+      intro hnf
+      exact hnf.elim
+  | self R =>
       intro hnf
       exact hnf.elim
   | top =>
@@ -324,6 +380,18 @@ def AxiomNominalFree : Axiom → Prop
   | .gci C D => NominalFree C ∧ NominalFree D
   | .rinc _ _ => True
   | .rchain _ _ _ => True
+  -- The three OWL 2 EL extensions below are implemented at the
+  -- algorithm level (owlel) and have sound `Sat` rules
+  -- (`range_apply`, `reflexive_apply`, `self_intro`).  The canonical-
+  -- model construction for them is genuinely harder
+  -- (BBL 2008 §3.3 fresh-atom range elimination; merging canonical
+  -- model for HasKey à la Kazakov 2014 §6).  Marking them as
+  -- non-nominal-free keeps the existing canonical-model and Layer 6
+  -- factorisation proofs sound; the proofs simply gate them out
+  -- via the existing `OntologyNominalFree` precondition.
+  | .range _ _ => False
+  | .reflexive _ => False
+  | .hasKey _ _ => False
 
 /-- An ontology is nominal-free if all its axioms are. -/
 def OntologyNominalFree (O : Ontology) : Prop :=
@@ -355,6 +423,15 @@ theorem canon_satisfies (O : Ontology) (default : CanonDom O)
   | rchain R₁ R₂ S =>
       intro x y z hR1 hR2
       exact Sat.rchain_apply hR1 hR2 hax
+  | range R C =>
+      -- AxiomNominalFree (range _ _) = False, so OntologyNominalFree
+      -- forbids range axioms in the proven fragment.  Discharge from
+      -- the contradictory hypothesis.
+      exact hax_nf.elim
+  | reflexive R =>
+      exact hax_nf.elim
+  | hasKey C rs =>
+      exact hax_nf.elim
 
 -- ============================================================
 -- 7. Completeness — ELK 2014 §3.3 (Theorem 1)
