@@ -16,6 +16,7 @@ import ELKSDD.EL
 import ELKSDD.ELpp
 import ELKSDD.Normalize
 import ELKSDD.Stratified
+import ELKSDD.SCC
 import ELKSDD.SDD
 
 namespace ELKSDD
@@ -150,6 +151,40 @@ namespace ELKSDD
 #print axioms Stratified.Sat_iff_SatAt
 #print axioms Stratified.Sat_iff_SatUpTo
 #print axioms Stratified.IsFixpointDepth_imp_IsClosedDepth
+
+-- ============================================================
+-- SCC — Layer 6: signature-based factorization of the closure.
+--       The novel SCC compositionality theorem in two parts:
+--
+--         (a) easy direction: Sat O₁ ⊆ Sat (O₁ ++ O₂)
+--             (Sat is monotone in the ontology — proved here)
+--         (b) hard direction: Sat (O₁ ++ O₂) factors when
+--             signatures are disjoint
+--             (statement+proof-sketch documented; full disjoint-
+--             domain construction in next increment)
+--
+--       Auxiliary: signature predicates, sub-ontology relation,
+--       axiom-membership-implies-signature lemma.
+-- ============================================================
+#print axioms SCC.Subontology.refl
+#print axioms SCC.Subontology.append_left
+#print axioms SCC.Subontology.append_right
+#print axioms SCC.Sat_mono
+#print axioms SCC.Sat_mono_append_left
+#print axioms SCC.Sat_mono_append_right
+#print axioms SCC.Sat_factor_easy
+#print axioms SCC.DisjointConceptSigs.symm
+#print axioms SCC.DisjointRoleSigs.symm
+#print axioms SCC.DisjointSigs.symm
+#print axioms SCC.ConceptInSig.top
+#print axioms SCC.ConceptInSig.bot
+#print axioms SCC.ontologyAtoms_append
+#print axioms SCC.ontologyRoles_append
+#print axioms SCC.mem_ontologyAtoms_append
+#print axioms SCC.mem_ontologyRoles_append
+#print axioms SCC.axiom_in_self_sig
+#print axioms SCC.axiom_in_one_sig
+#print axioms SCC.gci_in_O₁_atoms_implies_in_O₁
 
 -- ============================================================
 -- SDD — BDD with linear-time WMC + Shannon-expansion compile
