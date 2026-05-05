@@ -93,6 +93,14 @@ theorem Subontology.append_right (O₁ O₂ : Ontology) :
 -- 2. Sat is monotone in the ontology  — easy direction of Layer 6
 -- ============================================================
 
+/-- `RincAncestor` is monotone in the ontology: rinc-ancestors are
+    preserved when extending O. -/
+theorem RincAncestor_mono {O₁ O₂ : Ontology} (hsub : Subontology O₁ O₂)
+    {R S : Role} (h : RincAncestor O₁ R S) : RincAncestor O₂ R S := by
+  induction h with
+  | refl => exact RincAncestor.refl _
+  | step _ hStep ih => exact RincAncestor.step ih (hsub _ hStep)
+
 /-- **Sat monotonicity (easy direction of factorization).**
     If `Sat O₁ C D` and `O₁ ⊆ O₂`, then `Sat O₂ C D`.
 
@@ -125,6 +133,10 @@ theorem Sat_mono {O₁ O₂ : Ontology} (hsub : Subontology O₁ O₂)
   | self_intro _ ih => exact Sat.self_intro ih
   | reflexive_self hax => exact Sat.reflexive_self (hsub _ hax)
   | self_range _ hax ih => exact Sat.self_range ih (hsub _ hax)
+  | range_via_rincStar _ hAnc hRange ih =>
+      exact Sat.range_via_rincStar ih (RincAncestor_mono hsub hAnc) (hsub _ hRange)
+  | rinc_self_star _ hAnc ih =>
+      exact Sat.rinc_self_star ih (RincAncestor_mono hsub hAnc)
 
 /-- Concrete corollary: appending O₂ to O₁ preserves Sat-derivability. -/
 theorem Sat_mono_append_left {O₁ : Ontology} (O₂ : Ontology)

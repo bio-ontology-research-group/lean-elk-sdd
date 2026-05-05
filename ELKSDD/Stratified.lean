@@ -128,6 +128,13 @@ inductive SatAt (O : Ontology) : Nat → Concept → Concept → Prop where
       Axiom.reflexive R ∈ O → SatAt O (k+1) C (.self R)
   | self_range : ∀ {k C R E},
       SatAt O k C (.self R) → Axiom.range R E ∈ O → SatAt O (k+1) C E
+  | range_via_rincStar : ∀ {k C R S D E},
+      SatAt O k C (.exist R D) → RincAncestor O R S →
+      Axiom.range S E ∈ O →
+      SatAt O (k+1) C (.exist R (.conj D E))
+  | rinc_self_star : ∀ {k C R S},
+      SatAt O k C (.self R) → RincAncestor O R S →
+      SatAt O (k+1) C (.self S)
 
 -- ============================================================
 -- 2. Depth monotonicity
@@ -226,6 +233,12 @@ theorem Sat_to_SatAt {O : Ontology} {C D : Concept}
   | self_range _ hax ih =>
       obtain ⟨k, h⟩ := ih
       exact ⟨k+1, SatAt.self_range h hax⟩
+  | range_via_rincStar _ hAnc hRange ih =>
+      obtain ⟨k, h⟩ := ih
+      exact ⟨k+1, SatAt.range_via_rincStar h hAnc hRange⟩
+  | rinc_self_star _ hAnc ih =>
+      obtain ⟨k, h⟩ := ih
+      exact ⟨k+1, SatAt.rinc_self_star h hAnc⟩
 
 -- ============================================================
 -- 4. Backward: SatAt ⊆ Sat
@@ -256,6 +269,8 @@ theorem SatAt_to_Sat {O : Ontology} : ∀ {k C D},
   | self_intro _ ih => exact Sat.self_intro ih
   | reflexive_self hax => exact Sat.reflexive_self hax
   | self_range _ hax ih => exact Sat.self_range ih hax
+  | range_via_rincStar _ hAnc hRange ih => exact Sat.range_via_rincStar ih hAnc hRange
+  | rinc_self_star _ hAnc ih => exact Sat.rinc_self_star ih hAnc
 
 -- ============================================================
 -- 5. The equivalence — Layer 5 main theorem

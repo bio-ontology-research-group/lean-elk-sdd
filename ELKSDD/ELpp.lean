@@ -148,6 +148,49 @@ def Entails (O : Ontology) (C D : Concept) : Prop :=
     ∀ x, I.eval C x → I.eval D x
 
 -- ============================================================
+-- 2a. Role-hierarchy ancestor (rinc-closure)
+-- ============================================================
+
+/-- **Reflexive-transitive closure of `rinc` axioms in `O`.**
+
+    `RincAncestor O R S` holds iff `R ⊑* S` in `O`'s role hierarchy:
+    either `R = S` (refl), or there's an intermediate `T` with
+    `RincAncestor O R T` and `Axiom.rinc T S ∈ O` (step).
+
+    Used in the new Sat rule `range_via_rincStar` to lift range axioms
+    of any rinc-ancestor of `R` into refinements of R-existential
+    witnesses, and in `canon`'s `ext_role` guard to ensure R-edge
+    targets satisfy not only R-ranges but also S-ranges for every
+    `S` with `R ⊑* S`. -/
+inductive RincAncestor (O : Ontology) : Role → Role → Prop where
+  | refl : ∀ R, RincAncestor O R R
+  | step : ∀ {R S T}, RincAncestor O R S → Axiom.rinc S T ∈ O →
+           RincAncestor O R T
+
+/-- Transitivity of `RincAncestor`. -/
+theorem RincAncestor.trans {O : Ontology} {R S T : Role}
+    (h₁ : RincAncestor O R S) (h₂ : RincAncestor O S T) :
+    RincAncestor O R T := by
+  induction h₂ with
+  | refl => exact h₁
+  | step _ hStep ih => exact RincAncestor.step ih hStep
+
+/-- **Edge-transport along rinc-ancestor**.  In any model satisfying
+    `O`, an `R`-edge transfers to a `S`-edge for every `S` with
+    `R ⊑* S` in `O`'s rinc-closure.  By induction on the ancestor chain,
+    using each rinc axiom's satisfaction as a single-step transport. -/
+theorem ext_role_rincStar {α : Type} {I : Interp α} {O : Ontology}
+    (hO : I.satisfies O) :
+    ∀ {R S : Role}, RincAncestor O R S → ∀ {x y : α},
+    I.ext_role R x y → I.ext_role S x y := by
+  intro R S hAnc x y hRxy
+  induction hAnc with
+  | refl => exact hRxy
+  | step _ hStep ih =>
+      have hRincSat : I.satisfiesAxiom (Axiom.rinc _ _) := hO _ hStep
+      exact hRincSat x y ih
+
+-- ============================================================
 -- 2. Calculus (ELK 2014 Fig 1, extended)
 -- ============================================================
 
@@ -213,6 +256,30 @@ inductive Sat (O : Ontology) : Concept → Concept → Prop where
       in `E`, so `c ∈ E`. -/
   | self_range : ∀ {C R E},
       Sat O C (.self R) → Axiom.range R E ∈ O → Sat O C E
+  /-- **Range via rinc-closure** (transitive role-hierarchy refinement).
+
+      From `Sat O C (∃R.D)`, `RincAncestor O R S` (i.e., `R ⊑* S` via
+      a chain of rinc axioms), and `Axiom.range S E ∈ O`, refine the
+      R-witness to also lie in `E`.
+
+      Soundness: in any model satisfying O, an R-target of a C-instance
+      is also an S-target via the rinc-chain (each rinc axiom transfers
+      edges).  By `Range S E`, S-targets are in E.  Hence the R-target
+      is in `D ⊓ E`.
+
+      This generalises the existing `range_apply` rule (which is the
+      `RincAncestor.refl` case where `S = R`).  -/
+  | range_via_rincStar : ∀ {C R S D E},
+      Sat O C (.exist R D) → RincAncestor O R S →
+      Axiom.range S E ∈ O →
+      Sat O C (.exist R (.conj D E))
+  /-- **Self transfer along rinc-closure**.  `C ⊑ Self(R)` and `R ⊑* S`
+      jointly imply `C ⊑ Self(S)`.
+
+      Soundness: in any model, every `c ∈ C` has `R(c, c)`.  By the
+      rinc-chain, `S(c, c)`.  So `c ∈ Self(S)`. -/
+  | rinc_self_star : ∀ {C R S},
+      Sat O C (.self R) → RincAncestor O R S → Sat O C (.self S)
 
 -- ============================================================
 -- 3. Soundness of the calculus
@@ -291,6 +358,22 @@ theorem sound (O : Ontology) {C D : Concept} (h : Sat O C D) :
       have hSelf : I.ext_role _ x x := ih I hO x hx
       have hRange : I.satisfiesAxiom (Axiom.range _ _) := hO _ hax
       exact hRange x x hSelf
+  | range_via_rincStar _ hAnc hRange ih =>
+      intro α I hO x hx
+      -- ih: I.eval (∃R.D) x, i.e., ∃ y. R(x, y) ∧ y ∈ D.
+      obtain ⟨y, hRxy, hDy⟩ := ih I hO x hx
+      -- Transport the R-edge to an S-edge along the rinc-ancestor chain.
+      have hSxy := ext_role_rincStar hO hAnc hRxy
+      -- y is an S-target, so by Range S E, y ∈ E.
+      have hRangeSat : I.satisfiesAxiom (Axiom.range _ _) := hO _ hRange
+      have hEy : I.eval _ y := hRangeSat x y hSxy
+      exact ⟨y, hRxy, hDy, hEy⟩
+  | rinc_self_star _ hAnc ih =>
+      intro α I hO x hx
+      -- ih : I.eval (.self R) x = I.ext_role R x x.
+      have hRxx : I.ext_role _ x x := ih I hO x hx
+      -- Transport the R-self-loop to an S-self-loop.
+      exact ext_role_rincStar hO hAnc hRxx
 
 -- ============================================================
 -- 4. Canonical (term) model — ELK 2014 Definition 2
@@ -330,61 +413,74 @@ noncomputable def canon (O : Ontology) (default : CanonDom O) :
     ext_concept := fun n x => Sat O x.val (.atom n)
     ext_role    := fun R x y =>
       Sat O x.val (.exist R y.val) ∧
-      ∀ E, Axiom.range R E ∈ O → Sat O y.val E
+      ∀ S E, RincAncestor O R S → Axiom.range S E ∈ O → Sat O y.val E
     indiv       := fun i =>
       if h : ¬ Sat O (.nom i) .bot then ⟨.nom i, h⟩ else default
   }
 
-/-- **Range-witness helper** (BBL 2008 §3.3 effective-subsumer dynamic).
+/-- **Range-witness helper** (BBL 2008 §3.3 effective-subsumer dynamic
+    extended with role-hierarchy closure).
 
     Given `Sat O C (∃R.E)`, produce a refined witness `D'` that
     (i) is still an R-witness from `C`, (ii) subsumes the original
     `E` (so the IH on `eval E ·` applies), and (iii) lies in every
-    range concept of `R` in `O`.
+    range concept of `R` AND of every `S` with `RincAncestor O R S`.
 
-    Construction: iterate `Sat.range_apply` over each `Range(R, F) ∈ O`,
-    conjoining `F` into the witness.  By `Sat.conj_left`/`Sat.conj_right`,
-    the resulting `D'` projects down to `E` and to every range `F`.
-
-    This helper is *not* used by `canon_eval`/`canon_satisfies` in
-    the current Layer-3 fragment (which gates `range`-axioms out
-    via `OntologyNominalFree`), but is kept as scaffolding for the
-    full OWL 2 EL canonical-model proof outlined below. -/
+    Construction: iterate over the axiom list of `O`.  For each
+    `range S F ∈ O` whose role `S` is an rinc-ancestor of `R`,
+    refine the witness via `Sat.range_via_rincStar` (the new sound
+    rule that subsumes `range_apply`).  Direct R-ranges are handled
+    as the `RincAncestor.refl` special case. -/
 theorem range_witness (O : Ontology) (R : Role) {C E : Concept}
     (h : Sat O C (.exist R E)) :
     ∃ D', Sat O C (.exist R D') ∧ Sat O D' E ∧
-          (∀ F, Axiom.range R F ∈ O → Sat O D' F) := by
+          (∀ S F, RincAncestor O R S → Axiom.range S F ∈ O → Sat O D' F) := by
+  classical
   suffices haux : ∀ axList : Ontology, (∀ ax ∈ axList, ax ∈ O) →
       ∃ D', Sat O C (.exist R D') ∧ Sat O D' E ∧
-            (∀ F, Axiom.range R F ∈ axList → Sat O D' F) by
+            (∀ S F, RincAncestor O R S → Axiom.range S F ∈ axList →
+                    Sat O D' F) by
     exact haux O (fun _ h => h)
   intro axList
   induction axList with
   | nil =>
       intro _
-      exact ⟨E, h, Sat.refl _, fun _ hMem => (List.not_mem_nil hMem).elim⟩
+      exact ⟨E, h, Sat.refl _, fun _ _ _ hMem => (List.not_mem_nil hMem).elim⟩
   | cons ax rest ih =>
       intro hSub
       have hAxIn : ax ∈ O := hSub ax List.mem_cons_self
       have hSubRest : ∀ a ∈ rest, a ∈ O :=
         fun a ha => hSub a (List.mem_cons.mpr (Or.inr ha))
       obtain ⟨D₁, hExist₁, hDE₁, hAll₁⟩ := ih hSubRest
-      by_cases hMatch : ∃ F, ax = Axiom.range R F
-      · obtain ⟨F, hFE⟩ := hMatch
+      by_cases hMatch : ∃ S F, ax = Axiom.range S F
+      · obtain ⟨S, F, hFE⟩ := hMatch
         subst hFE
-        refine ⟨.conj D₁ F, Sat.range_apply hExist₁ hAxIn,
-                Sat.trans (Sat.conj_left (Sat.refl _)) hDE₁, ?_⟩
-        intro F' hF'
+        -- ax is `range S F`.  Decide whether `S` is a rinc-ancestor of `R`.
+        by_cases hAnc : RincAncestor O R S
+        · -- Refine via range_via_rincStar.
+          refine ⟨.conj D₁ F, Sat.range_via_rincStar hExist₁ hAnc hAxIn,
+                  Sat.trans (Sat.conj_left (Sat.refl _)) hDE₁, ?_⟩
+          intro S' F' hAnc' hF'
+          rcases List.mem_cons.mp hF' with hEq | hRest
+          · injection hEq with hSEq hFEq
+            subst hSEq hFEq
+            exact Sat.conj_right (Sat.refl _)
+          · exact Sat.trans (Sat.conj_left (Sat.refl _)) (hAll₁ S' F' hAnc' hRest)
+        · -- `S` is NOT a rinc-ancestor of `R`.  Skip refinement.
+          refine ⟨D₁, hExist₁, hDE₁, ?_⟩
+          intro S' F' hAnc' hF'
+          rcases List.mem_cons.mp hF' with hEq | hRest
+          · injection hEq with hSEq hFEq
+            subst hSEq hFEq
+            -- hAnc' : RincAncestor O R S — but we negated.
+            exact absurd hAnc' hAnc
+          · exact hAll₁ S' F' hAnc' hRest
+      · -- ax is not a range axiom at all.
+        refine ⟨D₁, hExist₁, hDE₁, ?_⟩
+        intro S' F' hAnc' hF'
         rcases List.mem_cons.mp hF' with hEq | hRest
-        · injection hEq with _ hFEq
-          subst hFEq
-          exact Sat.conj_right (Sat.refl _)
-        · exact Sat.trans (Sat.conj_left (Sat.refl _)) (hAll₁ F' hRest)
-      · refine ⟨D₁, hExist₁, hDE₁, ?_⟩
-        intro F' hF'
-        rcases List.mem_cons.mp hF' with hEq | hRest
-        · exact absurd ⟨F', hEq.symm⟩ hMatch
-        · exact hAll₁ F' hRest
+        · exact absurd ⟨S', F', hEq.symm⟩ hMatch
+        · exact hAll₁ S' F' hAnc' hRest
 
 -- ============================================================
 -- 5. Lemmas 1, 2 of ELK 2014 §3.3 — eval ↔ Sat correspondence
@@ -442,8 +538,8 @@ theorem canon_eval (O : Ontology) (default : CanonDom O) :
         have hSatE : Sat O y.val E := (ihE hnf y).mp hEy
         exact Sat.exist_prop hSatExist hSatE
       · intro hSat
-        -- BBL 2008 §3.3 effective-subsumer trick: refine the
-        -- witness to absorb every range concept of `R` in `O`.
+        -- BBL 2008 §3.3 effective-subsumer trick (extended with rinc-closure):
+        -- refine the witness to absorb ranges of every rinc-ancestor of R.
         obtain ⟨D', hExist', hDE', hAllRanges⟩ := range_witness O R hSat
         by_cases hDbot : Sat O D' .bot
         · exact (x.property (Sat.exist_bot hExist' hDbot)).elim
@@ -502,44 +598,51 @@ theorem canon_satisfies (O : Ontology) (default : CanonDom O)
       exact (canon_eval O default D hD_nf x).mpr hSat
   | rinc R S =>
       intro x y hRxy
-      obtain ⟨hRxySat, _hRxyRanges⟩ := hRxy
+      obtain ⟨hRxySat, hRxyAncRanges⟩ := hRxy
       refine ⟨Sat.rinc_apply hRxySat hax, ?_⟩
-      -- Range-guard transfer under role hierarchy: ∀ E. Range S E ∈ O
-      -- → Sat O y.val E.  Not derivable from the R-guard alone — S
-      -- can have ranges that R doesn't.  Closing this requires either
-      -- (a) extending the calculus with a `range_via_rinc` rule:
-      --      Sat O C (.exist R D) → Axiom.rinc R S ∈ O →
-      --        Axiom.range S E ∈ O → Sat O C (.exist R (.conj D E))
-      -- (sound) and iterating over rinc-ancestors in `range_witness`,
-      -- or (b) BBL 2008 §3.3 fresh-atom normalisation as a separate
-      -- pass before invoking `complete_via_canon`.  Future work.
-      sorry
+      -- New ext_role guard: ∀ T E. RincAncestor O R T → Range T E ∈ O →
+      -- Sat O y.val E.  Need the analogous guard for S: ∀ T E.
+      -- RincAncestor O S T → Range T E ∈ O → Sat O y.val E.
+      -- Argument: any S-ancestor T is also an R-ancestor (by transitivity
+      -- through `rinc R S ∈ O`), so the guard transfers cleanly.
+      intro T E hAncST hRange
+      -- Build RincAncestor O R T from RincAncestor O R S (single step)
+      -- + RincAncestor O S T (given).
+      have hAncRS : RincAncestor O R S := RincAncestor.step (RincAncestor.refl R) hax
+      have hAncRT : RincAncestor O R T := RincAncestor.trans hAncRS hAncST
+      exact hRxyAncRanges T E hAncRT hRange
   | rchain R₁ R₂ S =>
       intro x y z hR1 hR2
       obtain ⟨hR1Sat, _⟩ := hR1
       obtain ⟨hR2Sat, _⟩ := hR2
       refine ⟨Sat.rchain_apply hR1Sat hR2Sat hax, ?_⟩
-      -- Same range-guard-transfer gap as `rinc` above; chain version
-      -- analogously needs `range_via_rchain` or the BBL 2008 reduction.
+      -- Range-guard transfer under role chain.  z is a chain-target of x
+      -- via R₁∘R₂, hence an S-target.  But `RincAncestor` only captures
+      -- rinc-ancestor closure; chain ancestors require additional
+      -- machinery (e.g., a `RoleAncestor` predicate that includes
+      -- chain-induced lifts, plus a corresponding `range_via_rchain*`
+      -- Sat rule).  Future work.
       sorry
   | range R C =>
-      -- AxiomNominalFree (.range R C) = NominalFree C now allows
-      -- range axioms in the proven fragment.  The new ext_role
-      -- bundles `∀ E. Range R E ∈ O → Sat O y.val E` directly.
+      -- AxiomNominalFree (.range R C) = NominalFree C.  The ext_role
+      -- guard at S = R via `RincAncestor.refl` directly gives the
+      -- range constraint.
       have hC_nf : NominalFree C := hax_nf
       intro x y hxy
-      have hSatYC : Sat O y.val C := hxy.2 C hax
+      have hSatYC : Sat O y.val C :=
+        hxy.2 R C (RincAncestor.refl R) hax
       exact (canon_eval O default C hC_nf y).mpr hSatYC
   | reflexive R =>
-      -- AxiomNominalFree (.reflexive _) = True — handled here.
-      -- Need ext_role R x x for every x.
-      -- First conjunct: Sat.reflexive_apply hax.
-      -- Second conjunct: Sat.reflexive_self + Sat.self_range chain.
+      -- New ext_role guard: ∀ T E. RincAncestor O R T → Range T E ∈ O →
+      -- Sat O x.val E.  Combine `Sat.reflexive_self` (Self R) +
+      -- `Sat.rinc_self_star` (lift Self R to Self T along the rinc
+      -- chain) + `Sat.self_range` (Self T + Range T E ⇒ Sat E).
       intro x
       refine ⟨Sat.reflexive_apply hax, ?_⟩
-      intro E hE
-      have hSelf : Sat O x.val (.self R) := Sat.reflexive_self hax
-      exact Sat.self_range hSelf hE
+      intro T E hAnc hE
+      have hSelfR : Sat O x.val (.self R) := Sat.reflexive_self hax
+      have hSelfT : Sat O x.val (.self T) := Sat.rinc_self_star hSelfR hAnc
+      exact Sat.self_range hSelfT hE
   | hasKey C rs =>
       exact hax_nf.elim
 
@@ -608,7 +711,7 @@ theorem canon_satisfies_strict (O : Ontology) (default : CanonDom O)
       intro x y hRxy
       obtain ⟨hRxySat, _⟩ := hRxy
       refine ⟨Sat.rinc_apply hRxySat hax, ?_⟩
-      intro E hE
+      intro T E _ hE
       -- O is range-free under OntologyStrict: hE contradicts AxiomStrict.
       exact (hO _ hE).elim
   | rchain R₁ R₂ S =>
@@ -616,13 +719,13 @@ theorem canon_satisfies_strict (O : Ontology) (default : CanonDom O)
       obtain ⟨hR1Sat, _⟩ := hR1
       obtain ⟨hR2Sat, _⟩ := hR2
       refine ⟨Sat.rchain_apply hR1Sat hR2Sat hax, ?_⟩
-      intro E hE
+      intro T E _ hE
       exact (hO _ hE).elim
   | range _ _ => exact hax_s.elim
   | reflexive R =>
       intro x
       refine ⟨Sat.reflexive_apply hax, ?_⟩
-      intro E hE
+      intro T E _ hE
       exact (hO _ hE).elim
   | hasKey _ _ => exact hax_s.elim
 
