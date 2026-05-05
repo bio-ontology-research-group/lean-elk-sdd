@@ -95,10 +95,85 @@ def hasRange : Ontology → Role → Bool
 
 theorem hasRange_iff (O : Ontology) (R : Role) :
     hasRange O R = true ↔ ∃ E, Axiom.range R E ∈ O := by
-  -- Routine induction on O, case-splitting on each axiom kind.
-  -- *Future Lean work* — the proof is direct but tedious due to
-  -- per-constructor case splits.
-  sorry
+  induction O with
+  | nil =>
+      constructor
+      · intro h; cases h
+      · intro ⟨_, hE⟩; exact (List.not_mem_nil hE).elim
+  | cons ax rest ih =>
+      cases ax with
+      | range R' E' =>
+          constructor
+          · intro h
+            -- h : (decide (R = R') || hasRange rest R) = true
+            simp only [hasRange, Bool.or_eq_true, decide_eq_true_eq] at h
+            rcases h with hRR' | hRest
+            · subst hRR'
+              exact ⟨E', List.mem_cons_self⟩
+            · obtain ⟨E, hE⟩ := ih.mp hRest
+              exact ⟨E, List.mem_cons.mpr (Or.inr hE)⟩
+          · intro ⟨E, hE⟩
+            simp only [hasRange, Bool.or_eq_true, decide_eq_true_eq]
+            rcases List.mem_cons.mp hE with hEq | hRest
+            · injection hEq with hRR' _
+              subst hRR'
+              exact Or.inl rfl
+            · exact Or.inr (ih.mpr ⟨E, hRest⟩)
+      | gci _ _ =>
+          constructor
+          · intro h
+            simp only [hasRange] at h
+            obtain ⟨E, hE⟩ := ih.mp h
+            exact ⟨E, List.mem_cons.mpr (Or.inr hE)⟩
+          · intro ⟨E, hE⟩
+            simp only [hasRange]
+            rcases List.mem_cons.mp hE with hEq | hRest
+            · cases hEq
+            · exact ih.mpr ⟨E, hRest⟩
+      | rinc _ _ =>
+          constructor
+          · intro h
+            simp only [hasRange] at h
+            obtain ⟨E, hE⟩ := ih.mp h
+            exact ⟨E, List.mem_cons.mpr (Or.inr hE)⟩
+          · intro ⟨E, hE⟩
+            simp only [hasRange]
+            rcases List.mem_cons.mp hE with hEq | hRest
+            · cases hEq
+            · exact ih.mpr ⟨E, hRest⟩
+      | rchain _ _ _ =>
+          constructor
+          · intro h
+            simp only [hasRange] at h
+            obtain ⟨E, hE⟩ := ih.mp h
+            exact ⟨E, List.mem_cons.mpr (Or.inr hE)⟩
+          · intro ⟨E, hE⟩
+            simp only [hasRange]
+            rcases List.mem_cons.mp hE with hEq | hRest
+            · cases hEq
+            · exact ih.mpr ⟨E, hRest⟩
+      | reflexive _ =>
+          constructor
+          · intro h
+            simp only [hasRange] at h
+            obtain ⟨E, hE⟩ := ih.mp h
+            exact ⟨E, List.mem_cons.mpr (Or.inr hE)⟩
+          · intro ⟨E, hE⟩
+            simp only [hasRange]
+            rcases List.mem_cons.mp hE with hEq | hRest
+            · cases hEq
+            · exact ih.mpr ⟨E, hRest⟩
+      | hasKey _ _ =>
+          constructor
+          · intro h
+            simp only [hasRange] at h
+            obtain ⟨E, hE⟩ := ih.mp h
+            exact ⟨E, List.mem_cons.mpr (Or.inr hE)⟩
+          · intro ⟨E, hE⟩
+            simp only [hasRange]
+            rcases List.mem_cons.mp hE with hEq | hRest
+            · cases hEq
+            · exact ih.mpr ⟨E, hRest⟩
 
 -- ============================================================
 -- 3. Concept and axiom modification
@@ -295,6 +370,51 @@ theorem Sat_to_eliminated {O : Ontology} {X Y : Concept}
     (h : Sat O X Y) :
     Sat (eliminateRanges O) (modifyConcept O X) (modifyConcept O Y) := by
   sorry
+
+/-- **Helper for `Sat_to_eliminated` (sorry-free).**
+
+    `modifyConcept` only ADDS markers (as right conjuncts of existential
+    fillers).  Therefore the modified concept is always subsumed by
+    the original, in O' (not O — markers don't exist in O):
+
+        Sat (eliminateRanges O) (modifyConcept O C) C
+
+    Proof by structural induction on `C`.  The interesting case is
+    `exist R E`: when `hasRange O R = true`, the modified concept is
+    `exist R (conj (modifyConcept E) (atom (rangeMarker O R)))`, and
+    we project away the marker via `Sat.conj_left` and recurse on `E`.
+    When `hasRange O R = false`, the modification is just on the
+    inner `E`, handled by induction.
+
+    This helper is used in the future Lean proof of `Sat_to_eliminated`
+    to bridge the LHS of `base_gci` (modified-axiom application gives
+    `Sat O' C (modifyConcept D)` but we need `Sat O' (modifyConcept C)
+    (modifyConcept D)`; bridge via `Sat_modify_imp_orig` + `Sat.trans`). -/
+theorem Sat_modify_imp_orig (O : Ontology) (C : Concept) :
+    Sat (eliminateRanges O) (modifyConcept O C) C := by
+  induction C with
+  | atom n => exact Sat.refl _
+  | nom i => exact Sat.refl _
+  | self R => exact Sat.refl _
+  | top => exact Sat.refl _
+  | bot => exact Sat.refl _
+  | conj A B ihA ihB =>
+      -- modifyConcept (conj A B) = conj (modifyConcept A) (modifyConcept B)
+      -- want Sat O' (conj _ _) (conj A B), via conj_intro of ihA composed and ihB composed
+      apply Sat.conj_intro
+      · exact Sat.trans (Sat.conj_left (Sat.refl _)) ihA
+      · exact Sat.trans (Sat.conj_right (Sat.refl _)) ihB
+  | exist R E ihE =>
+      simp only [modifyConcept]
+      by_cases hR : hasRange O R = true
+      · simp [hR]
+        -- Goal: Sat O' (.exist R (.conj (modifyConcept E) (atom marker))) (.exist R E)
+        -- Sat.exist_prop: from refl + (conj_left ; ihE)
+        refine Sat.exist_prop (Sat.refl _) ?_
+        exact Sat.trans (Sat.conj_left (Sat.refl _)) ihE
+      · simp [hR]
+        -- Goal: Sat O' (.exist R (modifyConcept E)) (.exist R E)
+        exact Sat.exist_prop (Sat.refl _) ihE
 
 -- ============================================================
 -- 6. Sat conservativity (backward — projection)

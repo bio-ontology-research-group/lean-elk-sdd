@@ -85,6 +85,8 @@ namespace ELKSDD
 #print axioms RangeNorm.eliminateRanges_no_range
 #print axioms RangeNorm.eliminateRanges_strict
 #print axioms RangeNorm.atom_MarkerFree_of_in_O
+#print axioms RangeNorm.hasRange_iff
+#print axioms RangeNorm.Sat_modify_imp_orig
 #print axioms RangeNorm.complete_via_canon_owl2el
 #print axioms RangeNorm.complete_via_canon_owl2el_atom
 #print axioms ELpp.sound_atomSub
