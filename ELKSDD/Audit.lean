@@ -407,4 +407,16 @@ namespace ELKSDD
 #print axioms ELpp.compileSat_disponte_eq_of_wmc_form
 #print axioms ELpp.disponte_eq_wmc_via_compileSat
 
+-- ============================================================
+-- CompilationWMC — Shannon-recursive WMC building blocks toward
+--                  unconditional DISPONTE.  wmc compileSat reduces
+--                  to a clean recursive form (shannonSatSum).
+--                  Perm-foldr-add infrastructure (zero-axiom)
+--                  ready for the final bridge to enumerateWorlds.
+-- ============================================================
+#print axioms ELpp.wmc_compileSatAux_eq
+#print axioms ELpp.wmc_compileSat_eq_shannonSatSum
+#print axioms ELpp.Perm_foldr_add_eq
+#print axioms ELpp.Perm_foldr_add_eq_fn
+
 end ELKSDD
