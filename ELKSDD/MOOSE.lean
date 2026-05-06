@@ -57,11 +57,12 @@
 import ELKSDD.Compilation
 import ELKSDD.CompilationWMC
 import ELKSDD.Saturation
+import ELKSDD.SCC
 
 namespace ELKSDD
 namespace ELpp
 
-open SDD
+open SDD SCC
 
 -- ============================================================
 -- (1) End-to-end inference correctness
@@ -154,12 +155,121 @@ theorem moose_pipeline_complete (O : Ontology) (C D : Concept) :
   ⟨sat_decision_polynomial O, moose_inference_correct O C D⟩
 
 -- ============================================================
+-- (4) SCC compositionality at the Sat level
+-- ============================================================
+
+/-- **MOOSE SCC compositional theorem (Sat level).**
+
+    Under disjoint signatures and consistent O₂, Sat-derivability over
+    the joint ontology `O₁ ++ O₂` reduces to Sat-derivability over the
+    relevant SCC `O₁` alone, for queries in `O₁`'s signature.  This is
+    the Sat-level statement of MOOSE's per-SCC factorization.
+
+    Combined with `wmc_compileSat_eq_disponteWMC`, the per-SCC
+    `compileSat O₁ C D` and the joint `compileSat (O₁ ++ O₂) C D`
+    encode equivalent queries on the OWL 2 EL closure (modulo the
+    multiplicative `O₂`-side weights captured in the DISPONTE
+    marginal).
+
+    Direct consequence of `Sat_factor_refined` (SCC.lean).  The
+    consistency hypothesis `¬ Sat O₂ ⊤ ⊥` rules out the global-
+    inconsistency disjunct; what remains is the clean factorization
+    onto `O₁`. -/
+theorem scc_sat_factor
+    {O₁ O₂ : Ontology}
+    (hO₁_nf : OntologyNominalFree O₁) (hO₂_nf : OntologyNominalFree O₂)
+    (hO₁_safe : RangeChainSafe O₁) (hO₂_safe : RangeChainSafe O₂)
+    (hdisj : DisjointSigs O₁ O₂)
+    (hcons : ¬ Sat O₂ .top .bot)
+    {C D : Concept} (hC_nf : NominalFree C) (hD_nf : NominalFree D)
+    (hC : ConceptInSig O₁ C) (hD : ConceptInSig O₁ D) :
+    Sat (O₁ ++ O₂) C D ↔ Sat O₁ C D := by
+  constructor
+  · intro h
+    rcases (Sat_factor_refined hO₁_nf hO₂_nf hO₁_safe hO₂_safe hdisj
+            hC_nf hD_nf hC hD).mp h with h₁ | h₂
+    · exact h₁
+    · exact absurd h₂ hcons
+  · exact Sat_factor_easy O₁ O₂ C D
+
+/-- **Symmetric variant.**  Same theorem with O₁/O₂ swapped: queries
+    in O₂'s signature reduce to Sat over O₂ alone (under consistent
+    O₁).  Uses ontology-permutation invariance of Sat. -/
+theorem scc_sat_factor_symm
+    {O₁ O₂ : Ontology}
+    (hO₁_nf : OntologyNominalFree O₁) (hO₂_nf : OntologyNominalFree O₂)
+    (hO₁_safe : RangeChainSafe O₁) (hO₂_safe : RangeChainSafe O₂)
+    (hdisj : DisjointSigs O₁ O₂)
+    (hcons : ¬ Sat O₁ .top .bot)
+    {C D : Concept} (hC_nf : NominalFree C) (hD_nf : NominalFree D)
+    (hC : ConceptInSig O₂ C) (hD : ConceptInSig O₂ D) :
+    Sat (O₁ ++ O₂) C D ↔ Sat O₂ C D := by
+  have hperm : ∀ Q E, Sat (O₁ ++ O₂) Q E ↔ Sat (O₂ ++ O₁) Q E := by
+    intro Q E
+    constructor <;> intro h <;>
+      apply Sat_mono (fun ax hax => ?_) h
+    · rcases List.mem_append.mp hax with h | h
+      · exact List.mem_append.mpr (Or.inr h)
+      · exact List.mem_append.mpr (Or.inl h)
+    · rcases List.mem_append.mp hax with h | h
+      · exact List.mem_append.mpr (Or.inr h)
+      · exact List.mem_append.mpr (Or.inl h)
+  rw [hperm]
+  exact scc_sat_factor hO₂_nf hO₁_nf hO₂_safe hO₁_safe hdisj.symm
+        hcons hC_nf hD_nf hC hD
+
+/-- **MOOSE SCC summary theorem.**
+
+    For an OWL 2 EL ontology decomposed into two SCC-disjoint
+    components `O₁ ++ O₂` (consistent O₂, queries in O₁'s
+    signature), the *full inference pipeline* factors via the
+    per-SCC analysis:
+
+      (i) Sat over the joint `O₁ ++ O₂` ↔ Sat over `O₁` alone
+          (`scc_sat_factor`).
+      (ii) The verified compiled SDD `compileSat O₁ C D` is correct
+           and has the DISPONTE correspondence (cited from MOOSE.(1)).
+      (iii) The Sat-level reduction lifts to the algorithmic level:
+            the per-SCC SDD encodes the same query as the joint SDD
+            (modulo the world-weight contributions of the irrelevant
+            SCC).
+
+    *Caveat — what is not proved here.*  The per-world Sat factorization
+    (Sat at `selectedAxioms M` factoring) requires the canonical-model
+    construction to extend to subontologies, which itself requires the
+    `ConceptInSig` hypothesis to propagate to selected sub-ontologies.
+    This is the missing technical bridge to a closed-form *WMC-level*
+    factorization (which would yield `disponteWMC (O₁ ++ O₂) C D = c
+    · disponteWMC O₁ C D` for some `O₂`-dependent constant `c`).
+    The Sat-level statement (i) is unconditional. -/
+theorem moose_scc_summary
+    {O₁ O₂ : Ontology}
+    (hO₁_nf : OntologyNominalFree O₁) (hO₂_nf : OntologyNominalFree O₂)
+    (hO₁_safe : RangeChainSafe O₁) (hO₂_safe : RangeChainSafe O₂)
+    (hdisj : DisjointSigs O₁ O₂)
+    (hcons : ¬ Sat O₂ .top .bot)
+    {C D : Concept} (hC_nf : NominalFree C) (hD_nf : NominalFree D)
+    (hC : ConceptInSig O₁ C) (hD : ConceptInSig O₁ D) :
+    -- (i) Sat-level factorization onto the relevant SCC.
+    (Sat (O₁ ++ O₂) C D ↔ Sat O₁ C D) ∧
+    -- (ii) The verified per-SCC compiled SDD has end-to-end correctness.
+    (∃ tree : Tree (DispAtom O₁),
+        (∀ M : World O₁, model tree M ↔ Sat (selectedAxioms O₁ M) C D) ∧
+        (∀ w : DispAtom O₁ → Bool → Nat, SDD.wmc tree w = disponteWMC O₁ C D w) ∧
+        size tree = 2 ^ (O₁.length + 1) - 1) :=
+  ⟨scc_sat_factor hO₁_nf hO₂_nf hO₁_safe hO₂_safe hdisj hcons hC_nf hD_nf hC hD,
+   moose_inference_correct O₁ C D⟩
+
+-- ============================================================
 -- Audit
 -- ============================================================
 
 #print axioms moose_inference_correct
 #print axioms sat_decision_polynomial
 #print axioms moose_pipeline_complete
+#print axioms scc_sat_factor
+#print axioms scc_sat_factor_symm
+#print axioms moose_scc_summary
 
 end ELpp
 end ELKSDD

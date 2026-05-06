@@ -448,5 +448,9 @@ namespace ELKSDD
 #print axioms ELpp.moose_inference_correct
 #print axioms ELpp.sat_decision_polynomial
 #print axioms ELpp.moose_pipeline_complete
+-- (3): SCC compositional theorems at the Sat level.
+#print axioms ELpp.scc_sat_factor
+#print axioms ELpp.scc_sat_factor_symm
+#print axioms ELpp.moose_scc_summary
 
 end ELKSDD
