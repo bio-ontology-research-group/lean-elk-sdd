@@ -226,24 +226,31 @@ def markerAxioms (O : Ontology) : Ontology :=
     | .range R E => some (.gci (.atom (rangeMarker O R)) (modifyConcept O E))
     | _ => none)
 
-/-- **Marker-propagation axioms** for rinc + range interactions.
+/-- **Marker-propagation axioms** for rinc + range and reflexive + range
+    interactions.
 
-    For each rinc R S ∈ O with both R and S having range axioms in O,
-    add the propagation axiom `gci (atom marker_R) (atom marker_S)`.
-    This captures the BBL 2008 §3.3 marker-flow under role hierarchies:
-    R-target witnesses (which carry marker_R) are also S-target witnesses
-    (which should carry marker_S) by rinc R S → R ⊑ S.
+    Two cases:
+    1. For each rinc R S ∈ O with both R and S having range axioms,
+       add `gci (atom marker_R) (atom marker_S)`.  Captures: R-target
+       witnesses are also S-target witnesses by rinc R S → R ⊑ S,
+       so marker_R ⊑ marker_S.
+    2. For each reflexive R ∈ O with R having a range axiom, add
+       `gci .top (atom marker_R)`.  Captures: reflexive R + range R E
+       jointly entail ⊤ ⊑ E in O (every x is its own R-target via
+       reflexive, hence in E via range), so ⊤ ⊑ marker_R.
 
-    Soundness: in any model satisfying O, R-edges are S-edges (rinc R S),
-    so R-targets are S-targets.  range R E and range S E' both apply to
-    these targets.  In the marker semantics, marker_R = "R-target", and
-    marker_S = "S-target", so marker_R ⊑ marker_S is a true entailment
-    of O lifted through the marker mechanism. -/
+    Both forms produce gci axioms with NominalFree LHS (atom or .top)
+    and NominalFree RHS (atom), so they preserve `OntologyStrict`. -/
 def markerPropagationAxioms (O : Ontology) : Ontology :=
   O.filterMap (fun ax => match ax with
     | .rinc R S =>
         if hasRange O R = true ∧ hasRange O S = true then
           some (.gci (.atom (rangeMarker O R)) (.atom (rangeMarker O S)))
+        else
+          none
+    | .reflexive R =>
+        if hasRange O R = true then
+          some (.gci .top (.atom (rangeMarker O R)))
         else
           none
     | _ => none)
@@ -320,7 +327,9 @@ theorem markerPropagationAxioms_no_range (O : Ontology) :
       split at hOpt <;> simp at hOpt
   | rchain _ _ _ => simp at hOpt
   | range _ _ => simp at hOpt
-  | reflexive _ => simp at hOpt
+  | reflexive R' =>
+      simp only [markerPropagationAxioms.match_1] at hOpt
+      split at hOpt <;> simp at hOpt
   | hasKey _ _ => simp at hOpt
 
 /-- `eliminateRanges` produces no range axioms. -/
@@ -407,7 +416,14 @@ theorem eliminateRanges_strict (O : Ontology)
         · simp [h] at hOpt
     | rchain _ _ _ => simp at hOpt
     | range _ _ => simp at hOpt
-    | reflexive _ => simp at hOpt
+    | reflexive R' =>
+        simp at hOpt
+        by_cases h : hasRange O R' = true
+        · simp [h] at hOpt
+          subst hOpt
+          -- ax = gci .top (atom marker_R').  .top is NominalFree, atom is NominalFree.
+          exact ⟨trivial, trivial⟩
+        · simp [h] at hOpt
     | hasKey _ _ => simp at hOpt
 
 -- ============================================================
@@ -509,7 +525,9 @@ theorem markerPropagationAxioms_nil_under_no_range {O : Ontology}
       simp
   | rchain _ _ _ => simp
   | range _ _ => simp
-  | reflexive _ => simp
+  | reflexive R =>
+      simp only [hasRange_false_under_no_range hO]
+      simp
   | hasKey _ _ => simp
 
 /-- Under `OntologyNoRange`, `eliminateRanges O = O`. -/
