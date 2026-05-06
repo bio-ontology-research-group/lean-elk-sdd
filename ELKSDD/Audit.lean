@@ -27,6 +27,7 @@ import ELKSDD.Compilation
 import ELKSDD.Stratified
 import ELKSDD.SCC
 import ELKSDD.SDD
+import ELKSDD.MOOSE
 
 namespace ELKSDD
 
@@ -437,5 +438,15 @@ namespace ELKSDD
 #print axioms ELpp.wmc_compileSat_eq_disponteWMC
 #print axioms ELpp.compileSat_disponte_correspondence
 #print axioms ELpp.exists_disponte_correspondence
+
+-- ============================================================
+-- MOOSE — bow-tied paper-citation theorems for the inference
+--         pipeline: end-to-end correctness, polynomial-time Sat
+--         decision, and a combined factorisation of the entire
+--         MOOSE algorithm.
+-- ============================================================
+#print axioms ELpp.moose_inference_correct
+#print axioms ELpp.sat_decision_polynomial
+#print axioms ELpp.moose_pipeline_complete
 
 end ELKSDD
