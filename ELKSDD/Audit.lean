@@ -31,6 +31,7 @@ import ELKSDD.MOOSE
 import ELKSDD.SatFactorGeneral
 import ELKSDD.SCCWorld
 import ELKSDD.DISPONTERat
+import ELKSDD.SCCWMCUniform
 
 namespace ELKSDD
 
@@ -474,5 +475,9 @@ namespace ELKSDD
 #print axioms ELpp.sat_selectedAxioms_decompose_iff
 #print axioms ELpp.per_world_sat_factor
 #print axioms ELpp.per_world_sat_factor_consistent
+-- (C) cont.: world-summation factorization + uniform-weight reduction.
+#print axioms ELpp.restrictFirst_extLast
+#print axioms ELpp.sum_enumerateWorlds_factor
+#print axioms ELpp.worldWeightRat_uniform
 
 end ELKSDD
