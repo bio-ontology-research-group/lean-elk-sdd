@@ -478,6 +478,16 @@ namespace ELKSDD
 -- (C) cont.: world-summation factorization + uniform-weight reduction.
 #print axioms ELpp.restrictFirst_extLast
 #print axioms ELpp.sum_enumerateWorlds_factor
+#print axioms ELpp.sum_enumerateWorlds_factor_general
 #print axioms ELpp.worldWeightRat_uniform
+-- (C) closed-form: WMC-level SCC factorization under uniform weights.
+#print axioms ELpp.disponteWMCRat_uniform_scc_factor
+-- (A7): nominal-aware SCC factorization (LHS-nominal extension).
+#print axioms ELpp.prodInterp_indiv_O₁
+#print axioms ELpp.nomLHS_indiv_in_sig
+#print axioms ELpp.prodInterp_satisfies_O₁_axiom_nomLHS
+#print axioms ELpp.prodInterp_satisfies_nomLHS
+#print axioms ELpp.Sat_factor_nomLHS
+#print axioms ELpp.scc_sat_factor_nomLHS
 
 end ELKSDD

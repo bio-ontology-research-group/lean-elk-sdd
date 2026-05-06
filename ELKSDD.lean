@@ -50,3 +50,4 @@ import ELKSDD.SatFactorGeneral
 import ELKSDD.SCCWorld
 import ELKSDD.DISPONTERat
 import ELKSDD.SCCWMCUniform
+import ELKSDD.SCCNomLHS
