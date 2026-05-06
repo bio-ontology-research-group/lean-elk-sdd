@@ -29,6 +29,7 @@ import ELKSDD.SCC
 import ELKSDD.SDD
 import ELKSDD.MOOSE
 import ELKSDD.SatFactorGeneral
+import ELKSDD.SCCWorld
 import ELKSDD.DISPONTERat
 
 namespace ELKSDD
@@ -466,5 +467,12 @@ namespace ELKSDD
 #print axioms ELpp.prodInterp_satisfies_actual_O₂_axiom
 #print axioms ELpp.prodInterp_satisfies_actual
 #print axioms ELpp.Sat_factor_refined_general
+-- (C) cont.: per-world Sat factor — the ConceptInSig propagation problem is solved.
+#print axioms ELpp.mem_selectedAxioms_iff
+#print axioms ELpp.selectedAxioms_sub_decompose
+#print axioms ELpp.decompose_sub_selectedAxioms
+#print axioms ELpp.sat_selectedAxioms_decompose_iff
+#print axioms ELpp.per_world_sat_factor
+#print axioms ELpp.per_world_sat_factor_consistent
 
 end ELKSDD
