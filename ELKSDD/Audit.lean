@@ -28,6 +28,7 @@ import ELKSDD.Stratified
 import ELKSDD.SCC
 import ELKSDD.SDD
 import ELKSDD.MOOSE
+import ELKSDD.SatFactorGeneral
 import ELKSDD.DISPONTERat
 
 namespace ELKSDD
@@ -460,5 +461,10 @@ namespace ELKSDD
 #print axioms ELpp.wmc_compileSat_eq_disponteWMC_rat
 #print axioms ELpp.compileSat_disponte_correspondence_rat
 #print axioms ELpp.exists_disponte_correspondence_rat
+-- (C): generalized Sat-factor — unblocks per-world Sat factor and WMC SCC.
+#print axioms ELpp.prodInterp_satisfies_actual_O₁_axiom
+#print axioms ELpp.prodInterp_satisfies_actual_O₂_axiom
+#print axioms ELpp.prodInterp_satisfies_actual
+#print axioms ELpp.Sat_factor_refined_general
 
 end ELKSDD
