@@ -409,12 +409,27 @@ theorem Sat_to_eliminated_full {O : Ontology} {X Y : Concept}
       -- Discovery: third incompleteness — self_range's range axiom is removed.
       sorry
   | @range_via_rincStar C R S D E _ hAnc hRange ih =>
-      -- The hardest case: rinc-ancestor refinement.
       -- ih : Sat O' (modifyConcept C) (modifyConcept (∃R.D))
       -- hAnc : RincAncestor O R S
-      -- hRange : range S E ∈ O
+      -- hRange : range S E ∈ O  (so hasRange O S = true)
       -- goal: Sat O' (modifyConcept C) (modifyConcept (∃R.(D ⊓ E)))
-      sorry
+      cases hAnc with
+      | refl =>
+          -- S = R, so this is exactly range_apply.
+          have hR : hasRange O R = true := (hasRange_iff O R).mpr ⟨E, hRange⟩
+          simp only [modifyConcept, hR, if_true] at ih ⊢
+          refine Sat.exist_prop ih ?_
+          apply Sat.conj_intro
+          · apply Sat.conj_intro
+            · exact Sat.conj_left (Sat.refl _)
+            · have hMarker : Sat (eliminateRanges O) (.atom (rangeMarker O R)) (modifyConcept O E) :=
+                Sat.base_gci (rangeMarker_axiom_in_eliminateRanges hRange)
+              exact Sat.trans (Sat.conj_right (Sat.refl _)) hMarker
+          · exact Sat.conj_right (Sat.refl _)
+      | step _ _ =>
+          -- General rinc-step case: requires modifyConcept to track rinc-ancestor markers.
+          -- See file header — this is the core open case requiring the modifyConcept extension.
+          sorry
   | @rinc_self_star C R S _ hAnc ih =>
       -- modifyConcept (self _) = self _.
       -- ih : Sat O' (modifyConcept C) (self R)
