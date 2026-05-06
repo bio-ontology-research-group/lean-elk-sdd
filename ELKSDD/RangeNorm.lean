@@ -211,12 +211,19 @@ def modifyAxiom (O : Ontology) : Axiom → Option Axiom
   | .reflexive R   => some (.reflexive R)
   | .hasKey C rs   => some (.hasKey C rs)
 
-/-- Generated marker-axioms: `A_R ⊑ E` for each `Range R E ∈ O`.
-    Markers are computed w.r.t. the full original O (filterMap closes
-    over O) so they are consistent across the whole transformation. -/
+/-- Generated marker-axioms: `A_R ⊑ modifyConcept O E` for each
+    `Range R E ∈ O`.  Markers are computed w.r.t. the full original
+    O (filterMap closes over O) so they are consistent across the
+    whole transformation.
+
+    *Note*: the RHS uses `modifyConcept O E` (not raw E) so that
+    Sat-conservativity on the eliminated ontology can transfer the
+    marker constraint cleanly into the modified concept space.  When
+    `E` is atomic (the typical OWL 2 EL usage), `modifyConcept O E = E`
+    and this distinction is transparent. -/
 def markerAxioms (O : Ontology) : Ontology :=
   O.filterMap (fun ax => match ax with
-    | .range R E => some (.gci (.atom (rangeMarker O R)) E)
+    | .range R E => some (.gci (.atom (rangeMarker O R)) (modifyConcept O E))
     | _ => none)
 
 /-- The full BBL 2008 §3.3 normalization. -/
@@ -338,10 +345,12 @@ theorem eliminateRanges_strict (O : Ontology)
     | range R' E' =>
         simp at hOpt
         subst hOpt
-        -- ax = gci (atom (rangeMarker O R')) E'.  AxiomStrict needs
-        -- NominalFree (atom _) ∧ NominalFree E'.  First is trivial.
-        -- Second: from AxiomNominalFree (.range R' E') = NominalFree E'.
-        exact ⟨trivial, hOrigNF⟩
+        -- ax = gci (atom (rangeMarker O R')) (modifyConcept O E').
+        -- AxiomStrict needs NominalFree (atom _) ∧ NominalFree (modifyConcept O E').
+        -- First is trivial.  Second: NominalFree E' (from AxiomNominalFree
+        -- (.range R' E')) → NominalFree (modifyConcept O E') (by
+        -- modifyConcept_NominalFree).
+        exact ⟨trivial, modifyConcept_NominalFree O E' hOrigNF⟩
     | reflexive _ => simp at hOpt
     | hasKey _ _ => simp at hOpt
 
