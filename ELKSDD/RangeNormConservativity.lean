@@ -106,6 +106,8 @@ theorem gci_in_eliminateRanges {O : Ontology} {C D : Concept}
   unfold eliminateRanges
   apply List.mem_append.mpr
   left
+  apply List.mem_append.mpr
+  left
   rw [List.mem_filterMap]
   exact ⟨Axiom.gci C D, h, by simp [modifyAxiom]⟩
 
@@ -114,6 +116,8 @@ theorem rinc_in_eliminateRanges {O : Ontology} {R S : Role}
     (h : Axiom.rinc R S ∈ O) :
     Axiom.rinc R S ∈ eliminateRanges O := by
   unfold eliminateRanges
+  apply List.mem_append.mpr
+  left
   apply List.mem_append.mpr
   left
   rw [List.mem_filterMap]
@@ -126,6 +130,8 @@ theorem rchain_in_eliminateRanges {O : Ontology} {R₁ R₂ S : Role}
   unfold eliminateRanges
   apply List.mem_append.mpr
   left
+  apply List.mem_append.mpr
+  left
   rw [List.mem_filterMap]
   exact ⟨Axiom.rchain R₁ R₂ S, h, by simp [modifyAxiom]⟩
 
@@ -134,6 +140,8 @@ theorem reflexive_in_eliminateRanges {O : Ontology} {R : Role}
     (h : Axiom.reflexive R ∈ O) :
     Axiom.reflexive R ∈ eliminateRanges O := by
   unfold eliminateRanges
+  apply List.mem_append.mpr
+  left
   apply List.mem_append.mpr
   left
   rw [List.mem_filterMap]
@@ -150,6 +158,8 @@ theorem rangeMarker_axiom_in_eliminateRanges {O : Ontology} {R : Role} {E : Conc
     Axiom.gci (.atom (rangeMarker O R)) (modifyConcept O E) ∈ eliminateRanges O := by
   unfold eliminateRanges
   apply List.mem_append.mpr
+  left
+  apply List.mem_append.mpr
   right
   unfold markerAxioms
   rw [List.mem_filterMap]
@@ -160,6 +170,8 @@ theorem hasKey_in_eliminateRanges {O : Ontology} {C : Concept} {rs : List Role}
     (h : Axiom.hasKey C rs ∈ O) :
     Axiom.hasKey C rs ∈ eliminateRanges O := by
   unfold eliminateRanges
+  apply List.mem_append.mpr
+  left
   apply List.mem_append.mpr
   left
   rw [List.mem_filterMap]
@@ -173,6 +185,21 @@ theorem RincAncestor_in_eliminateRanges {O : Ontology} {R S : Role}
   induction h with
   | refl => exact RincAncestor.refl _
   | step _ hStep ih => exact RincAncestor.step ih (rinc_in_eliminateRanges hStep)
+
+/-- If `rinc R S ∈ O` and both `hasRange O R` and `hasRange O S` are true,
+    then the marker-propagation axiom `gci (atom marker_R) (atom marker_S)`
+    is in `eliminateRanges O`. -/
+theorem markerPropagation_axiom_in_eliminateRanges {O : Ontology} {R S : Role}
+    (h : Axiom.rinc R S ∈ O)
+    (hR : hasRange O R = true) (hS : hasRange O S = true) :
+    Axiom.gci (.atom (rangeMarker O R)) (.atom (rangeMarker O S)) ∈ eliminateRanges O := by
+  unfold eliminateRanges
+  apply List.mem_append.mpr
+  right
+  unfold markerPropagationAxioms
+  rw [List.mem_filterMap]
+  refine ⟨Axiom.rinc R S, h, ?_⟩
+  simp [hR, hS]
 
 -- ============================================================
 -- 2. Forward conservativity (Sat O ⇒ Sat O' on modified concepts)
@@ -268,11 +295,19 @@ theorem Sat_to_eliminated_full {O : Ontology} {X Y : Concept}
         · -- goal: Sat O' (modifyConcept C) (∃S.(modifyConcept D ⊓ marker_S))
           simp only [hS, if_true]
           -- rinc_apply on ih gives ∃S.(modifyConcept D ⊓ marker_R).
-          -- We need to swap marker_R ↦ marker_S.
-          -- This requires bridging the markers, which generally fails.
-          -- Discovery: the modifyConcept transformation is incomplete here.
-          -- Future work: extend modifyConcept to track rinc-ancestor markers.
-          sorry
+          -- Use the marker-propagation axiom (atom marker_R) ⊑ (atom marker_S)
+          -- to swap markers via Sat.exist_prop.
+          have h1 : Sat (eliminateRanges O) (modifyConcept O C)
+                      (.exist S (.conj (modifyConcept O D) (.atom (rangeMarker O R)))) :=
+            Sat.rinc_apply ih (rinc_in_eliminateRanges hax)
+          refine Sat.exist_prop h1 ?_
+          -- Bridge: Sat O' (modifyConcept D ⊓ marker_R) (modifyConcept D ⊓ marker_S).
+          apply Sat.conj_intro
+          · exact Sat.conj_left (Sat.refl _)
+          · -- Sat O' (modifyConcept D ⊓ marker_R) (atom marker_S) via marker propagation.
+            have hProp : Sat (eliminateRanges O) (.atom (rangeMarker O R)) (.atom (rangeMarker O S)) :=
+              Sat.base_gci (markerPropagation_axiom_in_eliminateRanges hax hR hS)
+            exact Sat.trans (Sat.conj_right (Sat.refl _)) hProp
         · -- goal: Sat O' (modifyConcept C) (∃S.(modifyConcept D))
           simp only [hS, if_false]
           have h1 : Sat (eliminateRanges O) (modifyConcept O C)
@@ -377,14 +412,36 @@ theorem Sat_to_eliminated_full {O : Ontology} {X Y : Concept}
       exact Sat.nom_symm ih
   | @hasKey_apply a b C rs cs _ _ h_ax _ _ ih_aC ih_bC ih_aR ih_bR =>
       -- modifyConcept (nom _) = nom _.  hasKey kept verbatim by modifyAxiom.
-      -- Each ih_aR, ih_bR uses ∃R.(nom (cs R)).
-      -- We need to show this in modified form.
-      simp only [modifyConcept] at ih_aC ih_bC ih_aR ih_bR ⊢
-      -- For ih_aR R hR : Sat O' (.nom a) (modifyConcept (∃R.(.nom (cs R)))).
-      -- modifyConcept of this: if hasRange O R then ∃R.(.nom (cs R) ⊓ marker_R) else ∃R.(.nom (cs R)).
-      -- The hasKey rule wants exactly ∃R.(.nom (cs R)).  If hasRange R = true, the modified form
-      -- has an extra marker — same incompleteness as exist_prop's hasRange-true case.
-      sorry
+      -- The hasKey rule wants premises in shape ∃R.(.nom (cs R)).  When hasRange R = true,
+      -- the IH's modifyConcept gives ∃R.(.nom (cs R) ⊓ marker_R) — strip the marker via exist_prop+conj_left.
+      simp only [modifyConcept] at ih_aC ih_bC ⊢
+      -- Convert ih_aC : Sat O' (.nom a) (modifyConcept C) → Sat O' (.nom a) C via Sat_modify_imp_orig.
+      have h_aC' : Sat (eliminateRanges O) (.nom a) C :=
+        Sat.trans ih_aC (Sat_modify_imp_orig O C)
+      have h_bC' : Sat (eliminateRanges O) (.nom b) C :=
+        Sat.trans ih_bC (Sat_modify_imp_orig O C)
+      -- Strip markers (if present) from the role premises.
+      have h_aR' : ∀ R ∈ rs, Sat (eliminateRanges O) (.nom a) (.exist R (.nom (cs R))) := by
+        intro R hR
+        have hih := ih_aR R hR
+        simp only [modifyConcept] at hih
+        by_cases hRng : hasRange O R = true
+        · simp only [hRng, if_true] at hih
+          -- hih : Sat O' (.nom a) (∃R.((.nom (cs R)) ⊓ atom marker_R))
+          -- Strip via exist_prop + conj_left.
+          exact Sat.exist_prop hih (Sat.conj_left (Sat.refl _))
+        · simp only [hRng, if_false] at hih
+          exact hih
+      have h_bR' : ∀ R ∈ rs, Sat (eliminateRanges O) (.nom b) (.exist R (.nom (cs R))) := by
+        intro R hR
+        have hih := ih_bR R hR
+        simp only [modifyConcept] at hih
+        by_cases hRng : hasRange O R = true
+        · simp only [hRng, if_true] at hih
+          exact Sat.exist_prop hih (Sat.conj_left (Sat.refl _))
+        · simp only [hRng, if_false] at hih
+          exact hih
+      exact Sat.hasKey_apply cs h_aC' h_bC' (hasKey_in_eliminateRanges h_ax) h_aR' h_bR'
 
 #print axioms gci_in_eliminateRanges
 #print axioms rinc_in_eliminateRanges
