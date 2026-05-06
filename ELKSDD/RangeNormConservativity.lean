@@ -391,8 +391,21 @@ theorem Sat_to_eliminated_full {O : Ontology} {X Y : Concept}
       simp only [modifyConcept] at ih ⊢
       by_cases hR : hasRange O R = true
       · simp only [hR, if_true]
-        -- goal: ∃R.(modifyConcept C ⊓ marker_R) — same marker issue.
-        sorry
+        -- goal: ∃R.(modifyConcept C ⊓ marker_R)
+        classical
+        by_cases hRefl : Axiom.reflexive R ∈ O
+        · -- Direct reflexive R ∈ O: use .top ⊑ marker_R.
+          have h1 : Sat (eliminateRanges O) (modifyConcept O C) (.exist R (modifyConcept O C)) :=
+            Sat.self_intro ih
+          refine Sat.exist_prop h1 ?_
+          apply Sat.conj_intro
+          · exact Sat.refl _
+          · have hTop : Sat (eliminateRanges O) (modifyConcept O C) Concept.top := Sat.top _
+            have hMark : Sat (eliminateRanges O) Concept.top (.atom (rangeMarker O R)) :=
+              Sat.base_gci (reflexiveRange_axiom_in_eliminateRanges hRefl hR)
+            exact Sat.trans hTop hMark
+        · -- reflexive R ∉ O directly; same transitive-closure obstacle as self_range.
+          sorry
       · simp only [hR, if_false]
         exact Sat.self_intro ih
   | @reflexive_self C R hax =>
@@ -401,13 +414,23 @@ theorem Sat_to_eliminated_full {O : Ontology} {X Y : Concept}
       exact Sat.reflexive_self (reflexive_in_eliminateRanges hax)
   | @self_range C R E _ hax ih =>
       -- ih : Sat O' (modifyConcept C) (self R)
-      -- hax : range R E ∈ O
+      -- hax : range R E ∈ O  (so hasRange O R = true)
       -- goal: Sat O' (modifyConcept C) (modifyConcept E)
-      -- The original Sat.self_range gives Sat O C E directly.
-      -- In O', range R E is removed; we have marker_R ⊑ E and the self-loop.
-      -- Need to derive Sat O' (self R) atom marker_R, which isn't directly derivable.
-      -- Discovery: third incompleteness — self_range's range axiom is removed.
-      sorry
+      have hR : hasRange O R = true := (hasRange_iff O R).mpr ⟨E, hax⟩
+      classical
+      by_cases hRefl : Axiom.reflexive R ∈ O
+      · -- Direct reflexive R ∈ O: use .top ⊑ marker_R via reflexive-range propagation axiom.
+        have hTop : Sat (eliminateRanges O) (modifyConcept O C) Concept.top := Sat.top _
+        have hMark : Sat (eliminateRanges O) Concept.top (.atom (rangeMarker O R)) :=
+          Sat.base_gci (reflexiveRange_axiom_in_eliminateRanges hRefl hR)
+        have hME : Sat (eliminateRanges O) (.atom (rangeMarker O R)) (modifyConcept O E) :=
+          Sat.base_gci (rangeMarker_axiom_in_eliminateRanges hax)
+        exact Sat.trans hTop (Sat.trans hMark hME)
+      · -- reflexive R ∉ O directly; .self R came via rinc_self_star from some
+        -- reflexive R' with RincAncestor R' R.  Closing this requires either a
+        -- transitive reflexive-range propagation axiom (enumerable but requires
+        -- rinc-closure decidability) or the modifyConcept extension.
+        sorry
   | @range_via_rincStar C R S D E _ hAnc hRange ih =>
       -- ih : Sat O' (modifyConcept C) (modifyConcept (∃R.D))
       -- hAnc : RincAncestor O R S
