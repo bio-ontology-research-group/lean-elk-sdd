@@ -28,13 +28,13 @@
   *Application.*
 
     Combined with `per_world_sat_factor_consistent`, this yields the
-    WMC-level SCC factorization under uniform weights:
+    closed-form WMC-level SCC factorization under uniform weights:
        disponteWMCRat (O₁ ++ O₂) C D uniform = disponteWMCRat O₁ C D
        uniform · 2^|O₂|
-    as a corollary (full closed-form requires type-cast manipulation
-    via `List.length_append` to align `(O₁ ++ O₂).length` with
-    `O₁.length + O₂.length`; the substantive content of the
-    factorization is captured by `sum_enumerateWorlds_factor` here).
+    The length-cast bridge `(O₁ ++ O₂).length = O₁.length + O₂.length`
+    via `List.length_append` is handled by
+    `sum_enumerateWorlds_factor_general`, which uses `subst` to lift
+    the canonical identity to any propositionally-equivalent length.
 
   All theorems audit-clean — only Lean foundation axioms.  No
   Mathlib.
@@ -157,6 +157,27 @@ theorem sum_enumerateWorlds_factor (n m : Nat) (f : (Fin n → Bool) → Rat) :
 -- Uniform weight definition and basic theorem
 -- ============================================================
 
+/-- **Generalized world-summation factorization** with arbitrary
+    length `N = n + m`.  Bridges from the canonical `enumerateWorlds
+    (n + m)` form (in `sum_enumerateWorlds_factor`) to any length
+    propositionally equal to `n + m` (e.g., `(O₁ ++ O₂).length` via
+    `List.length_append`).
+
+    Proof: `subst` reduces the parametrised length to `n + m`; the
+    `by omega` bound uses `hEq` automatically, and after substitution
+    the body matches `restrictFirst` up to proof irrelevance. -/
+theorem sum_enumerateWorlds_factor_general
+    {N n m : Nat} (hEq : N = n + m) (f : (Fin n → Bool) → Rat) :
+    (enumerateWorlds N).foldr
+      (fun M acc => f (fun i : Fin n => M ⟨i.val, by omega⟩) + acc) 0 =
+    ((enumerateWorlds n).foldr (fun M' acc => f M' + acc) 0) * (2 ^ m : Nat) := by
+  subst hEq
+  exact sum_enumerateWorlds_factor n m f
+
+-- ============================================================
+-- Uniform weight definition and basic theorem
+-- ============================================================
+
 /-- *Uniform Rat weight*: every per-axiom value is 1.  Models the
     "uniform prior" case where every axiom is equally likely. -/
 def uniformRat {O : Ontology} : DispAtom O → Bool → Rat := fun _ _ => 1
@@ -172,23 +193,58 @@ theorem worldWeightRat_uniform (O : Ontology) (M : World O) :
       rw [ih, Rat.one_mul]
 
 -- ============================================================
--- WMC-level SCC factorization for uniform weights (combined form)
+-- WMC-level SCC factorization for uniform weights — closed form
 -- ============================================================
---
--- Combining `sum_enumerateWorlds_factor` with
--- `per_world_sat_factor_consistent` and `worldWeightRat_uniform`,
--- the rational DISPONTE marginal factors as
---    disponteWMCRat (O₁ ++ O₂) C D uniform =
---    disponteWMCRat O₁ C D uniform · 2^|O₂|
--- under SCC conditions.
---
--- The full closed-form theorem requires type-cast manipulation to
--- align `(O₁ ++ O₂).length` with `O₁.length + O₂.length` (the two
--- are propositionally equal via `List.length_append` but not
--- definitionally equal in Lean's type system).  The substantive
--- proof content is captured by `sum_enumerateWorlds_factor`
--- (combinatorial), `per_world_sat_factor_consistent` (Sat-level),
--- and `worldWeightRat_uniform` (uniform-weight reduction).
+
+/-- **WMC-level SCC factorization (uniform weights).**
+
+    Under SCC conditions (disjoint signatures, consistent O₂, query
+    inside O₁'s signature, both ontologies nominal-free and
+    range-chain-safe), the rational DISPONTE marginal under uniform
+    weights factorizes:
+
+      `disponteWMCRat (O₁ ++ O₂) C D uniformRat = disponteWMCRat O₁ C D uniformRat · 2^|O₂|`.
+
+    Proof: combine `per_world_sat_factor_consistent` (Sat-level
+    factorization), `worldWeightRat_uniform` (uniform weight
+    reduction), and `sum_enumerateWorlds_factor_general` (the
+    combinatorial summation identity, length-cast version). -/
+theorem disponteWMCRat_uniform_scc_factor
+    {O₁ O₂ : Ontology}
+    (hO₁_nf : OntologyNominalFree O₁) (hO₂_nf : OntologyNominalFree O₂)
+    (hO₁_safe : RangeChainSafe O₁) (hO₂_safe : RangeChainSafe O₂)
+    (hO₂_cons : ¬ Sat O₂ .top .bot)
+    (hdisj : DisjointSigs O₁ O₂)
+    {C D : Concept} (hC_nf : NominalFree C) (hD_nf : NominalFree D)
+    (hC : ConceptInSig O₁ C) (hD : ConceptInSig O₁ D) :
+    disponteWMCRat (O₁ ++ O₂) C D uniformRat =
+    disponteWMCRat O₁ C D uniformRat * ((2 ^ O₂.length : Nat) : Rat) := by
+  classical
+  unfold disponteWMCRat
+  -- Step 1: rewrite LHS summand using `worldWeightRat_uniform` + `per_world_sat_factor_consistent`.
+  have h_lhs : ∀ M ∈ enumerateWorlds (O₁ ++ O₂).length,
+      (if Sat (selectedAxioms (O₁ ++ O₂) M) C D
+        then worldWeightRat (O₁ ++ O₂) M uniformRat else 0) =
+      (if Sat (selectedAxioms O₁ (restrictWorld₁ M)) C D then 1 else 0) := by
+    intro M _
+    rw [worldWeightRat_uniform]
+    rw [per_world_sat_factor_consistent hO₁_nf hO₂_nf hO₁_safe hO₂_safe
+          hO₂_cons hdisj hC_nf hD_nf hC hD M]
+    -- selectedFromO₁ O₁ O₂ M = selectedAxioms O₁ (restrictWorld₁ M) by definition.
+    rfl
+  rw [foldr_add_eq_of_eqOn_rat _ _ _ h_lhs]
+  -- Step 2: rewrite RHS summand using `worldWeightRat_uniform`.
+  have h_rhs : ∀ M' ∈ enumerateWorlds O₁.length,
+      (if Sat (selectedAxioms O₁ M') C D then worldWeightRat O₁ M' uniformRat else 0) =
+      (if Sat (selectedAxioms O₁ M') C D then 1 else 0) := by
+    intro M' _
+    rw [worldWeightRat_uniform]
+  rw [foldr_add_eq_of_eqOn_rat _ _ _ h_rhs]
+  -- Step 3: apply the general factor with length cast `(O₁++O₂).length = O₁.length + O₂.length`.
+  -- Proof irrelevance reconciles `restrictWorld₁ M` with the abstract `fun i => M ⟨i.val, _⟩` form.
+  exact sum_enumerateWorlds_factor_general
+    (List.length_append : (O₁ ++ O₂).length = O₁.length + O₂.length)
+    (fun M' => if Sat (selectedAxioms O₁ M') C D then 1 else 0)
 
 -- ============================================================
 -- Audit
@@ -196,7 +252,9 @@ theorem worldWeightRat_uniform (O : Ontology) (M : World O) :
 
 #print axioms restrictFirst_extLast
 #print axioms sum_enumerateWorlds_factor
+#print axioms sum_enumerateWorlds_factor_general
 #print axioms worldWeightRat_uniform
+#print axioms disponteWMCRat_uniform_scc_factor
 
 end ELpp
 end ELKSDD
