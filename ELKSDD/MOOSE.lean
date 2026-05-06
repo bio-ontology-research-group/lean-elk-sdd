@@ -477,6 +477,102 @@ theorem scc_sat_factor_k
       · exact h_cons_rest
 
 -- ============================================================
+-- (5) Chain-free corollary: SCC factorisation without RangeChainSafe
+-- ============================================================
+--
+-- The `RangeChainSafe O` precondition on the SCC factorisation
+-- theorems is needed only because the rchain case of `canon_satisfies`
+-- (ELpp.lean:734-744) cannot discharge the range guard transfer
+-- when an `rchain R₁ R₂ S` axiom co-exists with a `range T E` axiom
+-- on a rinc-ancestor T of S.  When the ontology has no role chains
+-- (which is the case for all the experimental ontologies in the
+-- MOOSE paper — MNIST onto, Pizza\"iolo), the precondition is
+-- vacuously satisfied.
+--
+-- This section provides a `NoRoleChain` predicate that is strictly
+-- stronger than `RangeChainSafe` (vacuously implies it) and a
+-- corollary form of `scc_sat_factor` that takes `NoRoleChain`
+-- instead.  Production-ontology users who do not employ role
+-- chains can use this corollary directly without needing to verify
+-- range-chain safety.
+--
+-- Future work (BBL 2008 §3.3 Path-B): full elimination of
+-- `RangeChainSafe` by completing the meaningful-range case of
+-- `Sat_to_eliminated`/`Sat_from_eliminated` in `RangeNorm.lean`
+-- (~300 LOC; the `eliminateRanges` syntactic transformation and
+-- the strict-canon `canon_satisfies_strict` are already in place
+-- and sorry-free).
+
+/-- An ontology has no role chain axioms.  Strictly stronger than
+    `RangeChainSafe`: with no rchain axioms, the rchain case of any
+    range-guard-transfer obligation is vacuous. -/
+def NoRoleChain (O : Ontology) : Prop :=
+  ∀ R₁ R₂ S, Axiom.rchain R₁ R₂ S ∉ O
+
+/-- An ontology has no range axioms.  Also strictly stronger than
+    `RangeChainSafe`: with no range axioms, the conclusion
+    `Axiom.range T E ∉ O` is universally true.  This is the more
+    practically common case (e.g. the MNIST ontology in the MOOSE
+    paper has a role chain but no range axioms). -/
+def NoRangeAxiom (O : Ontology) : Prop :=
+  ∀ T E, Axiom.range T E ∉ O
+
+/-- `NoRoleChain O` implies `RangeChainSafe O` vacuously: with no
+    rchain axioms, the universal hypothesis `Axiom.rchain R₁ R₂ S ∈ O`
+    is always false, so the implication is trivially true. -/
+theorem RangeChainSafe_of_NoRoleChain {O : Ontology}
+    (h : NoRoleChain O) : RangeChainSafe O := by
+  intro R₁ R₂ S T E hRchain _ _
+  exact (h R₁ R₂ S hRchain).elim
+
+/-- `NoRangeAxiom O` implies `RangeChainSafe O` vacuously: with no
+    range axioms, the conclusion is universally true. -/
+theorem RangeChainSafe_of_NoRangeAxiom {O : Ontology}
+    (h : NoRangeAxiom O) : RangeChainSafe O := by
+  intro R₁ R₂ S T E _ _ hRange
+  exact h T E hRange
+
+/-- **Chain-free corollary of `scc_sat_factor`.**
+
+    For ontologies without role chains, the Sat-level SCC
+    factorisation holds without requiring the user to verify
+    range-chain safety. -/
+theorem scc_sat_factor_no_chain
+    {O₁ O₂ : Ontology}
+    (hO₁_nf : OntologyNominalFree O₁) (hO₂_nf : OntologyNominalFree O₂)
+    (hO₁_no_chain : NoRoleChain O₁) (hO₂_no_chain : NoRoleChain O₂)
+    (hdisj : DisjointSigs O₁ O₂)
+    (hcons : ¬ Sat O₂ .top .bot)
+    {C D : Concept} (hC_nf : NominalFree C) (hD_nf : NominalFree D)
+    (hC : ConceptInSig O₁ C) (hD : ConceptInSig O₁ D) :
+    Sat (O₁ ++ O₂) C D ↔ Sat O₁ C D :=
+  scc_sat_factor hO₁_nf hO₂_nf
+    (RangeChainSafe_of_NoRoleChain hO₁_no_chain)
+    (RangeChainSafe_of_NoRoleChain hO₂_no_chain)
+    hdisj hcons hC_nf hD_nf hC hD
+
+/-- **Range-free corollary of `scc_sat_factor`.**
+
+    For ontologies without range axioms (which includes both the
+    MNIST and Pizza\"iolo ontologies in the MOOSE experiments —
+    the former has a role chain but no ranges, the latter has
+    neither), the Sat-level SCC factorisation holds without
+    requiring the user to verify range-chain safety. -/
+theorem scc_sat_factor_no_range
+    {O₁ O₂ : Ontology}
+    (hO₁_nf : OntologyNominalFree O₁) (hO₂_nf : OntologyNominalFree O₂)
+    (hO₁_no_range : NoRangeAxiom O₁) (hO₂_no_range : NoRangeAxiom O₂)
+    (hdisj : DisjointSigs O₁ O₂)
+    (hcons : ¬ Sat O₂ .top .bot)
+    {C D : Concept} (hC_nf : NominalFree C) (hD_nf : NominalFree D)
+    (hC : ConceptInSig O₁ C) (hD : ConceptInSig O₁ D) :
+    Sat (O₁ ++ O₂) C D ↔ Sat O₁ C D :=
+  scc_sat_factor hO₁_nf hO₂_nf
+    (RangeChainSafe_of_NoRangeAxiom hO₁_no_range)
+    (RangeChainSafe_of_NoRangeAxiom hO₂_no_range)
+    hdisj hcons hC_nf hD_nf hC hD
+
+-- ============================================================
 -- Audit
 -- ============================================================
 
@@ -488,6 +584,10 @@ theorem scc_sat_factor_k
 #print axioms moose_scc_summary
 #print axioms joint_consistent_pair
 #print axioms scc_sat_factor_k
+#print axioms RangeChainSafe_of_NoRoleChain
+#print axioms RangeChainSafe_of_NoRangeAxiom
+#print axioms scc_sat_factor_no_chain
+#print axioms scc_sat_factor_no_range
 
 end ELpp
 end ELKSDD

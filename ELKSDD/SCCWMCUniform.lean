@@ -247,6 +247,58 @@ theorem disponteWMCRat_uniform_scc_factor
     (fun M' => if Sat (selectedAxioms O₁ M') C D then 1 else 0)
 
 -- ============================================================
+-- Chain-free corollary
+-- ============================================================
+--
+-- See `MOOSE.scc_sat_factor_no_chain` for the rationale.  The same
+-- corollary at the WMC level: chain-free ontologies (no rchain
+-- axioms) admit closed-form WMC SCC factorisation under uniform
+-- weights without the user needing to verify range-chain safety.
+-- `NoRoleChain` and `RangeChainSafe_of_NoRoleChain` are defined in
+-- `MOOSE` and reused here transitively via `DISPONTERat`.
+
+/-- **Chain-free corollary of `disponteWMCRat_uniform_scc_factor`.**
+
+    For chain-free ontologies, the closed-form WMC SCC factorisation
+    under uniform weights holds without requiring the user to verify
+    range-chain safety. -/
+theorem disponteWMCRat_uniform_scc_factor_no_chain
+    {O₁ O₂ : Ontology}
+    (hO₁_nf : OntologyNominalFree O₁) (hO₂_nf : OntologyNominalFree O₂)
+    (hO₁_no_chain : NoRoleChain O₁) (hO₂_no_chain : NoRoleChain O₂)
+    (hO₂_cons : ¬ Sat O₂ .top .bot)
+    (hdisj : DisjointSigs O₁ O₂)
+    {C D : Concept} (hC_nf : NominalFree C) (hD_nf : NominalFree D)
+    (hC : ConceptInSig O₁ C) (hD : ConceptInSig O₁ D) :
+    disponteWMCRat (O₁ ++ O₂) C D uniformRat =
+    disponteWMCRat O₁ C D uniformRat * ((2 ^ O₂.length : Nat) : Rat) :=
+  disponteWMCRat_uniform_scc_factor hO₁_nf hO₂_nf
+    (RangeChainSafe_of_NoRoleChain hO₁_no_chain)
+    (RangeChainSafe_of_NoRoleChain hO₂_no_chain)
+    hO₂_cons hdisj hC_nf hD_nf hC hD
+
+/-- **Range-free corollary of `disponteWMCRat_uniform_scc_factor`.**
+
+    For ontologies without range axioms (the case for both MNIST
+    and Pizza\"iolo experimental ontologies), the closed-form WMC
+    SCC factorisation under uniform weights holds without requiring
+    the user to verify range-chain safety. -/
+theorem disponteWMCRat_uniform_scc_factor_no_range
+    {O₁ O₂ : Ontology}
+    (hO₁_nf : OntologyNominalFree O₁) (hO₂_nf : OntologyNominalFree O₂)
+    (hO₁_no_range : NoRangeAxiom O₁) (hO₂_no_range : NoRangeAxiom O₂)
+    (hO₂_cons : ¬ Sat O₂ .top .bot)
+    (hdisj : DisjointSigs O₁ O₂)
+    {C D : Concept} (hC_nf : NominalFree C) (hD_nf : NominalFree D)
+    (hC : ConceptInSig O₁ C) (hD : ConceptInSig O₁ D) :
+    disponteWMCRat (O₁ ++ O₂) C D uniformRat =
+    disponteWMCRat O₁ C D uniformRat * ((2 ^ O₂.length : Nat) : Rat) :=
+  disponteWMCRat_uniform_scc_factor hO₁_nf hO₂_nf
+    (RangeChainSafe_of_NoRangeAxiom hO₁_no_range)
+    (RangeChainSafe_of_NoRangeAxiom hO₂_no_range)
+    hO₂_cons hdisj hC_nf hD_nf hC hD
+
+-- ============================================================
 -- Audit
 -- ============================================================
 
@@ -255,6 +307,8 @@ theorem disponteWMCRat_uniform_scc_factor
 #print axioms sum_enumerateWorlds_factor_general
 #print axioms worldWeightRat_uniform
 #print axioms disponteWMCRat_uniform_scc_factor
+#print axioms disponteWMCRat_uniform_scc_factor_no_chain
+#print axioms disponteWMCRat_uniform_scc_factor_no_range
 
 end ELpp
 end ELKSDD
