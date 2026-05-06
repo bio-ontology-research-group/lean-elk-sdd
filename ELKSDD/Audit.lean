@@ -28,6 +28,7 @@ import ELKSDD.Stratified
 import ELKSDD.SCC
 import ELKSDD.SDD
 import ELKSDD.MOOSE
+import ELKSDD.DISPONTERat
 
 namespace ELKSDD
 
@@ -455,5 +456,9 @@ namespace ELKSDD
 -- (B): multi-component (k-SCC) factorization.
 #print axioms ELpp.joint_consistent_pair
 #print axioms ELpp.scc_sat_factor_k
+-- (E): rational-valued DISPONTE correspondence (Lean core only, no Mathlib).
+#print axioms ELpp.wmc_compileSat_eq_disponteWMC_rat
+#print axioms ELpp.compileSat_disponte_correspondence_rat
+#print axioms ELpp.exists_disponte_correspondence_rat
 
 end ELKSDD
