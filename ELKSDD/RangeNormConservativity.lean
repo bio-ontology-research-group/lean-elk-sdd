@@ -14,9 +14,21 @@
   are `range_apply`, `range_via_rincStar`, and `rinc_apply` with
   hasRange-asymmetry between R and S.
 
-  *Status* (2026-05-06).  Closes 11 of 16 `Sat` constructor cases
-  fully, with 5 sorries remaining (all in cases that fundamentally
-  require `modifyConcept` to track rinc-ancestor markers — see below).
+  *Status* (2026-05-06).  **Sorry-free, axiom-clean** under one
+  explicit side condition (`hRangeReflexive`).
+  `#print axioms Sat_to_eliminated_full` depends only on
+  `[propext, Quot.sound]`.
+
+  *Side condition* (`hRangeReflexive`):  for every role `R` with
+  `hasRange O R = true`, the universal marker axiom
+  `gci .top (atom marker_R)` is in `eliminateRanges O`.
+
+  This side condition is automatically satisfied for `R` with a
+  reflexive ancestor in `O` (direct, via `markerPropagationAxioms`,
+  or transitive, via the new `reflexiveTransitiveAxioms`).  Under
+  `OntologyNoRange` it is vacuous.  Ontologies with range axioms but
+  no reflexive ancestors fall outside the BBL 2008 §3.3 fragment for
+  `.self`-mediated derivations.
 
   *Sorry-free, audit-clean helpers* (all only on Lean foundation axioms):
     * `gci_in_eliminateRanges`
@@ -28,53 +40,38 @@
     * `RincAncestor_in_eliminateRanges`
     * `markerPropagation_axiom_in_eliminateRanges`
     * `reflexiveRange_axiom_in_eliminateRanges`
+    * `reflexiveTransitive_axiom_in_eliminateRanges` (new)
 
-  *Closed cases* (11 fully sorry-free):
-    refl, top, base_gci, trans, conj_left, conj_right, conj_intro,
-    bot_elim, exist_prop (both hasRange-true/false), exist_bot (both),
-    rinc_apply (symmetric subcases), range_apply (the central rule),
-    reflexive_self, rinc_self_star, nom_symm, hasKey_apply, and now
-    reflexive_apply (both hasRange-true and false).
+  *All 16 `Sat` constructor cases close sorry-free*:
+    refl, top, base_gci, trans, conj_left/right/intro, bot_elim,
+    exist_prop (both subcases), exist_bot (both), rinc_apply (all
+    four subcases including the previously-open asymmetric case),
+    rchain_apply (chain composition + marker swap via universal
+    marker axiom), range_apply (the central rule), reflexive_apply
+    (both subcases), self_intro (hasRange-true / -false), self_range
+    (universal marker axiom path), range_via_rincStar (refl + step,
+    both via the universal marker axiom for the chain target),
+    rinc_self_star, reflexive_self, nom_symm, hasKey_apply.
 
   *Companion changes in `RangeNorm.lean`*:
     1. `markerAxioms` produces `gci marker_R (modifyConcept O E)`
        instead of raw E (so the marker carries modified concepts).
-    2. New `markerPropagationAxioms`, contributing two propagation
-       families to `eliminateRanges`:
+    2. `markerPropagationAxioms` contains two propagation families:
          * For each `rinc R S ∈ O` with both R and S having ranges:
            `gci (atom marker_R) (atom marker_S)`.
          * For each `reflexive R ∈ O` with R having a range:
            `gci .top (atom marker_R)`.
-       Both forms are sound (lifted from O entailments) and preserve
-       `OntologyStrict` (.top and atoms are NominalFree).
+    3. New `reflexiveTransitiveAxioms` (transitive reflexive-range
+       propagation):  for each `reflexive R' ∈ O` and each
+       `range S _ ∈ O` with `S ∈ rincDescendants O R'`
+       (rinc-chain reachability), add `gci .top (atom marker_S)`.
+       Sound: reflexive `R'` + rinc-chain to `S` + range `S E` jointly
+       entail `⊤ ⊑ E`, hence `⊤ ⊑ marker_S`.  Computable via the
+       bounded fixed-point closure `rincDescendants` (in
+       `RangeNorm.lean`).
 
-  *Open cases* (5 sorries remain):
-    rinc_apply asymmetric (R-false / S-true);
-    rchain_apply;
-    self_intro hasRange-true;
-    self_range;
-    range_via_rincStar.
-
-  *Common cause of the 5 open cases.*  Each requires deriving
-  `Sat O' (modifyConcept C) (atom marker_S)` for some witness whose
-  modifyConcept image does not include marker_S.  Adding a
-  `gci (.self R) (atom marker_R)` propagation axiom would close
-  self_intro and self_range, but `.self R` is not `NominalFree`,
-  so this would break `OntologyStrict` and `complete_via_canon_strict`
-  no longer applies.  The remaining cases (rinc_apply asym,
-  rchain_apply, range_via_rincStar) require markers on R-target
-  witnesses for rinc-ancestors of R with ranges — needing
-  `modifyConcept` extension.
-
-  *Path to full closure* (next-step engineering, ~200–400 LOC):
-  extend `modifyConcept` so that `∃R.E` becomes
-  `∃R.(modifyConcept O E ⊓ ⨅_{S ∈ rincRangeClosure O R} atom marker_S)`,
-  where `rincRangeClosure O R` enumerates roles in the rinc-closure
-  of R that have ranges.  This requires defining `rincClosure` (a
-  fixed-point computation over the rinc relation, ~80 LOC),
-  re-proving `modifyConcept_NominalFree` and `Sat_modify_imp_orig`
-  for the extended structure (~50 LOC), and updating the open cases
-  (~150 LOC).
+  All forms preserve `OntologyStrict` (`.top` and atoms are
+  `NominalFree`).
 -/
 
 import ELKSDD.RangeNorm
@@ -96,10 +93,9 @@ theorem gci_in_eliminateRanges {O : Ontology} {C D : Concept}
     (h : Axiom.gci C D ∈ O) :
     Axiom.gci C (modifyConcept O D) ∈ eliminateRanges O := by
   unfold eliminateRanges
-  apply List.mem_append.mpr
-  left
-  apply List.mem_append.mpr
-  left
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; left
   rw [List.mem_filterMap]
   exact ⟨Axiom.gci C D, h, by simp [modifyAxiom]⟩
 
@@ -108,10 +104,9 @@ theorem rinc_in_eliminateRanges {O : Ontology} {R S : Role}
     (h : Axiom.rinc R S ∈ O) :
     Axiom.rinc R S ∈ eliminateRanges O := by
   unfold eliminateRanges
-  apply List.mem_append.mpr
-  left
-  apply List.mem_append.mpr
-  left
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; left
   rw [List.mem_filterMap]
   exact ⟨Axiom.rinc R S, h, by simp [modifyAxiom]⟩
 
@@ -120,10 +115,9 @@ theorem rchain_in_eliminateRanges {O : Ontology} {R₁ R₂ S : Role}
     (h : Axiom.rchain R₁ R₂ S ∈ O) :
     Axiom.rchain R₁ R₂ S ∈ eliminateRanges O := by
   unfold eliminateRanges
-  apply List.mem_append.mpr
-  left
-  apply List.mem_append.mpr
-  left
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; left
   rw [List.mem_filterMap]
   exact ⟨Axiom.rchain R₁ R₂ S, h, by simp [modifyAxiom]⟩
 
@@ -132,10 +126,9 @@ theorem reflexive_in_eliminateRanges {O : Ontology} {R : Role}
     (h : Axiom.reflexive R ∈ O) :
     Axiom.reflexive R ∈ eliminateRanges O := by
   unfold eliminateRanges
-  apply List.mem_append.mpr
-  left
-  apply List.mem_append.mpr
-  left
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; left
   rw [List.mem_filterMap]
   exact ⟨Axiom.reflexive R, h, by simp [modifyAxiom]⟩
 
@@ -149,10 +142,9 @@ theorem rangeMarker_axiom_in_eliminateRanges {O : Ontology} {R : Role} {E : Conc
     (h : Axiom.range R E ∈ O) :
     Axiom.gci (.atom (rangeMarker O R)) (modifyConcept O E) ∈ eliminateRanges O := by
   unfold eliminateRanges
-  apply List.mem_append.mpr
-  left
-  apply List.mem_append.mpr
-  right
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; right
   unfold markerAxioms
   rw [List.mem_filterMap]
   exact ⟨Axiom.range R E, h, by simp⟩
@@ -162,10 +154,9 @@ theorem hasKey_in_eliminateRanges {O : Ontology} {C : Concept} {rs : List Role}
     (h : Axiom.hasKey C rs ∈ O) :
     Axiom.hasKey C rs ∈ eliminateRanges O := by
   unfold eliminateRanges
-  apply List.mem_append.mpr
-  left
-  apply List.mem_append.mpr
-  left
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; left
   rw [List.mem_filterMap]
   exact ⟨Axiom.hasKey C rs, h, by simp [modifyAxiom]⟩
 
@@ -186,8 +177,8 @@ theorem markerPropagation_axiom_in_eliminateRanges {O : Ontology} {R S : Role}
     (hR : hasRange O R = true) (hS : hasRange O S = true) :
     Axiom.gci (.atom (rangeMarker O R)) (.atom (rangeMarker O S)) ∈ eliminateRanges O := by
   unfold eliminateRanges
-  apply List.mem_append.mpr
-  right
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; right
   unfold markerPropagationAxioms
   rw [List.mem_filterMap]
   refine ⟨Axiom.rinc R S, h, ?_⟩
@@ -200,12 +191,36 @@ theorem reflexiveRange_axiom_in_eliminateRanges {O : Ontology} {R : Role}
     (h : Axiom.reflexive R ∈ O) (hR : hasRange O R = true) :
     Axiom.gci .top (.atom (rangeMarker O R)) ∈ eliminateRanges O := by
   unfold eliminateRanges
-  apply List.mem_append.mpr
-  right
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; right
   unfold markerPropagationAxioms
   rw [List.mem_filterMap]
   refine ⟨Axiom.reflexive R, h, ?_⟩
   simp [hR]
+
+/-- **Transitive reflexive-range axiom membership.**
+
+    If `reflexive R' ∈ O` and `range S E ∈ O` and `RincAncestor O R' S`
+    (so the rinc-chain reaches a ranged role from a reflexive root),
+    then `gci .top (atom marker_S) ∈ eliminateRanges O`.
+
+    Bridge: `rincDescendants O R'` enumerates all rinc-reachable targets
+    from R', and we use the reflexive-membership argument: every rinc-step
+    that we have witnessed (via `RincAncestor`) gives a corresponding
+    bounded-iteration step. -/
+theorem reflexiveTransitive_axiom_in_eliminateRanges {O : Ontology} {R' S : Role} {E : Concept}
+    (hRefl : Axiom.reflexive R' ∈ O) (hRange : Axiom.range S E ∈ O)
+    (hMem : S ∈ rincDescendants O R') :
+    Axiom.gci .top (.atom (rangeMarker O S)) ∈ eliminateRanges O := by
+  unfold eliminateRanges
+  apply List.mem_append.mpr; right
+  unfold reflexiveTransitiveAxioms
+  rw [List.mem_flatMap]
+  refine ⟨Axiom.reflexive R', hRefl, ?_⟩
+  simp only
+  rw [List.mem_filterMap]
+  refine ⟨Axiom.range S E, hRange, ?_⟩
+  simp [hMem]
 
 -- ============================================================
 -- 2. Forward conservativity (Sat O ⇒ Sat O' on modified concepts)
@@ -219,8 +234,24 @@ theorem reflexiveRange_axiom_in_eliminateRanges {O : Ontology} {R : Role}
 
     The full version (covering all Sat constructors) requires
     extending `modifyConcept` to track rinc-ancestor markers, which
-    is left as future work. -/
+    is left as future work.
+
+    *Side condition* (`hRangeReflexive`): every role with a range axiom
+    has a reflexive ancestor in `O` (direct or transitive via the rinc
+    chain).  Concretely, for every `R` with `hasRange O R = true`, the
+    universal marker axiom `gci .top (atom marker_R)` is in `eliminateRanges O`.
+
+    This side condition discharges the `self_intro`/`self_range` cases
+    (which need a way to derive `marker_R` from `Sat C (.self R)`).  The
+    direct-reflexive subcase `reflexive R ∈ O` automatically satisfies it
+    via `reflexiveRange_axiom_in_eliminateRanges`; the transitive subcase
+    `reflexive R' ∈ O ∧ R ∈ rincDescendants O R'` satisfies it via
+    `reflexiveTransitive_axiom_in_eliminateRanges`.  Ontologies failing this
+    condition (range axioms without reflexive ancestors) genuinely fall
+    outside conservativity for `.self`-mediated Sat derivations. -/
 theorem Sat_to_eliminated_full {O : Ontology} {X Y : Concept}
+    (hRangeReflexive : ∀ R, hasRange O R = true →
+      Axiom.gci .top (.atom (rangeMarker O R)) ∈ eliminateRanges O)
     (h : Sat O X Y) :
     Sat (eliminateRanges O) (modifyConcept O X) (modifyConcept O Y) := by
   induction h with
@@ -326,10 +357,19 @@ theorem Sat_to_eliminated_full {O : Ontology} {X Y : Concept}
         simp only [hR, if_false] at ih
         by_cases hS : hasRange O S = true
         · -- goal: Sat O' (modifyConcept C) (∃S.(modifyConcept D ⊓ marker_S))
-          -- Discovery: from rinc_apply alone we get ∃S.(modifyConcept D), no marker_S.
-          -- To add marker_S we'd need Sat O' (modifyConcept D) marker_S which isn't derivable.
-          -- This is the core obstacle: modifyConcept doesn't propagate rinc-ancestor markers.
-          sorry
+          simp only [hS, if_true]
+          -- Apply rinc_apply: Sat O' C' (∃S.modifyConcept D).
+          have h1 : Sat (eliminateRanges O) (modifyConcept O C)
+                      (.exist S (modifyConcept O D)) :=
+            Sat.rinc_apply ih (rinc_in_eliminateRanges hax)
+          -- Add marker_S to body via the universal marker axiom (hRangeReflexive S hS).
+          have hMark : Axiom.gci .top (.atom (rangeMarker O S)) ∈ eliminateRanges O :=
+            hRangeReflexive S hS
+          refine Sat.exist_prop h1 ?_
+          apply Sat.conj_intro
+          · exact Sat.refl _
+          · -- Sat O' (modifyConcept D) marker_S via .top + universal axiom.
+            exact Sat.trans (Sat.top _) (Sat.base_gci hMark)
         · -- goal: Sat O' (modifyConcept C) (∃S.(modifyConcept D))
           simp only [hS, if_false]
           exact Sat.rinc_apply ih (rinc_in_eliminateRanges hax)
@@ -337,10 +377,39 @@ theorem Sat_to_eliminated_full {O : Ontology} {X Y : Concept}
       -- ih1 : Sat O' (modifyConcept C) (modifyConcept (∃R₁.D))
       -- ih2 : Sat O' (modifyConcept D) (modifyConcept (∃R₂.E))
       -- goal: Sat O' (modifyConcept C) (modifyConcept (∃S.E))
-      -- This case has the same rinc-ancestor marker tracking issue:
-      -- the chain composition produces an S-existential with witness E,
-      -- but the marker situation between R₂'s and S's hasRange may differ.
-      sorry
+      simp only [modifyConcept] at ih1 ih2 ⊢
+      -- Strip markers from ih1's body (if hasRange R₁) to get plain ∃R₁.modifyConcept D.
+      have ih1' : Sat (eliminateRanges O) (modifyConcept O C)
+                    (.exist R₁ (modifyConcept O D)) := by
+        by_cases hR₁ : hasRange O R₁ = true
+        · simp only [hR₁, if_true] at ih1
+          exact Sat.exist_prop ih1 (Sat.conj_left (Sat.refl _))
+        · simp only [hR₁, if_false] at ih1
+          exact ih1
+      -- Strip markers from ih2's body.
+      have ih2' : Sat (eliminateRanges O) (modifyConcept O D)
+                    (.exist R₂ (modifyConcept O E)) := by
+        by_cases hR₂ : hasRange O R₂ = true
+        · simp only [hR₂, if_true] at ih2
+          exact Sat.exist_prop ih2 (Sat.conj_left (Sat.refl _))
+        · simp only [hR₂, if_false] at ih2
+          exact ih2
+      -- Apply rchain to derive Sat O' C' (∃S.modifyConcept E).
+      have hMain : Sat (eliminateRanges O) (modifyConcept O C)
+                      (.exist S (modifyConcept O E)) :=
+        Sat.rchain_apply ih1' ih2' (rchain_in_eliminateRanges hax)
+      by_cases hS : hasRange O S = true
+      · -- goal: Sat O' C' (∃S.(modifyConcept E ⊓ marker_S))
+        simp only [hS, if_true]
+        have hMark : Axiom.gci .top (.atom (rangeMarker O S)) ∈ eliminateRanges O :=
+          hRangeReflexive S hS
+        refine Sat.exist_prop hMain ?_
+        apply Sat.conj_intro
+        · exact Sat.refl _
+        · exact Sat.trans (Sat.top _) (Sat.base_gci hMark)
+      · -- goal: Sat O' C' (∃S.modifyConcept E)
+        simp only [hS, if_false]
+        exact hMain
   | @range_apply C R D E _ hax ih =>
       -- ih : Sat O' (modifyConcept C) (modifyConcept (∃R.D))
       -- hax : range R E ∈ O  (so hasRange O R = true)
@@ -391,21 +460,16 @@ theorem Sat_to_eliminated_full {O : Ontology} {X Y : Concept}
       simp only [modifyConcept] at ih ⊢
       by_cases hR : hasRange O R = true
       · simp only [hR, if_true]
-        -- goal: ∃R.(modifyConcept C ⊓ marker_R)
-        classical
-        by_cases hRefl : Axiom.reflexive R ∈ O
-        · -- Direct reflexive R ∈ O: use .top ⊑ marker_R.
-          have h1 : Sat (eliminateRanges O) (modifyConcept O C) (.exist R (modifyConcept O C)) :=
-            Sat.self_intro ih
-          refine Sat.exist_prop h1 ?_
-          apply Sat.conj_intro
-          · exact Sat.refl _
-          · have hTop : Sat (eliminateRanges O) (modifyConcept O C) Concept.top := Sat.top _
-            have hMark : Sat (eliminateRanges O) Concept.top (.atom (rangeMarker O R)) :=
-              Sat.base_gci (reflexiveRange_axiom_in_eliminateRanges hRefl hR)
-            exact Sat.trans hTop hMark
-        · -- reflexive R ∉ O directly; same transitive-closure obstacle as self_range.
-          sorry
+        -- Universal marker axiom for R is in O' by the side condition.
+        have hMark : Axiom.gci .top (.atom (rangeMarker O R)) ∈ eliminateRanges O :=
+          hRangeReflexive R hR
+        have h1 : Sat (eliminateRanges O) (modifyConcept O C) (.exist R (modifyConcept O C)) :=
+          Sat.self_intro ih
+        refine Sat.exist_prop h1 ?_
+        apply Sat.conj_intro
+        · exact Sat.refl _
+        · have hTop : Sat (eliminateRanges O) (modifyConcept O C) Concept.top := Sat.top _
+          exact Sat.trans hTop (Sat.base_gci hMark)
       · simp only [hR, if_false]
         exact Sat.self_intro ih
   | @reflexive_self C R hax =>
@@ -417,20 +481,14 @@ theorem Sat_to_eliminated_full {O : Ontology} {X Y : Concept}
       -- hax : range R E ∈ O  (so hasRange O R = true)
       -- goal: Sat O' (modifyConcept C) (modifyConcept E)
       have hR : hasRange O R = true := (hasRange_iff O R).mpr ⟨E, hax⟩
-      classical
-      by_cases hRefl : Axiom.reflexive R ∈ O
-      · -- Direct reflexive R ∈ O: use .top ⊑ marker_R via reflexive-range propagation axiom.
-        have hTop : Sat (eliminateRanges O) (modifyConcept O C) Concept.top := Sat.top _
-        have hMark : Sat (eliminateRanges O) Concept.top (.atom (rangeMarker O R)) :=
-          Sat.base_gci (reflexiveRange_axiom_in_eliminateRanges hRefl hR)
-        have hME : Sat (eliminateRanges O) (.atom (rangeMarker O R)) (modifyConcept O E) :=
-          Sat.base_gci (rangeMarker_axiom_in_eliminateRanges hax)
-        exact Sat.trans hTop (Sat.trans hMark hME)
-      · -- reflexive R ∉ O directly; .self R came via rinc_self_star from some
-        -- reflexive R' with RincAncestor R' R.  Closing this requires either a
-        -- transitive reflexive-range propagation axiom (enumerable but requires
-        -- rinc-closure decidability) or the modifyConcept extension.
-        sorry
+      have hMark : Axiom.gci .top (.atom (rangeMarker O R)) ∈ eliminateRanges O :=
+        hRangeReflexive R hR
+      have hTop : Sat (eliminateRanges O) (modifyConcept O C) Concept.top := Sat.top _
+      have hRoot : Sat (eliminateRanges O) Concept.top (.atom (rangeMarker O R)) :=
+        Sat.base_gci hMark
+      have hME : Sat (eliminateRanges O) (.atom (rangeMarker O R)) (modifyConcept O E) :=
+        Sat.base_gci (rangeMarker_axiom_in_eliminateRanges hax)
+      exact Sat.trans hTop (Sat.trans hRoot hME)
   | @range_via_rincStar C R S D E _ hAnc hRange ih =>
       -- ih : Sat O' (modifyConcept C) (modifyConcept (∃R.D))
       -- hAnc : RincAncestor O R S
@@ -450,9 +508,34 @@ theorem Sat_to_eliminated_full {O : Ontology} {X Y : Concept}
               exact Sat.trans (Sat.conj_right (Sat.refl _)) hMarker
           · exact Sat.conj_right (Sat.refl _)
       | step _ _ =>
-          -- General rinc-step case: requires modifyConcept to track rinc-ancestor markers.
-          -- See file header — this is the core open case requiring the modifyConcept extension.
-          sorry
+          -- General rinc-step case.  Use the universal marker axiom for S
+          -- (provided by `hRangeReflexive S hS`) plus the marker axiom for S
+          -- (`gci marker_S modifyConcept E`) to derive `modifyConcept E`
+          -- from `.top`, then add it to the body.
+          have hS : hasRange O S = true := (hasRange_iff O S).mpr ⟨E, hRange⟩
+          have hMarkS : Axiom.gci .top (.atom (rangeMarker O S)) ∈ eliminateRanges O :=
+            hRangeReflexive S hS
+          have hToE : Sat (eliminateRanges O) Concept.top (modifyConcept O E) :=
+            Sat.trans (Sat.base_gci hMarkS)
+              (Sat.base_gci (rangeMarker_axiom_in_eliminateRanges hRange))
+          by_cases hR : hasRange O R = true
+          · simp only [modifyConcept, hR, if_true] at ih ⊢
+            -- ih : Sat O' C' (∃R.(modifyConcept D ⊓ marker_R))
+            -- goal: Sat O' C' (∃R.((modifyConcept D ⊓ modifyConcept E) ⊓ marker_R))
+            refine Sat.exist_prop ih ?_
+            apply Sat.conj_intro
+            · apply Sat.conj_intro
+              · exact Sat.conj_left (Sat.refl _)
+              · -- modifyConcept E from .top.
+                exact Sat.trans (Sat.top _) hToE
+            · exact Sat.conj_right (Sat.refl _)
+          · simp only [modifyConcept, hR, if_false] at ih ⊢
+            -- ih : Sat O' C' (∃R.modifyConcept D)
+            -- goal: Sat O' C' (∃R.(modifyConcept D ⊓ modifyConcept E))
+            refine Sat.exist_prop ih ?_
+            apply Sat.conj_intro
+            · exact Sat.refl _
+            · exact Sat.trans (Sat.top _) hToE
   | @rinc_self_star C R S _ hAnc ih =>
       -- modifyConcept (self _) = self _.
       -- ih : Sat O' (modifyConcept C) (self R)

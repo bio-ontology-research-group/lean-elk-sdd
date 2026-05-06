@@ -255,10 +255,127 @@ def markerPropagationAxioms (O : Ontology) : Ontology :=
           none
     | _ => none)
 
+/-- One step of the rinc-closure: extend `current` with every `S` such that
+    there is some `T ∈ current` with `Axiom.rinc T S ∈ O`. -/
+private def rincStepFn (O : Ontology) (current : List Role) : List Role :=
+  current ++ (O.filterMap (fun ax => match ax with
+    | .rinc T S => if T ∈ current ∧ S ∉ current then some S else none
+    | _ => none))
+
+/-- Bounded iteration of `rincStepFn`. -/
+private def rincIter : Nat → Ontology → List Role → List Role
+  | 0, _, current => current
+  | Nat.succ n, O, current => rincIter n O (rincStepFn O current)
+
+/-- The set of roles reachable from `R` via 0+ `rinc`-edges in `O`.
+    Bounded fixed-point iteration for `O.length + 1` steps suffices
+    because each productive step adds a distinct new role (bounded
+    by the number of distinct roles syntactically in `O`). -/
+def rincDescendants (O : Ontology) (R : Role) : List Role :=
+  rincIter (O.length + 1) O [R]
+
+theorem rincStepFn_subset (O : Ontology) (current : List Role) :
+    ∀ x ∈ current, x ∈ rincStepFn O current := by
+  intro x hx
+  unfold rincStepFn
+  exact List.mem_append.mpr (Or.inl hx)
+
+theorem rincIter_subset {O : Ontology} (n : Nat) (current : List Role) :
+    ∀ x ∈ current, x ∈ rincIter n O current := by
+  induction n generalizing current with
+  | zero => intro _ h; exact h
+  | succ n ih =>
+      intro x hx
+      apply ih
+      exact rincStepFn_subset O current x hx
+
+theorem rincDescendants_self (O : Ontology) (R : Role) :
+    R ∈ rincDescendants O R := by
+  unfold rincDescendants
+  exact rincIter_subset _ [R] R (List.mem_singleton.mpr rfl)
+
+/-- One-step rinc lifting: if `rinc T S ∈ O` and `T ∈ current`,
+    then `S ∈ rincStepFn O current`. -/
+theorem rincStepFn_step {O : Ontology} {current : List Role} {T S : Role}
+    (hT : T ∈ current) (hRinc : Axiom.rinc T S ∈ O) :
+    S ∈ rincStepFn O current := by
+  unfold rincStepFn
+  by_cases hS : S ∈ current
+  · exact List.mem_append.mpr (Or.inl hS)
+  · refine List.mem_append.mpr (Or.inr ?_)
+    rw [List.mem_filterMap]
+    refine ⟨Axiom.rinc T S, hRinc, ?_⟩
+    simp [hT, hS]
+
+/-- Soundness: every element of `rincDescendants O R` is `RincAncestor O R`-related to `R`. -/
+theorem rincIter_sound {O : Ontology} (n : Nat) (R : Role) (current : List Role)
+    (h : ∀ S ∈ current, RincAncestor O R S) :
+    ∀ S ∈ rincIter n O current, RincAncestor O R S := by
+  induction n generalizing current with
+  | zero =>
+      intro S hS
+      exact h S hS
+  | succ n ih =>
+      apply ih
+      intro S hS
+      unfold rincStepFn at hS
+      rcases List.mem_append.mp hS with hCurr | hExt
+      · exact h S hCurr
+      · rw [List.mem_filterMap] at hExt
+        obtain ⟨ax, haxIn, hOpt⟩ := hExt
+        cases ax with
+        | rinc T S' =>
+            simp only at hOpt
+            by_cases hCond : T ∈ current ∧ S' ∉ current
+            · simp [hCond] at hOpt
+              obtain ⟨hT, _⟩ := hCond
+              subst hOpt
+              exact RincAncestor.step (h T hT) haxIn
+            · simp [hCond] at hOpt
+        | gci _ _ => simp at hOpt
+        | rchain _ _ _ => simp at hOpt
+        | range _ _ => simp at hOpt
+        | reflexive _ => simp at hOpt
+        | hasKey _ _ => simp at hOpt
+
+theorem rincDescendants_sound {O : Ontology} {R S : Role}
+    (h : S ∈ rincDescendants O R) : RincAncestor O R S := by
+  unfold rincDescendants at h
+  apply rincIter_sound _ R [R] _ S h
+  intro T hT
+  rw [List.mem_singleton] at hT
+  subst hT
+  exact RincAncestor.refl _
+
+/-- **Transitive reflexive-rinc propagation.**
+
+    For each `reflexive R' ∈ O` and each `range S E ∈ O` with `R' ⊑* S`
+    (rinc-chain), add `gci .top (atom marker_S)`.  Captures: every domain
+    element has `R'(x, x)` (reflexive), hence `S(x, x)` by rinc-chain, hence
+    `x ∈ E` by `range S E`, hence `x ∈ marker_S` after elimination.
+
+    This subsumes the direct reflexive-range propagation (refl case of
+    RincAncestor) and adds chains through possibly-no-range intermediates.
+
+    Computability: enumerate over all (reflexive R', range S E) pairs in O
+    and check `S ∈ rincDescendants O R'` (decidable; bounded iteration). -/
+def reflexiveTransitiveAxioms (O : Ontology) : Ontology :=
+  O.flatMap (fun ax1 => match ax1 with
+    | .reflexive R' =>
+        O.filterMap (fun ax2 => match ax2 with
+          | .range S _ =>
+              if S ∈ rincDescendants O R' then
+                some (.gci .top (.atom (rangeMarker O S)))
+              else none
+          | _ => none)
+    | _ => [])
+
 /-- The full BBL 2008 §3.3 normalization, extended with marker
-    propagation for rinc + range interactions. -/
+    propagation for rinc + range interactions and the transitive
+    reflexive-rinc closure. -/
 def eliminateRanges (O : Ontology) : Ontology :=
   O.filterMap (modifyAxiom O) ++ markerAxioms O ++ markerPropagationAxioms O
+    ++ reflexiveTransitiveAxioms O
 
 -- ============================================================
 -- 4. Structural properties of `eliminateRanges`
@@ -332,18 +449,47 @@ theorem markerPropagationAxioms_no_range (O : Ontology) :
       split at hOpt <;> simp at hOpt
   | hasKey _ _ => simp at hOpt
 
+/-- `reflexiveTransitiveAxioms` produces only GCI axioms (never range). -/
+theorem reflexiveTransitiveAxioms_no_range (O : Ontology) :
+    ∀ R E, Axiom.range R E ∉ reflexiveTransitiveAxioms O := by
+  intro R E hMem
+  unfold reflexiveTransitiveAxioms at hMem
+  rw [List.mem_flatMap] at hMem
+  obtain ⟨ax1, _, hMem⟩ := hMem
+  cases ax1 with
+  | gci _ _ => simp at hMem
+  | rinc _ _ => simp at hMem
+  | rchain _ _ _ => simp at hMem
+  | range _ _ => simp at hMem
+  | reflexive _ =>
+      simp only at hMem
+      rw [List.mem_filterMap] at hMem
+      obtain ⟨ax2, _, hOpt⟩ := hMem
+      cases ax2 with
+      | gci _ _ => simp at hOpt
+      | rinc _ _ => simp at hOpt
+      | rchain _ _ _ => simp at hOpt
+      | range _ _ =>
+          simp only at hOpt
+          split at hOpt <;> simp at hOpt
+      | reflexive _ => simp at hOpt
+      | hasKey _ _ => simp at hOpt
+  | hasKey _ _ => simp at hMem
+
 /-- `eliminateRanges` produces no range axioms. -/
 theorem eliminateRanges_no_range (O : Ontology) :
     ∀ R E, Axiom.range R E ∉ eliminateRanges O := by
   intro R E hMem
   unfold eliminateRanges at hMem
-  rcases List.mem_append.mp hMem with hLR | hProp
-  · rcases List.mem_append.mp hLR with hLeft | hMarker
-    · rw [List.mem_filterMap] at hLeft
-      obtain ⟨origAx, _, hMod⟩ := hLeft
-      exact modifyAxiom_no_range O origAx R E hMod
-    · exact markerAxioms_no_range O R E hMarker
-  · exact markerPropagationAxioms_no_range O R E hProp
+  rcases List.mem_append.mp hMem with hABCD | hRefl
+  · rcases List.mem_append.mp hABCD with hLR | hProp
+    · rcases List.mem_append.mp hLR with hLeft | hMarker
+      · rw [List.mem_filterMap] at hLeft
+        obtain ⟨origAx, _, hMod⟩ := hLeft
+        exact modifyAxiom_no_range O origAx R E hMod
+      · exact markerAxioms_no_range O R E hMarker
+    · exact markerPropagationAxioms_no_range O R E hProp
+  · exact reflexiveTransitiveAxioms_no_range O R E hRefl
 
 /-- Under `OntologyNominalFree`, `eliminateRanges` produces an
     `OntologyStrict` ontology (no range, no hasKey, GCIs nominal-free).
@@ -355,76 +501,105 @@ theorem eliminateRanges_strict (O : Ontology)
     (hO : OntologyNominalFree O) : OntologyStrict (eliminateRanges O) := by
   intro ax hax
   unfold eliminateRanges at hax
-  rcases List.mem_append.mp hax with hLR | hProp
-  · rcases List.mem_append.mp hLR with hLeft | hMarker
-    · -- ax came from filterMap (modifyAxiom O)
-      rw [List.mem_filterMap] at hLeft
-      obtain ⟨origAx, hOrigIn, hMod⟩ := hLeft
-      have hOrigNF : AxiomNominalFree origAx := hO origAx hOrigIn
-      cases origAx with
-      | gci C D =>
-          simp [modifyAxiom] at hMod
-          subst hMod
-          obtain ⟨hC_nf, hD_nf⟩ := hOrigNF
-          exact ⟨hC_nf, modifyConcept_NominalFree O D hD_nf⟩
-      | rinc R S =>
-          simp [modifyAxiom] at hMod
-          subst hMod
-          trivial
-      | rchain R₁ R₂ S =>
-          simp [modifyAxiom] at hMod
-          subst hMod
-          trivial
-      | range _ _ =>
-          -- modifyAxiom returns none for range; hMod : none = some _.
-          simp [modifyAxiom] at hMod
-      | reflexive R =>
-          simp [modifyAxiom] at hMod
-          subst hMod
-          trivial
-      | hasKey _ _ =>
-          -- AxiomNominalFree (.hasKey _ _) = False
-          exact hOrigNF.elim
-    · -- ax came from markerAxioms O: gci (atom marker_R) (modifyConcept E) for range R E ∈ O.
-      unfold markerAxioms at hMarker
-      rw [List.mem_filterMap] at hMarker
-      obtain ⟨origAx, hOrigIn, hOpt⟩ := hMarker
-      have hOrigNF : AxiomNominalFree origAx := hO origAx hOrigIn
+  rcases List.mem_append.mp hax with hABCD | hRefl
+  · rcases List.mem_append.mp hABCD with hLR | hProp
+    · rcases List.mem_append.mp hLR with hLeft | hMarker
+      · -- ax came from filterMap (modifyAxiom O)
+        rw [List.mem_filterMap] at hLeft
+        obtain ⟨origAx, hOrigIn, hMod⟩ := hLeft
+        have hOrigNF : AxiomNominalFree origAx := hO origAx hOrigIn
+        cases origAx with
+        | gci C D =>
+            simp [modifyAxiom] at hMod
+            subst hMod
+            obtain ⟨hC_nf, hD_nf⟩ := hOrigNF
+            exact ⟨hC_nf, modifyConcept_NominalFree O D hD_nf⟩
+        | rinc R S =>
+            simp [modifyAxiom] at hMod
+            subst hMod
+            trivial
+        | rchain R₁ R₂ S =>
+            simp [modifyAxiom] at hMod
+            subst hMod
+            trivial
+        | range _ _ =>
+            -- modifyAxiom returns none for range; hMod : none = some _.
+            simp [modifyAxiom] at hMod
+        | reflexive R =>
+            simp [modifyAxiom] at hMod
+            subst hMod
+            trivial
+        | hasKey _ _ =>
+            -- AxiomNominalFree (.hasKey _ _) = False
+            exact hOrigNF.elim
+      · -- ax came from markerAxioms O: gci (atom marker_R) (modifyConcept E) for range R E ∈ O.
+        unfold markerAxioms at hMarker
+        rw [List.mem_filterMap] at hMarker
+        obtain ⟨origAx, hOrigIn, hOpt⟩ := hMarker
+        have hOrigNF : AxiomNominalFree origAx := hO origAx hOrigIn
+        cases origAx with
+        | gci _ _ => simp at hOpt
+        | rinc _ _ => simp at hOpt
+        | rchain _ _ _ => simp at hOpt
+        | range R' E' =>
+            simp at hOpt
+            subst hOpt
+            exact ⟨trivial, modifyConcept_NominalFree O E' hOrigNF⟩
+        | reflexive _ => simp at hOpt
+        | hasKey _ _ => simp at hOpt
+    · -- ax came from markerPropagationAxioms O: gci (atom marker_R) (atom marker_S) for rinc R S ∈ O with hasRange both.
+      unfold markerPropagationAxioms at hProp
+      rw [List.mem_filterMap] at hProp
+      obtain ⟨origAx, _, hOpt⟩ := hProp
       cases origAx with
       | gci _ _ => simp at hOpt
-      | rinc _ _ => simp at hOpt
-      | rchain _ _ _ => simp at hOpt
-      | range R' E' =>
+      | rinc R' S' =>
           simp at hOpt
-          subst hOpt
-          exact ⟨trivial, modifyConcept_NominalFree O E' hOrigNF⟩
-      | reflexive _ => simp at hOpt
+          by_cases h : hasRange O R' = true ∧ hasRange O S' = true
+          · simp [h] at hOpt
+            subst hOpt
+            -- ax = gci (atom marker_R') (atom marker_S').  Both atoms are NominalFree.
+            exact ⟨trivial, trivial⟩
+          · simp [h] at hOpt
+      | rchain _ _ _ => simp at hOpt
+      | range _ _ => simp at hOpt
+      | reflexive R' =>
+          simp at hOpt
+          by_cases h : hasRange O R' = true
+          · simp [h] at hOpt
+            subst hOpt
+            -- ax = gci .top (atom marker_R').  .top is NominalFree, atom is NominalFree.
+            exact ⟨trivial, trivial⟩
+          · simp [h] at hOpt
       | hasKey _ _ => simp at hOpt
-  · -- ax came from markerPropagationAxioms O: gci (atom marker_R) (atom marker_S) for rinc R S ∈ O with hasRange both.
-    unfold markerPropagationAxioms at hProp
-    rw [List.mem_filterMap] at hProp
-    obtain ⟨origAx, _, hOpt⟩ := hProp
-    cases origAx with
-    | gci _ _ => simp at hOpt
-    | rinc R' S' =>
-        simp at hOpt
-        by_cases h : hasRange O R' = true ∧ hasRange O S' = true
-        · simp [h] at hOpt
-          subst hOpt
-          -- ax = gci (atom marker_R') (atom marker_S').  Both atoms are NominalFree.
-          exact ⟨trivial, trivial⟩
-        · simp [h] at hOpt
-    | rchain _ _ _ => simp at hOpt
-    | range _ _ => simp at hOpt
+  · -- ax came from reflexiveTransitiveAxioms O: gci .top (atom marker_S) for some
+    -- reflexive R' ∈ O and range S _ ∈ O with S ∈ rincDescendants O R'.
+    unfold reflexiveTransitiveAxioms at hRefl
+    rw [List.mem_flatMap] at hRefl
+    obtain ⟨ax1, _, hRefl⟩ := hRefl
+    cases ax1 with
+    | gci _ _ => simp at hRefl
+    | rinc _ _ => simp at hRefl
+    | rchain _ _ _ => simp at hRefl
+    | range _ _ => simp at hRefl
     | reflexive R' =>
-        simp at hOpt
-        by_cases h : hasRange O R' = true
-        · simp [h] at hOpt
-          subst hOpt
-          -- ax = gci .top (atom marker_R').  .top is NominalFree, atom is NominalFree.
-          exact ⟨trivial, trivial⟩
-        · simp [h] at hOpt
-    | hasKey _ _ => simp at hOpt
+        simp only at hRefl
+        rw [List.mem_filterMap] at hRefl
+        obtain ⟨ax2, _, hOpt⟩ := hRefl
+        cases ax2 with
+        | gci _ _ => simp at hOpt
+        | rinc _ _ => simp at hOpt
+        | rchain _ _ _ => simp at hOpt
+        | range S _ =>
+            simp only at hOpt
+            by_cases hCond : S ∈ rincDescendants O R'
+            · simp [hCond] at hOpt
+              subst hOpt
+              exact ⟨trivial, trivial⟩
+            · simp [hCond] at hOpt
+        | reflexive _ => simp at hOpt
+        | hasKey _ _ => simp at hOpt
+    | hasKey _ _ => simp at hRefl
 
 -- ============================================================
 -- 4b. NoRange degenerate-case helpers
@@ -530,6 +705,34 @@ theorem markerPropagationAxioms_nil_under_no_range {O : Ontology}
       simp
   | hasKey _ _ => simp
 
+/-- Under `OntologyNoRange`, `reflexiveTransitiveAxioms O = []`.
+
+    The inner `filterMap` over range axioms returns nothing because there
+    are no range axioms in `O`. -/
+theorem reflexiveTransitiveAxioms_nil_under_no_range {O : Ontology}
+    (hO : OntologyNoRange O) : reflexiveTransitiveAxioms O = [] := by
+  unfold reflexiveTransitiveAxioms
+  apply List.flatMap_eq_nil_iff.mpr
+  intro ax _
+  cases ax with
+  | gci _ _ => simp
+  | rinc _ _ => simp
+  | rchain _ _ _ => simp
+  | range _ _ => simp
+  | reflexive R' =>
+      simp only
+      apply List.filterMap_eq_nil_iff.mpr
+      intro ax2 hax2
+      cases ax2 with
+      | gci _ _ => simp
+      | rinc _ _ => simp
+      | rchain _ _ _ => simp
+      | range S _ =>
+          exact (hO S _ hax2).elim
+      | reflexive _ => simp
+      | hasKey _ _ => simp
+  | hasKey _ _ => simp
+
 /-- Under `OntologyNoRange`, `eliminateRanges O = O`. -/
 theorem eliminateRanges_eq_under_no_range {O : Ontology}
     (hO : OntologyNoRange O) : eliminateRanges O = O := by
@@ -537,7 +740,8 @@ theorem eliminateRanges_eq_under_no_range {O : Ontology}
   rw [filterMap_modifyAxiom_eq_self_under_no_range hO,
       markerAxioms_nil_under_no_range hO,
       markerPropagationAxioms_nil_under_no_range hO,
-      List.append_nil, List.append_nil]
+      reflexiveTransitiveAxioms_nil_under_no_range hO,
+      List.append_nil, List.append_nil, List.append_nil]
 
 -- ============================================================
 -- 5. Sat conservativity (forward / soundness of encoding)
