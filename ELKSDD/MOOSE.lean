@@ -62,7 +62,7 @@ import ELKSDD.SCC
 namespace ELKSDD
 namespace ELpp
 
-open SDD SCC
+open SDD SCC Normalize
 
 -- ============================================================
 -- (1) End-to-end inference correctness
@@ -261,6 +261,222 @@ theorem moose_scc_summary
    moose_inference_correct O₁ C D⟩
 
 -- ============================================================
+-- (5) Multi-component SCC factorization (k SCCs)
+-- ============================================================
+
+/-- Sat-permutation invariance for triple appends. -/
+private theorem Sat_swap_middle {A B C : Ontology} {Q E : Concept} :
+    Sat (A ++ B ++ C) Q E ↔ Sat (A ++ C ++ B) Q E := by
+  constructor
+  · intro h
+    apply Sat_mono _ h
+    intro ax hax
+    rw [List.append_assoc] at hax ⊢
+    rcases List.mem_append.mp hax with hA | hBC
+    · exact List.mem_append.mpr (Or.inl hA)
+    · rcases List.mem_append.mp hBC with hB | hC
+      · exact List.mem_append.mpr (Or.inr (List.mem_append.mpr (Or.inr hB)))
+      · exact List.mem_append.mpr (Or.inr (List.mem_append.mpr (Or.inl hC)))
+  · intro h
+    apply Sat_mono _ h
+    intro ax hax
+    rw [List.append_assoc] at hax ⊢
+    rcases List.mem_append.mp hax with hA | hCB
+    · exact List.mem_append.mpr (Or.inl hA)
+    · rcases List.mem_append.mp hCB with hC | hB
+      · exact List.mem_append.mpr (Or.inr (List.mem_append.mpr (Or.inr hC)))
+      · exact List.mem_append.mpr (Or.inr (List.mem_append.mpr (Or.inl hB)))
+
+/-- `RangeChainSafe` propagates downward to subontologies. -/
+theorem RangeChainSafe_subontology {O O' : Ontology} (hsafe : RangeChainSafe O)
+    (hsub : Subontology O' O) : RangeChainSafe O' := by
+  intro R₁ R₂ S T E hRchain hAnc hRange
+  exact hsafe R₁ R₂ S T E (hsub _ hRchain)
+        (RincAncestor_mono hsub hAnc) (hsub _ hRange)
+
+/-- `OntologyNominalFree` propagates downward to subontologies. -/
+theorem OntologyNominalFree_subontology {O O' : Ontology}
+    (hnf : OntologyNominalFree O) (hsub : Subontology O' O) :
+    OntologyNominalFree O' :=
+  fun ax hax => hnf ax (hsub _ hax)
+
+/-- `ConceptInSig` propagates upward (subontology → larger ontology). -/
+theorem ConceptInSig_of_Subontology {O O' : Ontology} {C : Concept}
+    (hsub : Subontology O O') (hC : ConceptInSig O C) : ConceptInSig O' C := by
+  refine ⟨?_, ?_⟩
+  · intro n hn
+    have hn_O : n ∈ ontologyAtoms O := hC.1 n hn
+    unfold Normalize.ontologyAtoms at hn_O ⊢
+    rw [List.mem_flatMap] at hn_O ⊢
+    obtain ⟨ax, hax_O, hn_ax⟩ := hn_O
+    exact ⟨ax, hsub _ hax_O, hn_ax⟩
+  · intro R hR
+    have hR_O : R ∈ ontologyRoles O := hC.2 R hR
+    unfold Normalize.ontologyRoles at hR_O ⊢
+    rw [List.mem_flatMap] at hR_O ⊢
+    obtain ⟨ax, hax_O, hR_ax⟩ := hR_O
+    exact ⟨ax, hsub _ hax_O, hR_ax⟩
+
+/-- `DisjointSigs` combines under append (left side). -/
+theorem DisjointSigs_append_left {O₁ O₂ O : Ontology}
+    (h₁ : DisjointSigs O₁ O) (h₂ : DisjointSigs O₂ O) :
+    DisjointSigs (O₁ ++ O₂) O := by
+  refine ⟨?_, ?_⟩
+  · intro a ha
+    rw [mem_ontologyAtoms_append] at ha
+    cases ha with
+    | inl h => exact h₁.1 a h
+    | inr h => exact h₂.1 a h
+  · intro r hr
+    rw [mem_ontologyRoles_append] at hr
+    cases hr with
+    | inl h => exact h₁.2 r h
+    | inr h => exact h₂.2 r h
+
+/-- **Joint consistency from per-component consistency + disjoint sigs.**
+    A useful corollary of `Sat_factor_refined`: pairwise disjoint
+    consistent ontologies remain consistent when concatenated. -/
+theorem joint_consistent_pair
+    {O₁ O₂ : Ontology}
+    (hO₁_nf : OntologyNominalFree O₁) (hO₂_nf : OntologyNominalFree O₂)
+    (hO₁_safe : RangeChainSafe O₁) (hO₂_safe : RangeChainSafe O₂)
+    (hdisj : DisjointSigs O₁ O₂)
+    (h₁_cons : ¬ Sat O₁ .top .bot) (h₂_cons : ¬ Sat O₂ .top .bot) :
+    ¬ Sat (O₁ ++ O₂) .top .bot := by
+  intro h
+  have hiff := Sat_factor_refined hO₁_nf hO₂_nf hO₁_safe hO₂_safe hdisj
+                (show NominalFree .top from trivial) (show NominalFree .bot from trivial)
+                (ConceptInSig.top _) (ConceptInSig.bot _)
+  rcases hiff.mp h with h₁ | h₂
+  · exact h₁_cons h₁
+  · exact h₂_cons h₂
+
+/-- **MOOSE k-component SCC factorization theorem.**
+
+    Given `k+1` ontologies (one "relevant" `Otop` containing the
+    query's signature, plus `k` other components in `Os` with
+    pairwise-disjoint signatures and each individually consistent),
+    Sat-derivability over the *flattened* ontology reduces to
+    Sat-derivability over `Otop` alone for queries in `Otop`'s
+    signature.
+
+    This is the iterated form of `scc_sat_factor`, generalising
+    from 2 components to k.  Proof: induction on `Os`, peeling off
+    one component at a time and applying `scc_sat_factor` plus
+    Sat-permutation invariance.
+
+    Hypotheses:
+      * `hjoint_nf`, `hjoint_safe` — well-formedness conditions on
+        the joint ontology.
+      * `h_disj_top` — each component in `Os` has signature disjoint
+        from `Otop`.
+      * `h_pairwise_disj` — components within `Os` are pairwise
+        signature-disjoint (the "SCC partition" condition).
+      * `h_cons` — each component in `Os` is individually consistent.
+      * `hC_nf`, `hD_nf`, `hC`, `hD` — the query is nominal-free and
+        in `Otop`'s signature. -/
+theorem scc_sat_factor_k
+    (Otop : Ontology) (Os : List Ontology)
+    (hjoint_nf : OntologyNominalFree (Otop ++ Os.flatten))
+    (hjoint_safe : RangeChainSafe (Otop ++ Os.flatten))
+    (h_disj_top : ∀ O ∈ Os, DisjointSigs Otop O)
+    (h_pairwise_disj : List.Pairwise DisjointSigs Os)
+    (h_cons : ∀ O ∈ Os, ¬ Sat O .top .bot)
+    {C D : Concept} (hC_nf : NominalFree C) (hD_nf : NominalFree D)
+    (hC : ConceptInSig Otop C) (hD : ConceptInSig Otop D) :
+    Sat (Otop ++ Os.flatten) C D ↔ Sat Otop C D := by
+  induction Os with
+  | nil =>
+      show Sat (Otop ++ ([] : List Ontology).flatten) C D ↔ Sat Otop C D
+      simp [List.flatten]
+  | cons O' rest ih =>
+      have h_disj_O' : DisjointSigs Otop O' := h_disj_top O' List.mem_cons_self
+      have h_cons_O' : ¬ Sat O' .top .bot := h_cons O' List.mem_cons_self
+      have h_disj_rest : ∀ O ∈ rest, DisjointSigs Otop O :=
+        fun O hO => h_disj_top O (List.mem_cons_of_mem _ hO)
+      have h_pairwise_rest : List.Pairwise DisjointSigs rest :=
+        h_pairwise_disj.tail
+      have h_O'_disj_rest : ∀ O ∈ rest, DisjointSigs O' O := by
+        intro O hO
+        rcases List.pairwise_cons.mp h_pairwise_disj with ⟨hhead, _⟩
+        exact hhead O hO
+      have h_cons_rest : ∀ O ∈ rest, ¬ Sat O .top .bot :=
+        fun O hO => h_cons O (List.mem_cons_of_mem _ hO)
+      have hsub_top : Subontology Otop (Otop ++ (O' :: rest).flatten) :=
+        Subontology.append_left _ _
+      have hsub_O' : Subontology O' (Otop ++ (O' :: rest).flatten) := by
+        intro ax hax
+        show ax ∈ Otop ++ (O' ++ rest.flatten)
+        exact List.mem_append.mpr (Or.inr (List.mem_append.mpr (Or.inl hax)))
+      have hsub_rest : Subontology rest.flatten (Otop ++ (O' :: rest).flatten) := by
+        intro ax hax
+        show ax ∈ Otop ++ (O' ++ rest.flatten)
+        exact List.mem_append.mpr (Or.inr (List.mem_append.mpr (Or.inr hax)))
+      show Sat (Otop ++ (O' ++ rest.flatten)) C D ↔ Sat Otop C D
+      have hperm : Sat (Otop ++ (O' ++ rest.flatten)) C D ↔
+                   Sat ((Otop ++ rest.flatten) ++ O') C D := by
+        have h1 : Sat (Otop ++ (O' ++ rest.flatten)) C D ↔
+                  Sat ((Otop ++ O') ++ rest.flatten) C D := by
+          rw [← List.append_assoc]
+        have h2 : Sat ((Otop ++ O') ++ rest.flatten) C D ↔
+                  Sat ((Otop ++ rest.flatten) ++ O') C D :=
+          @Sat_swap_middle Otop O' rest.flatten C D
+        exact h1.trans h2
+      rw [hperm]
+      have hsub_A : Subontology (Otop ++ rest.flatten)
+                       (Otop ++ (O' :: rest).flatten) := by
+        intro ax hax
+        rcases List.mem_append.mp hax with hT | hR
+        · exact hsub_top _ hT
+        · exact hsub_rest _ hR
+      have hA_nf : OntologyNominalFree (Otop ++ rest.flatten) :=
+        OntologyNominalFree_subontology hjoint_nf hsub_A
+      have hB_nf : OntologyNominalFree O' :=
+        OntologyNominalFree_subontology hjoint_nf hsub_O'
+      have hA_safe : RangeChainSafe (Otop ++ rest.flatten) :=
+        RangeChainSafe_subontology hjoint_safe hsub_A
+      have hB_safe : RangeChainSafe O' :=
+        RangeChainSafe_subontology hjoint_safe hsub_O'
+      have hA_disj_B : DisjointSigs (Otop ++ rest.flatten) O' := by
+        apply DisjointSigs_append_left
+        · exact h_disj_O'
+        · refine ⟨?_, ?_⟩
+          · intro a ha_rest
+            unfold Normalize.ontologyAtoms at ha_rest
+            rw [List.mem_flatMap] at ha_rest
+            obtain ⟨ax, hax_rest, ha_ax⟩ := ha_rest
+            have : ax ∈ rest.flatten := hax_rest
+            rw [List.mem_flatten] at this
+            obtain ⟨O, hO_rest, hax_O⟩ := this
+            have hO'_disj_O : DisjointSigs O' O := h_O'_disj_rest O hO_rest
+            apply hO'_disj_O.symm.1 a
+            unfold Normalize.ontologyAtoms
+            exact List.mem_flatMap.mpr ⟨ax, hax_O, ha_ax⟩
+          · intro r hr_rest
+            unfold Normalize.ontologyRoles at hr_rest
+            rw [List.mem_flatMap] at hr_rest
+            obtain ⟨ax, hax_rest, hr_ax⟩ := hr_rest
+            have : ax ∈ rest.flatten := hax_rest
+            rw [List.mem_flatten] at this
+            obtain ⟨O, hO_rest, hax_O⟩ := this
+            have hO'_disj_O : DisjointSigs O' O := h_O'_disj_rest O hO_rest
+            apply hO'_disj_O.symm.2 r
+            unfold Normalize.ontologyRoles
+            exact List.mem_flatMap.mpr ⟨ax, hax_O, hr_ax⟩
+      have hC_in_A : ConceptInSig (Otop ++ rest.flatten) C :=
+        ConceptInSig_of_Subontology (Subontology.append_left _ _) hC
+      have hD_in_A : ConceptInSig (Otop ++ rest.flatten) D :=
+        ConceptInSig_of_Subontology (Subontology.append_left _ _) hD
+      rw [scc_sat_factor hA_nf hB_nf hA_safe hB_safe hA_disj_B h_cons_O'
+          hC_nf hD_nf hC_in_A hD_in_A]
+      apply ih
+      · exact hA_nf
+      · exact hA_safe
+      · exact h_disj_rest
+      · exact h_pairwise_rest
+      · exact h_cons_rest
+
+-- ============================================================
 -- Audit
 -- ============================================================
 
@@ -270,6 +486,8 @@ theorem moose_scc_summary
 #print axioms scc_sat_factor
 #print axioms scc_sat_factor_symm
 #print axioms moose_scc_summary
+#print axioms joint_consistent_pair
+#print axioms scc_sat_factor_k
 
 end ELpp
 end ELKSDD

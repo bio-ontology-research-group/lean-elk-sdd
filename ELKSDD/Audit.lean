@@ -452,5 +452,8 @@ namespace ELKSDD
 #print axioms ELpp.scc_sat_factor
 #print axioms ELpp.scc_sat_factor_symm
 #print axioms ELpp.moose_scc_summary
+-- (B): multi-component (k-SCC) factorization.
+#print axioms ELpp.joint_consistent_pair
+#print axioms ELpp.scc_sat_factor_k
 
 end ELKSDD
