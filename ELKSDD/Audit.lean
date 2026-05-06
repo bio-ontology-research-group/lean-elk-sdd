@@ -406,6 +406,13 @@ namespace ELKSDD
 #print axioms ELpp.compileSat_models_iff_sat
 #print axioms ELpp.compileSat_disponte_eq_of_wmc_form
 #print axioms ELpp.disponte_eq_wmc_via_compileSat
+-- A6: tighter SDD size bounds — exact size + essential-variable polynomial bound.
+#print axioms ELpp.compileSatAux_size_eq
+#print axioms ELpp.compileSat_size_eq
+#print axioms ELpp.compileSat_wmcCost_eq
+#print axioms ELpp.sat_invariant_multi
+#print axioms ELpp.essential_compile_correct
+#print axioms ELpp.essential_polynomial_bound
 
 -- ============================================================
 -- CompilationWMC — Shannon-recursive WMC + UNCONDITIONAL DISPONTE

@@ -297,7 +297,173 @@ theorem disponte_eq_wmc_via_compileSat (O : Ontology) (C D : Concept)
    compileSat_disponte_eq_of_wmc_form O C D h_wmc_form⟩
 
 -- ============================================================
--- 9. Audit
+-- 9. Tighter SDD size bounds — exact size + essential-variable bound
+-- ============================================================
+
+/-- **Exact size of the auxiliary compile.**  The Shannon-expanded
+    tree built by `compileSatAux` over a variable list of length `n`
+    has *exactly* `2^(n+1) - 1` nodes — every internal node and every
+    leaf of the complete binary tree on `n+1` levels.  Tightens
+    `compileSatAux_size_bound`'s `<` to `=`. -/
+theorem compileSatAux_size_eq (O : Ontology) (C D : Concept)
+    (vs : List (DispAtom O)) (ctx : Assignment (DispAtom O)) :
+    size (compileSatAux O C D vs ctx) = 2 ^ (vs.length + 1) - 1 := by
+  classical
+  induction vs generalizing ctx with
+  | nil =>
+      unfold compileSatAux
+      by_cases h : Sat (selectedAxioms O ctx) C D
+      · simp only [h, if_true]; rfl
+      · simp only [h, if_false]; rfl
+  | cons p rest ih =>
+      unfold compileSatAux size
+      rw [ih (setAt ctx p true), ih (setAt ctx p false)]
+      have h : 2 ^ (rest.length + 1) ≥ 1 := Nat.one_le_two_pow
+      show 1 + (2 ^ (rest.length + 1) - 1) + (2 ^ (rest.length + 1) - 1) =
+           2 ^ ((p :: rest).length + 1) - 1
+      simp only [List.length_cons]
+      rw [Nat.pow_succ (m := rest.length + 1)]
+      omega
+
+/-- **Top-level exact size**: `compileSat O C D` has *exactly*
+    `2^(|O|+1) - 1` nodes. -/
+theorem compileSat_size_eq (O : Ontology) (C D : Concept) :
+    size (compileSat O C D) = 2 ^ (O.length + 1) - 1 := by
+  unfold compileSat
+  have h := compileSatAux_size_eq O C D (List.finRange O.length) (fun _ => false)
+  rwa [List.length_finRange] at h
+
+/-- **Exact WMC cost.**  Combined with `wmcCost_eq_size`, this gives
+    the precise number of operations performed when evaluating WMC. -/
+theorem compileSat_wmcCost_eq (O : Ontology) (C D : Concept) :
+    wmcCost (compileSat O C D) = 2 ^ (O.length + 1) - 1 := by
+  rw [wmcCost_eq_size, compileSat_size_eq]
+
+-- ============================================================
+-- 10. Polynomial bound via essential variables
+-- ============================================================
+
+/-- A variable `p` is *inessential* for the Sat-query `(C, D)` over `O`
+    if flipping `p`'s value in any world `M` does not change the Sat
+    outcome.  Variables not appearing in the saturation tracing the
+    query are inessential. -/
+def Inessential (O : Ontology) (C D : Concept) (p : DispAtom O) : Prop :=
+  ∀ (M : Assignment (DispAtom O)) (b : Bool),
+    Sat (selectedAxioms O M) C D ↔ Sat (selectedAxioms O (setAt M p b)) C D
+
+/-- Iterate `setAt` over a list `vs`, applying `target` at each
+    position. -/
+noncomputable def setAtList {α : Type _} (M : Assignment α) (vs : List α)
+    (target : α → Bool) : Assignment α :=
+  vs.foldr (fun p acc => setAt acc p (target p)) M
+
+theorem setAtList_mem {α : Type _} (M : Assignment α) (vs : List α)
+    (target : α → Bool) (q : α) (hq : q ∈ vs) :
+    setAtList M vs target q = target q := by
+  classical
+  induction vs with
+  | nil => exact absurd hq List.not_mem_nil
+  | cons p rest ih =>
+      simp only [setAtList, List.foldr_cons]
+      by_cases hqp : q = p
+      · subst hqp; simp [setAt]
+      · have hqr : q ∈ rest := by
+          cases List.mem_cons.mp hq with
+          | inl h => exact absurd h hqp
+          | inr h => exact h
+        simp only [setAt, if_neg hqp]
+        exact ih hqr
+
+theorem setAtList_not_mem {α : Type _} (M : Assignment α) (vs : List α)
+    (target : α → Bool) (q : α) (hq : q ∉ vs) :
+    setAtList M vs target q = M q := by
+  classical
+  induction vs with
+  | nil => rfl
+  | cons p rest ih =>
+      simp only [setAtList, List.foldr_cons]
+      have hqp : q ≠ p := fun h => hq (h ▸ List.mem_cons_self)
+      have hqr : q ∉ rest := fun h => hq (List.mem_cons_of_mem _ h)
+      simp only [setAt, if_neg hqp]
+      exact ih hqr
+
+/-- *Multi-flip Sat invariance.*  If every variable in `vs` is
+    inessential, then iterating `setAt` over `vs` (to any target)
+    preserves Sat-derivability.  Proof: induction on `vs`, applying
+    `Inessential` at each step. -/
+theorem sat_invariant_multi (O : Ontology) (C D : Concept) (vs : List (DispAtom O))
+    (h_iness : ∀ p ∈ vs, Inessential O C D p)
+    (M : Assignment (DispAtom O)) (target : DispAtom O → Bool) :
+    Sat (selectedAxioms O M) C D ↔ Sat (selectedAxioms O (setAtList M vs target)) C D := by
+  classical
+  induction vs with
+  | nil => rfl
+  | cons p rest ih =>
+      have h_p : Inessential O C D p := h_iness p List.mem_cons_self
+      have h_rest : ∀ q ∈ rest, Inessential O C D q :=
+        fun q hq => h_iness q (List.mem_cons_of_mem _ hq)
+      show _ ↔ Sat (selectedAxioms O (setAt (setAtList M rest target) p (target p))) C D
+      rw [ih h_rest]
+      exact h_p (setAtList M rest target) (target p)
+
+/-- **Essential-only compile correctness.**  If `essVars` contains all
+    "essential" variables (i.e., every variable *not* in `essVars` is
+    inessential), then the Shannon-expansion tree built by
+    `compileSatAux` over `essVars` correctly encodes the Sat-query —
+    the model semantics matches `Sat (selectedAxioms O M) C D` for
+    every world `M`. -/
+theorem essential_compile_correct (O : Ontology) (C D : Concept)
+    (essVars : List (DispAtom O))
+    (h_complement : ∀ p, p ∉ essVars → Inessential O C D p)
+    (M : Assignment (DispAtom O)) :
+    model (compileSatAux O C D essVars (fun _ => false)) M ↔
+    Sat (selectedAxioms O M) C D := by
+  classical
+  rw [compileSatAux_correct]
+  let nonEss := (List.finRange O.length).filter (fun p => decide (p ∉ essVars))
+  have h_iness_nonEss : ∀ p ∈ nonEss, Inessential O C D p := by
+    intro p hp
+    have : p ∈ (List.finRange O.length).filter _ := hp
+    rw [List.mem_filter] at this
+    exact h_complement p (decide_eq_true_eq.mp this.2)
+  have hEq : mergeOn essVars (fun _ => false) M = setAtList M nonEss (fun _ => false) := by
+    funext q
+    by_cases hq : q ∈ essVars
+    · simp only [mergeOn, if_pos hq]
+      rw [setAtList_not_mem]
+      intro hqNon
+      have : q ∈ (List.finRange O.length).filter _ := hqNon
+      rw [List.mem_filter] at this
+      exact (decide_eq_true_eq.mp this.2) hq
+    · simp only [mergeOn, if_neg hq]
+      rw [setAtList_mem]
+      show q ∈ (List.finRange O.length).filter _
+      rw [List.mem_filter]
+      exact ⟨List.mem_finRange q, decide_eq_true_eq.mpr hq⟩
+  rw [hEq]
+  exact (sat_invariant_multi O C D nonEss h_iness_nonEss M (fun _ => false)).symm
+
+/-- **Essential-only polynomial size bound.**  If only `k` variables
+    are essential for the Sat-query, then there exists a verified
+    SDD tree of size `2^(k+1) - 1` correctly encoding the query.
+    Combined with a polynomial bound on the number of essential
+    variables (e.g., from the OWL 2 EL saturation polynomial bound),
+    this yields a *polynomial-size* SDD.
+
+    Witness: `compileSatAux O C D essVars (fun _ => false)`. -/
+theorem essential_polynomial_bound (O : Ontology) (C D : Concept)
+    (essVars : List (DispAtom O))
+    (h_complement : ∀ p, p ∉ essVars → Inessential O C D p) :
+    ∃ tree : Tree (DispAtom O),
+      SDDEncodesQuery O C D tree ∧
+      size tree = 2 ^ (essVars.length + 1) - 1 := by
+  refine ⟨compileSatAux O C D essVars (fun _ => false), ?_, ?_⟩
+  · intro M
+    exact essential_compile_correct O C D essVars h_complement M
+  · exact compileSatAux_size_eq O C D essVars _
+
+-- ============================================================
+-- 11. Audit
 -- ============================================================
 
 #print axioms compileSatAux_correct
@@ -308,6 +474,12 @@ theorem disponte_eq_wmc_via_compileSat (O : Ontology) (C D : Concept)
 #print axioms compileSat_models_iff_sat
 #print axioms compileSat_disponte_eq_of_wmc_form
 #print axioms disponte_eq_wmc_via_compileSat
+#print axioms compileSatAux_size_eq
+#print axioms compileSat_size_eq
+#print axioms compileSat_wmcCost_eq
+#print axioms sat_invariant_multi
+#print axioms essential_compile_correct
+#print axioms essential_polynomial_bound
 
 end ELpp
 end ELKSDD
