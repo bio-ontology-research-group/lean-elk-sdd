@@ -203,6 +203,12 @@ inductive Sat (O : Ontology) : Concept → Concept → Prop where
   | orE   : ∀ {C D E}, Sat O C E → Sat O D E → Sat O (.disj C D) E
   | bot   : ∀ C,     Sat O .bot C
   | top   : ∀ C,     Sat O C .top
+  -- Role-axis monotonicity. These let subsumptions propagate through
+  -- existential and universal restrictions in the *covariant* slot,
+  -- which is what the structural-transformation clausification relies
+  -- on when it lifts `C ⊑ D` to `∃R.C ⊑ ∃R.D` / `∀R.C ⊑ ∀R.D`.
+  | monoExist : ∀ R {C D}, Sat O C D → Sat O (.exist R C) (.exist R D)
+  | monoUniv  : ∀ R {C D}, Sat O C D → Sat O (.univ  R C) (.univ  R D)
 
 -- ============================================================
 -- 5. Soundness of `Sat`
@@ -238,6 +244,14 @@ theorem sat_sound (O : Ontology) (C D : Concept)
       exact hC.elim
   | top _ =>
       trivial
+  | monoExist R _ ih =>
+      -- ∃R.C(x) gives a witness y; y ∈ C^I so by IH y ∈ D^I; same y witnesses ∃R.D(x).
+      obtain ⟨y, hR, hCy⟩ := hC
+      exact ⟨y, hR, ih y hCy⟩
+  | monoUniv R _ ih =>
+      -- ∀R.C(x) ⇒ for every y, R(x,y) ⇒ C(y) ⇒ D(y) by IH.
+      intro y hR
+      exact ih y (hC y hR)
 
 -- ============================================================
 -- 6. A small worked example
