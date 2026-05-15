@@ -164,5 +164,93 @@ theorem eval_neg_univ (R : Nat) (C : Concept) (x : α) :
 
 end Interp
 
+-- ============================================================
+-- 4. A consequence-based saturation calculus
+-- ============================================================
+
+/-
+The full Sequoia / Tena Cucala calculus for ALCHOQ uses contexts,
+context clauses, ordered hyperresolution, and paramodulation on
+equality atoms. The version here is the propositional sub-calculus
+sufficient for the cases the Python skeleton handles: subsumption
+between concept names via a sequence of axioms.
+
+`Sat O C D` says: `C ⊑ D` is derivable in `O` by repeated use of:
+
+  * `refl` — `C ⊑ C` for any concept,
+  * `axiom` — pick `(C, D)` from the ontology,
+  * `trans` — chain two derivations,
+  * `monoConj` / `monoDisj` — propagate subsumption through ⊓ / ⊔
+    in the right slot,
+  * `andL` / `andR` — projection / introduction for ⊓,
+  * `orL` / `orR` — introduction / elimination for ⊔.
+
+This calculus is sound but **not complete** for ALC — completing it
+to a proper CB calculus is the next milestone (and will require the
+auxiliary-individual / canonical-model construction familiar from
+`EL.lean`'s completeness proof).
+-/
+
+inductive Sat (O : Ontology) : Concept → Concept → Prop where
+  | refl  : ∀ C, Sat O C C
+  | axm   : ∀ C D, (C, D) ∈ O → Sat O C D
+  | trans : ∀ {C D E}, Sat O C D → Sat O D E → Sat O C E
+  | andL  : ∀ C D,   Sat O (.conj C D) C
+  | andR  : ∀ C D,   Sat O (.conj C D) D
+  | andI  : ∀ {C D E}, Sat O C D → Sat O C E → Sat O C (.conj D E)
+  | orL   : ∀ C D,   Sat O C (.disj C D)
+  | orR   : ∀ C D,   Sat O D (.disj C D)
+  | orE   : ∀ {C D E}, Sat O C E → Sat O D E → Sat O (.disj C D) E
+  | bot   : ∀ C,     Sat O .bot C
+  | top   : ∀ C,     Sat O C .top
+
+-- ============================================================
+-- 5. Soundness of `Sat`
+-- ============================================================
+
+/-- The core soundness theorem: every derivable `Sat O C D` is
+    semantically entailed. The proof is a direct induction on the
+    derivation; each rule mirrors a Tarskian set-inclusion principle. -/
+theorem sat_sound (O : Ontology) (C D : Concept)
+    (h : Sat O C D) : Entails O C D := by
+  intro α I hOK x hC
+  induction h generalizing x with
+  | refl _ => exact hC
+  | axm C D hMem =>
+      exact hOK (C, D) hMem x hC
+  | trans hCD hDE ihCD ihDE =>
+      exact ihDE x (ihCD x hC)
+  | andL _ _ =>
+      exact hC.1
+  | andR _ _ =>
+      exact hC.2
+  | andI _ _ ihD ihE =>
+      exact ⟨ihD x hC, ihE x hC⟩
+  | orL _ _ =>
+      exact Or.inl hC
+  | orR _ _ =>
+      exact Or.inr hC
+  | orE _ _ ihE ihE' =>
+      cases hC with
+      | inl h => exact ihE x h
+      | inr h => exact ihE' x h
+  | bot _ =>
+      exact hC.elim
+  | top _ =>
+      trivial
+
+-- ============================================================
+-- 6. A small worked example
+-- ============================================================
+
+/-- Smoke check that the calculus works on the natural transitive case:
+    given `A ⊑ B` and `B ⊑ C`, the calculus derives `A ⊑ C` via `trans`. -/
+example : Sat [(Concept.atom 0, Concept.atom 1),
+               (Concept.atom 1, Concept.atom 2)]
+              (Concept.atom 0) (Concept.atom 2) :=
+  Sat.trans (D := Concept.atom 1)
+    (Sat.axm (Concept.atom 0) (Concept.atom 1) (by simp))
+    (Sat.axm (Concept.atom 1) (Concept.atom 2) (by simp))
+
 end ALC
 end ELKSDD
