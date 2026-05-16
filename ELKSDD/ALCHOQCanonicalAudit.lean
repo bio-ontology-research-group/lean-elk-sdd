@@ -21,5 +21,8 @@ namespace ELKSDD.ALCHOQ
 #print axioms skol_eval_exist_iff
 #print axioms skol_eval_univ_iff
 #print axioms conj_mem
+#print axioms skol_canonical_eval_iff
+#print axioms skol_canonical_satisfies
+#print axioms satC_complete_skolFragment
 
 end ELKSDD.ALCHOQ

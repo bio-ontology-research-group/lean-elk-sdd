@@ -518,5 +518,295 @@ theorem skol_eval_univ_iff
     -- y is an R-successor of x; universal propagation gives C ∈ carrier y.
     exact hR.1 C hUniv
 
+-- ============================================================
+-- 7.  Structural fragment with NO meta-hypotheses.
+--
+--     We isolate the sub-syntax of ALCHOQ where every case of the
+--     truth lemma can be discharged purely by the Skolem-tagged
+--     construction — *no* NomCompleteness, *no* HasSelfCompleteness,
+--     *no* CardinalityWitnesses.
+--
+--     `SkolFragment` admits: atoms, ⊤, ⊥, negation, conjunction,
+--     disjunction, ∃R.C, ∀R.C, ≥0 / ≤0 cardinality (which collapse
+--     to ⊤ / ∀R.¬C), and `hasSelf R`.  Excluded: nominals and
+--     positive `≥(n+1)` / `≤(n+1)` cardinality (these are the
+--     genuinely non-Tena-Cucala-handled cases).
+-- ============================================================
+
+/-- The unconditionally-discharged sub-syntax of ALCHOQ. -/
+def SkolFragment : Concept → Prop
+  | .atom _        => True
+  | .top           => True
+  | .bot           => True
+  | .nom _         => False
+  | .neg C         => SkolFragment C
+  | .conj A B      => SkolFragment A ∧ SkolFragment B
+  | .disj A B      => SkolFragment A ∧ SkolFragment B
+  | .exist _ C     => SkolFragment C
+  | .univ _ C      => SkolFragment C
+  | .atLeast 0 _ C => SkolFragment C
+  | .atLeast (_+1) _ _ => False
+  | .atMost 0 _ C  => SkolFragment C
+  | .atMost (_+1) _ _ => False
+  | .hasSelf _     => True
+
+/-- An ontology is in the SkolFragment iff every axiom uses only
+    SkolFragment concepts. -/
+def OntologySkolFragment (O : Ontology) : Prop :=
+  ∀ ax ∈ O, SkolFragment ax.1 ∧ SkolFragment ax.2
+
+/-- ⊤ is always in a carrier (via top_mem applied to the underlying
+    Type_ O). -/
+theorem skol_top_mem (O : Ontology) (hCons : consistent O (∅ : Set Concept))
+    (x : CanDom O) :
+    Concept.top ∈ carrierSet O hCons x := top_mem O _
+
+/-- ⊥ is never in a carrier. -/
+theorem skol_bot_not_mem (O : Ontology)
+    (hCons : consistent O (∅ : Set Concept)) (x : CanDom O) :
+    Concept.bot ∉ carrierSet O hCons x := bot_not_mem O _
+
+/-- **Truth lemma on the SkolFragment** — unconditional in `O`,
+    needing only `consistent O ∅`.  Proven by structural induction
+    on the concept. -/
+theorem skol_canonical_eval_iff
+    (O : Ontology) (hCons : consistent O (∅ : Set Concept))
+    (C : Concept) (hC : SkolFragment C) :
+    ∀ x : CanDom O,
+      ((skolCanonical O hCons).eval C x ↔ C ∈ carrierSet O hCons x) := by
+  induction C with
+  | atom n => intro x; exact Iff.rfl
+  | top =>
+      intro x
+      show True ↔ _
+      exact ⟨fun _ => skol_top_mem O hCons x,
+             fun _ => trivial⟩
+  | bot =>
+      intro x
+      show False ↔ _
+      exact ⟨fun h => h.elim,
+             fun h => (skol_bot_not_mem O hCons x h).elim⟩
+  | nom i => exact absurd hC (by simp [SkolFragment])
+  | neg D ih =>
+      intro x
+      show (¬ (skolCanonical O hCons).eval D x) ↔
+              Concept.neg D ∈ carrierSet O hCons x
+      have ihD := ih hC
+      rw [ihD x]
+      unfold carrierSet
+      rcases mem_xor_neg O (carrierType O hCons x) D with
+        ⟨hDmem, hnDnotmem⟩ | ⟨hDnotmem, hnDmem⟩
+      · exact ⟨fun h => absurd hDmem h, fun h => absurd h hnDnotmem⟩
+      · exact ⟨fun _ => hnDmem, fun _ => hDnotmem⟩
+  | conj A B ihA ihB =>
+      intro x
+      obtain ⟨hA, hB⟩ := hC
+      show ((skolCanonical O hCons).eval A x ∧ (skolCanonical O hCons).eval B x) ↔
+            Concept.conj A B ∈ carrierSet O hCons x
+      rw [ihA hA x, ihB hB x]
+      unfold carrierSet
+      constructor
+      · rintro ⟨hAmem, hBmem⟩
+        exact conj_mem O (carrierType O hCons x) A B hAmem hBmem
+      · intro hConj
+        refine ⟨?_, ?_⟩
+        · exact type_closure O _ _ _ hConj (SatC.satC_andL _ _)
+        · exact type_closure O _ _ _ hConj (SatC.satC_andR _ _)
+  | disj A B ihA ihB =>
+      intro x
+      obtain ⟨hA, hB⟩ := hC
+      show ((skolCanonical O hCons).eval A x ∨ (skolCanonical O hCons).eval B x) ↔
+            Concept.disj A B ∈ carrierSet O hCons x
+      rw [ihA hA x, ihB hB x]
+      unfold carrierSet
+      constructor
+      · rintro (hA' | hB')
+        · exact type_closure O _ _ _ hA' (SatC.ofSat (Sat.orL A B))
+        · exact type_closure O _ _ _ hB' (SatC.ofSat (Sat.orR A B))
+      · intro hDisj
+        -- Suppose neither A nor B is in carrier x; deduce contradiction.
+        by_contra hNeither
+        push_neg at hNeither
+        obtain ⟨hAne, hBne⟩ := hNeither
+        rcases mem_xor_neg O (carrierType O hCons x) A with
+          ⟨hAmem, _⟩ | ⟨_, hnA⟩
+        · exact hAne hAmem
+        rcases mem_xor_neg O (carrierType O hCons x) B with
+          ⟨hBmem, _⟩ | ⟨_, hnB⟩
+        · exact hBne hBmem
+        -- Both `neg A, neg B` in carrier with `disj A B` ∈ carrier → contradiction.
+        apply (carrierType O hCons x).cons
+          [Concept.disj A B, Concept.neg A, Concept.neg B]
+        · intro D hD
+          simp at hD
+          rcases hD with rfl | rfl | rfl
+          · exact hDisj
+          · exact hnA
+          · exact hnB
+        · show SatC O (conjList [Concept.disj A B, Concept.neg A, Concept.neg B])
+                     Concept.bot
+          unfold conjList
+          refine SatC.trans ?_ (SatC.nc (Concept.disj A B))
+          refine SatC.satC_andI ?_ ?_
+          · exact SatC.satC_andL _ _
+          · refine SatC.trans ?_ (SatC.deMorganO' A B)
+            refine SatC.satC_andI ?_ ?_
+            · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
+            · refine SatC.trans (SatC.satC_andR _ _) ?_
+              refine SatC.trans (SatC.satC_andR _ _) ?_
+              exact SatC.satC_andL _ _
+  | exist R D ih =>
+      intro x
+      exact skol_eval_exist_iff O hCons R D x (ih hC)
+  | univ R D ih =>
+      intro x
+      exact skol_eval_univ_iff O hCons R D x (ih hC)
+  | atLeast n R D ih =>
+      cases n with
+      | zero =>
+          intro x
+          show Interp.atLeastCard _ 0 ↔ _
+          unfold Interp.atLeastCard
+          refine ⟨fun _ => ?_, fun _ => trivial⟩
+          unfold carrierSet
+          exact type_closure O (carrierType O hCons x) _ _
+            (top_mem O _) (SatC.atLeastZero R D)
+      | succ m =>
+          exact absurd hC (by simp [SkolFragment])
+  | atMost n R D ih =>
+      intro x
+      have hD : SkolFragment D := by
+        cases n with
+        | zero => exact hC
+        | succ _ => exact absurd hC (by simp [SkolFragment])
+      cases n with
+      | zero =>
+          have hSem : (skolCanonical O hCons).eval (.atMost 0 R D) x ↔
+                      ∀ y, (skolCanonical O hCons).ext_role R x y →
+                            ¬ (skolCanonical O hCons).eval D y :=
+            Interp.eval_atMost_zero (skolCanonical O hCons) R D x
+          rw [hSem]
+          have ihD := ih hD
+          constructor
+          · intro hAll
+            -- Show univ R (neg D) ∈ carrier x first.
+            have hUniv : Concept.univ R (Concept.neg D) ∈
+                            carrierSet O hCons x := by
+              -- By maximality on univ R (neg D); contradiction if neg.
+              rcases (carrierType O hCons x).maximal
+                  (Concept.univ R (Concept.neg D)) with hMem | hNeg
+              · exact hMem
+              · -- neg univ R (neg D) → exist R (neg (neg D)) → exist R D.
+                have hExNN : Concept.exist R (.neg (.neg D)) ∈
+                              carrierSet O hCons x := by
+                  unfold carrierSet
+                  exact type_closure O (carrierType O hCons x) _ _ hNeg
+                    (SatC.negUniv R (.neg D))
+                have hExD : Concept.exist R D ∈ carrierSet O hCons x := by
+                  unfold carrierSet
+                  unfold carrierSet at hExNN
+                  exact type_closure O _ _ _ hExNN
+                    (SatC.satC_monoExist R (SatC.negNegE D))
+                -- Witness with .succ x R D 0; evaluate D there;
+                -- contradiction with hAll.
+                let y := CanDom.succ x R D 0
+                have hER : (skolCanonical O hCons).ext_role R x y :=
+                  skol_succ_in_ext_role O hCons x R D 0 hExD
+                have hDy : (skolCanonical O hCons).eval D y :=
+                  (ihD y).mpr (succ_carrier_contains_C O hCons x R D 0 hExD)
+                exact absurd hDy (hAll y hER)
+            unfold carrierSet at hUniv
+            unfold carrierSet
+            exact type_closure O (carrierType O hCons x) _ _ hUniv
+              (SatC.univ_to_atMostZero R D)
+          · intro hAtMost y hR
+            intro hDy
+            have hDmem : D ∈ carrierSet O hCons y := (ihD y).mp hDy
+            have hUnivNeg : Concept.univ R (Concept.neg D) ∈
+                            carrierSet O hCons x := by
+              unfold carrierSet
+              unfold carrierSet at hAtMost
+              exact type_closure O (carrierType O hCons x) _ _ hAtMost
+                (SatC.atMostZero R D)
+            have hNegD : Concept.neg D ∈ carrierSet O hCons y :=
+              hR.1 _ hUnivNeg
+            unfold carrierSet at hDmem hNegD
+            rcases mem_xor_neg O (carrierType O hCons y) D with
+              ⟨_, hnnD⟩ | ⟨hDnotmem, _⟩
+            · exact hnnD hNegD
+            · exact hDnotmem hDmem
+      | succ m =>
+          exact absurd hC (by simp [SkolFragment])
+  | hasSelf R => intro x; exact skol_eval_hasSelf_iff O hCons R x
+
+/-- **Skolem canonical satisfies a SkolFragment ontology**. -/
+theorem skol_canonical_satisfies
+    (O : Ontology) (hCons : consistent O (∅ : Set Concept))
+    (hOFrag : OntologySkolFragment O) :
+    (skolCanonical O hCons).satisfies O := by
+  intro ax hAx x hP
+  obtain ⟨h1Frag, h2Frag⟩ := hOFrag ax hAx
+  have h1 : ax.1 ∈ carrierSet O hCons x :=
+    (skol_canonical_eval_iff O hCons ax.1 h1Frag x).mp hP
+  have h2 : ax.2 ∈ carrierSet O hCons x := by
+    unfold carrierSet at h1 ⊢
+    exact type_closure O (carrierType O hCons x) _ _ h1
+      (SatC.ofSat (Sat.axm ax.1 ax.2 hAx))
+  exact (skol_canonical_eval_iff O hCons ax.2 h2Frag x).mpr h2
+
+-- The SkolFragment excludes nominals from queries, so we can use the
+-- standard `c_negD_consistent` directly — no need for a nominal-purity
+-- side condition on the Lindenbaum extension.
+
+/-- **Headline completeness for the SkolFragment** — unconditional in
+    `O` (no NomCompleteness, HasSelfCompleteness, or
+    CardinalityWitnesses). -/
+theorem satC_complete_skolFragment
+    (O : Ontology) (C D : Concept)
+    (hOFrag : OntologySkolFragment O)
+    (hC : SkolFragment C) (hD : SkolFragment D)
+    (hEnt : Entails O C D) : SatC O C D := by
+  by_contra hNot
+  by_cases hCons : consistent O (∅ : Set Concept)
+  · -- consistent ontology; build counter-model.
+    have hCN : consistent O ({C, Concept.neg D} : Set Concept) :=
+      c_negD_consistent O C D hNot
+    obtain ⟨t, htsub⟩ := lindenbaum O _ hCN
+    have hsat : (skolCanonical O hCons).satisfies O :=
+      skol_canonical_satisfies O hCons hOFrag
+    -- Anchor at `.seed t` in the Skolem domain.
+    let x : CanDom O := .seed t
+    have hCarrierX : carrierSet O hCons x = t.carrier := rfl
+    have hCmem : C ∈ carrierSet O hCons x := by
+      rw [hCarrierX]
+      exact htsub (by simp : C ∈ ({C, Concept.neg D} : Set _))
+    have hEvalC : (skolCanonical O hCons).eval C x :=
+      (skol_canonical_eval_iff O hCons C hC x).mpr hCmem
+    have hEvalD : (skolCanonical O hCons).eval D x := hEnt _ hsat x hEvalC
+    have hDmem : D ∈ carrierSet O hCons x :=
+      (skol_canonical_eval_iff O hCons D hD x).mp hEvalD
+    have hnDmem : Concept.neg D ∈ carrierSet O hCons x := by
+      rw [hCarrierX]
+      exact htsub (by simp : Concept.neg D ∈ ({C, Concept.neg D} : Set _))
+    unfold carrierSet at hDmem hnDmem
+    rcases mem_xor_neg O (carrierType O hCons x) D with
+      ⟨_, hnnD⟩ | ⟨hDnotmem, _⟩
+    · exact hnnD hnDmem
+    · exact hDnotmem hDmem
+  · -- O inconsistent; chain top ⊑ bot.
+    unfold consistent at hCons
+    push_neg at hCons
+    obtain ⟨L, hLin, hSat⟩ := hCons
+    have hLnil : L = [] := by
+      cases L with
+      | nil => rfl
+      | cons E _ => exact absurd (hLin E List.mem_cons_self) (by simp)
+    subst hLnil
+    have hTopBot : SatC O Concept.top Concept.bot := by
+      have : conjList ([] : List Concept) = Concept.top := rfl
+      rw [this] at hSat; exact hSat
+    apply hNot
+    exact SatC.trans (satC_top O C) (SatC.trans hTopBot (satC_bot O D))
+
 end ALCHOQ
 end ELKSDD
