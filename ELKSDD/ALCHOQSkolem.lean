@@ -215,5 +215,135 @@ theorem skol_eval_nom_iff (O : Ontology)
   show (x = (skolCanonical O hCons).ext_ind i) ↔ x = .nomElt i
   rw [skolCanonical_ext_ind]
 
+-- ============================================================
+-- 5.  Forward Skolem witness construction for positive cardinality.
+--     One direction of CardinalityWitnesses: any carrier containing
+--     `≥(n+1) R.C` immediately yields `n+1` distinct domain witnesses
+--     via the Skolem-tagged successors.
+-- ============================================================
+
+/-- Inside the carrier of `x`, the at-least concept yields the
+    corresponding existential: `≥(n+1) R.C ∈ carrier x → ∃R.C ∈ carrier x`. -/
+theorem atLeast_implies_exist_in_carrier
+    (O : Ontology) (hCons : consistent O (∅ : Set Concept))
+    (x : CanDom O) (R : Nat) (C : Concept) (n : Nat)
+    (h : Concept.atLeast (n+1) R C ∈ carrierSet O hCons x) :
+    Concept.exist R C ∈ carrierSet O hCons x := by
+  unfold carrierSet at h ⊢
+  exact type_closure O (carrierType O hCons x) _ _ h
+    (SatC.atLeast_to_exist n R C)
+
+/-- `≥m R.C ∈ carrier x ⟹ ≥k R.C ∈ carrier x` whenever `k ≤ m`,
+    via `atLeast_anti_n` and type-closure. -/
+theorem atLeast_anti_in_carrier
+    (O : Ontology) (hCons : consistent O (∅ : Set Concept))
+    (x : CanDom O) (R : Nat) (C : Concept) {n m : Nat} (hle : n ≤ m)
+    (h : Concept.atLeast m R C ∈ carrierSet O hCons x) :
+    Concept.atLeast n R C ∈ carrierSet O hCons x := by
+  unfold carrierSet at h ⊢
+  exact type_closure O (carrierType O hCons x) _ _ h
+    (SatC.atLeast_anti_n R C hle)
+
+/-- Auxiliary: at level `k+1 ≤ n+1`, the parent's carrier contains
+    `≥(k+1) R.C` too, hence the Skolem successor `succ x R C k` exists,
+    carries `C`, and propagates universals.  Currently we only need
+    the consequence `∃R.C ∈ carrier x`, which is independent of `k`. -/
+theorem skol_succ_valid
+    (O : Ontology) (hCons : consistent O (∅ : Set Concept))
+    (x : CanDom O) (R : Nat) (C : Concept) {n k : Nat} (_hkle : k ≤ n)
+    (h : Concept.atLeast (n+1) R C ∈ carrierSet O hCons x) :
+    Concept.exist R C ∈ carrierSet O hCons x :=
+  atLeast_implies_exist_in_carrier O hCons x R C n h
+
+/-- The Skolem successor `succ x R C k` is an `ext_role R x ·`
+    successor of `x` whenever the parent's carrier contains
+    `≥(k+1) R.C` (or, sufficiently for our use, contains `∃R.C`). -/
+theorem skol_succ_in_ext_role
+    (O : Ontology) (hCons : consistent O (∅ : Set Concept))
+    (x : CanDom O) (R : Nat) (C : Concept) (k : Nat)
+    (hExist : Concept.exist R C ∈ carrierSet O hCons x) :
+    (skolCanonical O hCons).ext_role R x (.succ x R C k) := by
+  refine ⟨?_, ?_⟩
+  · -- universal propagation
+    intro D hUniv
+    exact succ_carrier_propagates_univ O hCons x R C k hExist D hUniv
+  · -- self-loop clause: succ x R C k = x → hasSelf R ∈ carrier x
+    intro hEq
+    exact absurd hEq (CanDom.succ_ne_parent O x R C k)
+
+/-- Skolem successors are injective in their `k`-index: at the same
+    parent, role, filler, distinct `k`'s give distinct elements. -/
+theorem skol_succ_k_ne {O : Ontology}
+    (x : CanDom O) (R : Nat) (C : Concept) {k k' : Nat} (hkk : k ≠ k') :
+    CanDom.succ x R C k ≠ CanDom.succ x R C k' := by
+  intro h
+  injection h with _ _ _ hk
+  exact hkk hk
+
+/-- **Skolem witness theorem (forward CardinalityWitnesses)**.
+
+    If `≥(n+1) R.C ∈ carrierSet x`, then the `n+1` Skolem successors
+    `succ x R C 0, …, succ x R C n` provide `n+1` distinct
+    `ext_role`-witnesses for the filler `C` — establishing
+    `atLeastCard … (n+1)` directly. -/
+theorem skol_atLeast_forward
+    (O : Ontology) (hCons : consistent O (∅ : Set Concept))
+    (x : CanDom O) (R : Nat) (C : Concept) (n : Nat)
+    (hCarrier : Concept.atLeast (n+1) R C ∈ carrierSet O hCons x) :
+    Interp.atLeastCard
+      (fun y : CanDom O =>
+        (skolCanonical O hCons).ext_role R x y ∧
+        C ∈ carrierSet O hCons y)
+      (n+1) := by
+  have hExist : Concept.exist R C ∈ carrierSet O hCons x :=
+    atLeast_implies_exist_in_carrier O hCons x R C n hCarrier
+  -- Generic helper: build the nested atLeastCard structure using
+  -- successive Skolem indices starting from any base `b`.
+  suffices aux :
+      ∀ (b m : Nat),
+        Interp.atLeastCard
+          (fun y : CanDom O =>
+            ((skolCanonical O hCons).ext_role R x y ∧
+              C ∈ carrierSet O hCons y) ∧
+            (∀ k < b, y ≠ .succ x R C k))
+          m by
+    have h := aux 0 (n+1)
+    refine atLeastCard_filler_mono
+      (P := fun y => ((skolCanonical O hCons).ext_role R x y ∧
+                       C ∈ carrierSet O hCons y) ∧
+                       (∀ k < 0, y ≠ .succ x R C k))
+      (Q := fun y => (skolCanonical O hCons).ext_role R x y ∧
+                       C ∈ carrierSet O hCons y)
+      ?_ (n+1) h
+    intro y ⟨hMain, _⟩
+    exact hMain
+  intro b m
+  induction m generalizing b with
+  | zero => trivial
+  | succ m ih =>
+      refine ⟨.succ x R C b, ?_, ?_⟩
+      · refine ⟨⟨?_, ?_⟩, ?_⟩
+        · exact skol_succ_in_ext_role O hCons x R C b hExist
+        · exact succ_carrier_contains_C O hCons x R C b hExist
+        · intro k hk hEq
+          exact (skol_succ_k_ne x R C (Nat.ne_of_lt hk).symm) hEq
+      · -- atLeastCard (filter out the just-chosen successor) m, by IH at b+1.
+        refine atLeastCard_filler_mono
+          (P := fun y =>
+            ((skolCanonical O hCons).ext_role R x y ∧
+              C ∈ carrierSet O hCons y) ∧
+            (∀ k < (b+1), y ≠ .succ x R C k))
+          (Q := fun y =>
+            (((skolCanonical O hCons).ext_role R x y ∧
+              C ∈ carrierSet O hCons y) ∧
+            (∀ k < b, y ≠ .succ x R C k)) ∧
+            y ≠ .succ x R C b)
+          ?_ m (ih (b+1))
+        intro y ⟨hMain, hNeAll⟩
+        refine ⟨⟨hMain, ?_⟩, ?_⟩
+        · intro k hk
+          exact hNeAll k (Nat.lt_succ_of_lt hk)
+        · exact hNeAll b (Nat.lt_succ_self _)
+
 end ALCHOQ
 end ELKSDD

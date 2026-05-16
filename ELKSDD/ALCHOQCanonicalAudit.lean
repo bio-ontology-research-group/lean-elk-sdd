@@ -16,5 +16,6 @@ namespace ELKSDD.ALCHOQ
 #print axioms succ_carrier_contains_C
 #print axioms succ_carrier_propagates_univ
 #print axioms nomElt_carrier_contains
+#print axioms skol_atLeast_forward
 
 end ELKSDD.ALCHOQ
