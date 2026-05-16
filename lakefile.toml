@@ -1,5 +1,10 @@
 name = "elk-sdd"
 defaultTargets = ["ELKSDD"]
 
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.30.0-rc2"
+
 [[lean_lib]]
 name = "ELKSDD"
