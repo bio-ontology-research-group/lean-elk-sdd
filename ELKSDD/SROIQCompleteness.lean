@@ -40,6 +40,14 @@ namespace SROIQ
 
 open ALCHOQ (Concept Ontology Interp)
 
+/-- Concept-level encoding of a role-chain existential: for a chain
+    ``r₁ · r₂ · … · rₖ`` and filler ``C``, this is the iterated
+    existential
+    ``∃r₁. (∃r₂. … (∃rₖ. C))``.  Empty chain ↦ ``C`` (degenerate). -/
+def existChain : List Nat → Concept → Concept
+  | [],       C => C
+  | r :: rs,  C => .exist r (existChain rs C)
+
 -- ============================================================
 -- 1. SROIQ entailment: must respect both ontology and RBox.
 -- ============================================================
@@ -76,6 +84,13 @@ inductive SatC (R : RBox) (O : Ontology) : Concept → Concept → Prop where
   | roleChain_two   : ∀ {r₁ r₂ s} (C : Concept),
       RAxiom.chain [r₁, r₂] s ∈ R →
       SatC R O (.exist r₁ (.exist r₂ C)) (.exist s C)
+  -- General k-ary role chain  r₁ ∘ … ∘ rₖ ⊑ s  ⟹
+  --   ∃r₁. ∃r₂. … ∃rₖ. C ⊑ ∃s.C
+  -- (degenerate empty-chain case yields the reflexivity-like rule
+  -- C ⊑ ∃s.C, sound because chain [] s ↔ ∀x, s(x,x).)
+  | roleChain_n     : ∀ {rs s} (C : Concept),
+      RAxiom.chain rs s ∈ R →
+      SatC R O (existChain rs C) (.exist s C)
   -- Trans(r) ⟹  ∃r.∃r.C ⊑ ∃r.C
   | roleTrans_exist : ∀ {r} (C : Concept),
       RAxiom.trans r ∈ R →
@@ -124,6 +139,29 @@ private theorem chain_two_of_mem {α} {I : Interp α} {R : RBox}
   exact fun x z ⟨y, h1, h2⟩ =>
     (chain_two_sound (I := I) r₁ r₂ s).mp hAx x y z h1 h2
 
+/-- ``existChain rs C`` evaluated at ``x`` exposes a chain-of-witnesses
+    terminating at a point where ``C`` holds.  By induction on ``rs``. -/
+private theorem existChain_eval_iff
+    {α} (I : Interp α) (rs : List Nat) (C : Concept) (x : α) :
+    I.eval (existChain rs C) x ↔
+      ∃ y, holdsAlong I rs x y ∧ I.eval C y := by
+  induction rs generalizing x with
+  | nil =>
+      -- existChain [] C = C; holdsAlong I [] x y = (x = y)
+      refine ⟨fun h => ⟨x, rfl, h⟩, ?_⟩
+      rintro ⟨y, hxy, hCy⟩
+      cases hxy
+      exact hCy
+  | cons r rs ih =>
+      -- existChain (r :: rs) C = ∃r. existChain rs C
+      constructor
+      · rintro ⟨z, hxz, hrest⟩
+        obtain ⟨y, hzy_chain, hCy⟩ := (ih (x := z)).mp hrest
+        exact ⟨y, ⟨z, hxz, hzy_chain⟩, hCy⟩
+      · rintro ⟨y, ⟨z, hxz, hzy_chain⟩, hCy⟩
+        refine ⟨z, hxz, ?_⟩
+        exact (ih (x := z)).mpr ⟨y, hzy_chain, hCy⟩
+
 private theorem trans_of_mem {α} {I : Interp α} {R : RBox} {r : Nat}
     (hR : R.eval I) (hMem : RAxiom.trans r ∈ R) :
     ∀ x y z, I.ext_role r x y → I.ext_role r y z → I.ext_role r x z :=
@@ -165,6 +203,10 @@ theorem satC_sound (R : RBox) (O : Ontology) (C D : Concept)
       obtain ⟨z, hyz, hCz⟩ := hy_rest
       refine ⟨z, ?_, hCz⟩
       exact chain_two_of_mem hR hMem x z ⟨y, hxy, hyz⟩
+  | @roleChain_n rs s C hMem =>
+      have hAx : (RAxiom.chain rs s).eval I := hR _ hMem
+      obtain ⟨y, hxy_chain, hCy⟩ := (existChain_eval_iff I rs C x).mp hC
+      exact ⟨y, hAx x y hxy_chain, hCy⟩
   | roleTrans_exist C hMem =>
       obtain ⟨y, hxy, hyrest⟩ := hC
       obtain ⟨z, hyz, hCz⟩ := hyrest
@@ -216,6 +258,20 @@ example (r : Nat) (C : Concept)
     (hRBox : RBox) (h_refl : RAxiom.refl r ∈ hRBox) (O : Ontology) :
     SatC hRBox O (.univ r C) C :=
   SatC.roleRefl_univ C h_refl
+
+/-- General role chains: ``r₁ ∘ r₂ ∘ r₃ ⊑ s``  yields
+    ``∃r₁.∃r₂.∃r₃.C ⊑ ∃s.C`` directly.  Demonstrates that
+    ``roleChain_n`` subsumes ``roleChain_two``. -/
+example (r₁ r₂ r₃ s : Nat) (C : Concept) (hRBox : RBox)
+    (h_chain : RAxiom.chain [r₁, r₂, r₃] s ∈ hRBox)
+    (O : Ontology) :
+    SatC hRBox O
+      (.exist r₁ (.exist r₂ (.exist r₃ C)))
+      (.exist s C) := by
+  have : (.exist r₁ (.exist r₂ (.exist r₃ C)) : Concept)
+          = existChain [r₁, r₂, r₃] C := rfl
+  rw [this]
+  exact SatC.roleChain_n C h_chain
 
 -- ============================================================
 -- 6. Headline conjecture: SROIQ completeness.
