@@ -594,5 +594,408 @@ theorem witness_exist
   · -- C ∈ t'.carrier
     exact ht' ((mem_successorSet_iff O t R C C).mpr (Or.inl rfl))
 
+-- ============================================================
+-- 8.  Truth lemma (canonical_eval_iff) for the structural fragment.
+-- ============================================================
+
+/-- The truth lemma for the structural ALCHOQ fragment.  Non-
+    structural cases (`nom`, `hasSelf`, `atLeast (n+1)`,
+    `atMost (n+1)`) are dispatched via the `Structural` hypothesis. -/
+theorem canonical_eval_iff
+    (O : Ontology) (hNE : ∃ t : Type_ O, True)
+    (C : Concept) :
+    Structural C →
+    ∀ t : Type_ O, ((canonical O hNE).eval C t ↔ C ∈ t.carrier) := by
+  induction C with
+  | atom n =>
+      intro _ t
+      exact Iff.rfl
+  | top =>
+      intro _ t
+      show True ↔ _
+      exact ⟨fun _ => top_mem O t, fun _ => trivial⟩
+  | bot =>
+      intro _ t
+      show False ↔ _
+      exact ⟨fun h => h.elim, fun h => (bot_not_mem O t h).elim⟩
+  | nom _ =>
+      intro hC _
+      exact hC.elim
+  | neg C ih =>
+      intro hC t
+      show (¬ (canonical O hNE).eval C t) ↔ Concept.neg C ∈ t.carrier
+      rw [ih hC t]
+      rcases mem_xor_neg O t C with ⟨hCmem, hnCnotmem⟩ | ⟨hCnotmem, hnCmem⟩
+      · constructor
+        · intro h; exact absurd hCmem h
+        · intro h; exact absurd h hnCnotmem
+      · constructor
+        · intro _; exact hnCmem
+        · intro _; exact hCnotmem
+  | conj A B ihA ihB =>
+      intro hC t
+      obtain ⟨hA, hB⟩ := hC
+      show ((canonical O hNE).eval A t ∧ (canonical O hNE).eval B t) ↔
+            Concept.conj A B ∈ t.carrier
+      rw [ihA hA t, ihB hB t]
+      constructor
+      · rintro ⟨hAmem, hBmem⟩
+        rcases t.maximal (Concept.conj A B) with hMem | hNeg
+        · exact hMem
+        · exfalso
+          apply t.cons [A, B, Concept.neg (Concept.conj A B)]
+          · intro D hD
+            simp at hD
+            rcases hD with rfl | rfl | rfl
+            · exact hAmem
+            · exact hBmem
+            · exact hNeg
+          · show SatC O (conjList [A, B, Concept.neg (Concept.conj A B)])
+                       Concept.bot
+            unfold conjList
+            refine SatC.trans ?_ (SatC.nc (Concept.conj A B))
+            refine SatC.satC_andI ?_ ?_
+            · refine SatC.satC_andI ?_ ?_
+              · exact SatC.satC_andL _ _
+              · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
+            · refine SatC.trans (SatC.satC_andR _ _) ?_
+              refine SatC.trans (SatC.satC_andR _ _) ?_
+              exact SatC.satC_andL _ _
+      · intro hConj
+        refine ⟨?_, ?_⟩
+        · by_contra hAne
+          rcases t.maximal A with hAmem | hAneg
+          · exact hAne hAmem
+          · apply t.cons [Concept.conj A B, Concept.neg A]
+            · intro D hD
+              simp at hD
+              rcases hD with rfl | rfl
+              · exact hConj
+              · exact hAneg
+            · show SatC O (conjList [Concept.conj A B, Concept.neg A])
+                         Concept.bot
+              unfold conjList
+              refine SatC.trans ?_ (SatC.nc A)
+              refine SatC.satC_andI ?_ ?_
+              · exact SatC.trans (SatC.satC_andL _ _) (SatC.satC_andL _ _)
+              · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
+        · by_contra hBne
+          rcases t.maximal B with hBmem | hBneg
+          · exact hBne hBmem
+          · apply t.cons [Concept.conj A B, Concept.neg B]
+            · intro D hD
+              simp at hD
+              rcases hD with rfl | rfl
+              · exact hConj
+              · exact hBneg
+            · show SatC O (conjList [Concept.conj A B, Concept.neg B])
+                         Concept.bot
+              unfold conjList
+              refine SatC.trans ?_ (SatC.nc B)
+              refine SatC.satC_andI ?_ ?_
+              · exact SatC.trans (SatC.satC_andL _ _) (SatC.satC_andR _ _)
+              · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
+  | disj A B ihA ihB =>
+      intro hC t
+      obtain ⟨hA, hB⟩ := hC
+      show ((canonical O hNE).eval A t ∨ (canonical O hNE).eval B t) ↔
+            Concept.disj A B ∈ t.carrier
+      rw [ihA hA t, ihB hB t]
+      constructor
+      · rintro (hAmem | hBmem)
+        · rcases t.maximal (Concept.disj A B) with hMem | hNeg
+          · exact hMem
+          · exfalso
+            apply t.cons [A, Concept.neg (Concept.disj A B)]
+            · intro D hD
+              simp at hD
+              rcases hD with rfl | rfl
+              · exact hAmem
+              · exact hNeg
+            · show SatC O (conjList [A, Concept.neg (Concept.disj A B)])
+                         Concept.bot
+              unfold conjList
+              refine SatC.trans ?_ (SatC.nc (Concept.disj A B))
+              refine SatC.satC_andI ?_ ?_
+              · exact SatC.trans (SatC.satC_andL _ _) (satC_orL O _ _)
+              · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
+        · rcases t.maximal (Concept.disj A B) with hMem | hNeg
+          · exact hMem
+          · exfalso
+            apply t.cons [B, Concept.neg (Concept.disj A B)]
+            · intro D hD
+              simp at hD
+              rcases hD with rfl | rfl
+              · exact hBmem
+              · exact hNeg
+            · show SatC O (conjList [B, Concept.neg (Concept.disj A B)])
+                         Concept.bot
+              unfold conjList
+              refine SatC.trans ?_ (SatC.nc (Concept.disj A B))
+              refine SatC.satC_andI ?_ ?_
+              · exact SatC.trans (SatC.satC_andL _ _) (satC_orR O _ _)
+              · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
+      · intro hDisj
+        by_contra hNeither
+        push_neg at hNeither
+        obtain ⟨hAne, hBne⟩ := hNeither
+        rcases t.maximal A with hAmem | hnA
+        · exact hAne hAmem
+        rcases t.maximal B with hBmem | hnB
+        · exact hBne hBmem
+        apply t.cons [Concept.disj A B, Concept.neg A, Concept.neg B]
+        · intro D hD
+          simp at hD
+          rcases hD with rfl | rfl | rfl
+          · exact hDisj
+          · exact hnA
+          · exact hnB
+        · show SatC O (conjList [Concept.disj A B,
+                                  Concept.neg A,
+                                  Concept.neg B]) Concept.bot
+          unfold conjList
+          refine SatC.trans ?_ (SatC.nc (Concept.disj A B))
+          refine SatC.satC_andI ?_ ?_
+          · exact SatC.satC_andL _ _
+          · refine SatC.trans ?_ (SatC.deMorganO' A B)
+            refine SatC.satC_andI ?_ ?_
+            · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
+            · refine SatC.trans (SatC.satC_andR _ _) ?_
+              refine SatC.trans (SatC.satC_andR _ _) ?_
+              exact SatC.satC_andL _ _
+  | exist R C ih =>
+      intro hC t
+      show (∃ t', (canonical O hNE).ext_role R t t' ∧
+                   (canonical O hNE).eval C t') ↔
+            Concept.exist R C ∈ t.carrier
+      constructor
+      · rintro ⟨t', hR, hCt'⟩
+        rcases t.maximal (Concept.exist R C) with hMem | hNeg
+        · exact hMem
+        · have hUniv : Concept.univ R (Concept.neg C) ∈ t.carrier :=
+            type_closure O t _ _ hNeg (SatC.negExist R C)
+          have hnC : Concept.neg C ∈ t'.carrier := hR _ hUniv
+          have hCmem : C ∈ t'.carrier := (ih hC t').mp hCt'
+          exfalso
+          rcases mem_xor_neg O t' C with ⟨_, hnnC⟩ | ⟨hCnotmem, _⟩
+          · exact hnnC hnC
+          · exact hCnotmem hCmem
+      · intro hExist
+        obtain ⟨t', hR, hCt'⟩ := witness_exist O hNE t R C hExist
+        exact ⟨t', hR, (ih hC t').mpr hCt'⟩
+  | univ R C ih =>
+      intro hC t
+      show (∀ t', (canonical O hNE).ext_role R t t' →
+                   (canonical O hNE).eval C t') ↔
+            Concept.univ R C ∈ t.carrier
+      constructor
+      · intro hAll
+        rcases t.maximal (Concept.univ R C) with hMem | hNeg
+        · exact hMem
+        · have hExistNeg : Concept.exist R (Concept.neg C) ∈ t.carrier :=
+            type_closure O t _ _ hNeg (SatC.negUniv R C)
+          obtain ⟨t', hR, hnCt'⟩ :=
+            witness_exist O hNE t R (Concept.neg C) hExistNeg
+          have hCt' : (canonical O hNE).eval C t' := hAll t' hR
+          have hCmem : C ∈ t'.carrier := (ih hC t').mp hCt'
+          exfalso
+          rcases mem_xor_neg O t' C with ⟨_, hnnC⟩ | ⟨hCnotmem, _⟩
+          · exact hnnC hnCt'
+          · exact hCnotmem hCmem
+      · intro hUniv t' hR
+        have hCt' : C ∈ t'.carrier := hR C hUniv
+        exact (ih hC t').mpr hCt'
+  | atLeast n R C ih =>
+      intro hC t
+      cases n with
+      | zero =>
+          have hC' : Structural C := hC
+          constructor
+          · intro _
+            exact type_closure O t _ _ (top_mem O t)
+              (SatC.atLeastZero R C)
+          · intro _
+            show Interp.atLeastCard _ 0
+            exact trivial
+      | succ _ => exact hC.elim
+  | atMost n R C ih =>
+      intro hC t
+      cases n with
+      | zero =>
+          have hC' : Structural C := hC
+          have hSem : (canonical O hNE).eval (.atMost 0 R C) t ↔
+                      ∀ t', (canonical O hNE).ext_role R t t' →
+                            ¬ (canonical O hNE).eval C t' :=
+            Interp.eval_atMost_zero (canonical O hNE) R C t
+          rw [hSem]
+          constructor
+          · intro hAll
+            have hUnivNeg : Concept.univ R (Concept.neg C) ∈ t.carrier := by
+              rcases t.maximal (Concept.univ R (Concept.neg C)) with h | h
+              · exact h
+              · have hExC : Concept.exist R C ∈ t.carrier := by
+                  have h1 : Concept.exist R (.neg (.neg C)) ∈ t.carrier :=
+                    type_closure O t _ _ h (SatC.negUniv R (.neg C))
+                  exact type_closure O t _ _ h1
+                    (SatC.satC_monoExist R (SatC.negNegE C))
+                obtain ⟨t', hR, hCt'⟩ := witness_exist O hNE t R C hExC
+                have hCsem : (canonical O hNE).eval C t' :=
+                  (ih hC' t').mpr hCt'
+                exact absurd hCsem (hAll t' hR)
+            exact type_closure O t _ _ hUnivNeg
+              (SatC.univ_to_atMostZero R C)
+          · intro hAtMost t' hR
+            have hUnivNeg : Concept.univ R (Concept.neg C) ∈ t.carrier :=
+              type_closure O t _ _ hAtMost (SatC.atMostZero R C)
+            have hNegC_mem : Concept.neg C ∈ t'.carrier := hR _ hUnivNeg
+            intro hCeval
+            have hCmem : C ∈ t'.carrier := (ih hC' t').mp hCeval
+            rcases mem_xor_neg O t' C with ⟨_, hnnC⟩ | ⟨hCnotmem, _⟩
+            · exact hnnC hNegC_mem
+            · exact hCnotmem hCmem
+      | succ _ => exact hC.elim
+  | hasSelf _ =>
+      intro hC _
+      exact hC.elim
+
+-- ============================================================
+-- 9.  Canonical satisfies the structural ontology.
+-- ============================================================
+
+theorem canonical_satisfies
+    (O : Ontology) (hNE : ∃ t : Type_ O, True)
+    (hOStruct : OntologyStructural O) :
+    (canonical O hNE).satisfies O := by
+  intro ax hAx t hP
+  obtain ⟨h1Struct, h2Struct⟩ := hOStruct ax hAx
+  have h1 : ax.1 ∈ t.carrier :=
+    (canonical_eval_iff O hNE ax.1 h1Struct t).mp hP
+  have h2 : ax.2 ∈ t.carrier :=
+    type_closure O t _ _ h1
+      (SatC.ofSat (Sat.axm ax.1 ax.2 hAx))
+  exact (canonical_eval_iff O hNE ax.2 h2Struct t).mpr h2
+
+-- ============================================================
+-- 10.  The two-element set ``{C, ¬D}`` is consistent if C ⊑ D is not
+--      SatC-derivable.  Used in the contradiction proof of
+--      completeness.
+-- ============================================================
+
+theorem c_negD_consistent (O : Ontology) (C D : Concept)
+    (hNotSat : ¬ SatC O C D) :
+    consistent O ({C, Concept.neg D} : Set Concept) := by
+  intro L hLin hSat
+  have aux :
+      ∀ L' : List Concept,
+        (∀ E ∈ L', E ∈ ({C, Concept.neg D} : Set Concept)) →
+        SatC O (.conj C (.neg D)) (conjList L') := by
+    intro L'
+    induction L' with
+    | nil =>
+        intro _
+        unfold conjList
+        exact satC_top O _
+    | cons E Es ih =>
+        intro hL'in
+        unfold conjList
+        have hE_mem : E ∈ ({C, Concept.neg D} : Set Concept) :=
+          hL'in E List.mem_cons_self
+        rcases hE_mem with hEC | hEnegD
+        · subst hEC
+          refine SatC.satC_andI ?_ ?_
+          · exact SatC.satC_andL _ _
+          · exact ih (fun F hF => hL'in F (List.mem_cons_of_mem _ hF))
+        · have hEeq : E = Concept.neg D := hEnegD
+          subst hEeq
+          refine SatC.satC_andI ?_ ?_
+          · exact SatC.satC_andR _ _
+          · exact ih (fun F hF => hL'in F (List.mem_cons_of_mem _ hF))
+  have hCNeg : SatC O (.conj C (.neg D)) (conjList L) := aux L hLin
+  have hContra : SatC O (.conj C (.neg D)) Concept.bot :=
+    SatC.trans hCNeg hSat
+  apply hNotSat
+  -- C ⊑ C ⊓ (D ⊔ ¬D) ⊑ (C⊓D) ⊔ (C⊓¬D) ⊑ D.
+  have step1 : SatC O C (.conj C (.disj D (.neg D))) :=
+    SatC.satC_andI (satC_refl O C)
+                   (SatC.trans (satC_top O C) (SatC.em D))
+  have step2 : SatC O (.conj C (.disj D (.neg D))) D := by
+    refine SatC.trans (SatC.dist C D (Concept.neg D)) ?_
+    refine SatC.satC_orE ?_ ?_
+    · exact SatC.satC_andR _ _
+    · exact SatC.trans hContra (satC_bot O D)
+  exact SatC.trans step1 step2
+
+-- ============================================================
+-- 11.  Completeness theorem for the structural fragment.
+-- ============================================================
+
+/-- Non-emptiness of `Type_ O`: provable from consistency of the
+    empty set (which is equivalent to O being SatC-satisfiable). -/
+theorem type_nonempty_of_consistent (O : Ontology)
+    (hC : consistent O (∅ : Set Concept)) :
+    ∃ t : Type_ O, True := by
+  obtain ⟨t, _⟩ := lindenbaum O ∅ hC
+  exact ⟨t, trivial⟩
+
+/-- **Completeness theorem for the structural ALCHOQ fragment**.
+
+    For ALCHOQ concepts in the no-nom / no-hasSelf / cardinality-
+    trivial sub-fragment, every Tarskian entailment under O is
+    derivable in `SatC`.
+
+    Non-structural cases (nominals, hasSelf, positive cardinality)
+    require either a quotient construction or auxiliary-individual
+    Skolemization (Tena~Cucala 2021 thesis); planned as follow-on.
+-/
+theorem satC_complete_structural
+    (O : Ontology) (C D : Concept)
+    (hOStruct : OntologyStructural O)
+    (hC : Structural C) (hD : Structural D)
+    (hEnt : Entails O C D) : SatC O C D := by
+  by_contra hNot
+  -- We want a contradiction.  Distinguish on whether ∅ is
+  -- SatC-consistent under O.  If ¬consistent O ∅, then top ⊑ bot is
+  -- derivable, so SatC O C D follows trivially — contradiction with
+  -- hNot.
+  by_cases hCons : consistent O (∅ : Set Concept)
+  · -- O is consistent.  Build a counter-model and contradict hEnt.
+    have hCN : consistent O ({C, Concept.neg D} : Set Concept) :=
+      c_negD_consistent O C D hNot
+    obtain ⟨t, htsub⟩ := lindenbaum O _ hCN
+    have hNE : ∃ t : Type_ O, True := type_nonempty_of_consistent O hCons
+    have hsat : (canonical O hNE).satisfies O :=
+      canonical_satisfies O hNE hOStruct
+    have hCmem : C ∈ t.carrier :=
+      htsub (by simp : C ∈ ({C, Concept.neg D} : Set _))
+    have hEvalC : (canonical O hNE).eval C t :=
+      (canonical_eval_iff O hNE C hC t).mpr hCmem
+    have hEvalD : (canonical O hNE).eval D t := hEnt _ hsat t hEvalC
+    have hDmem : D ∈ t.carrier :=
+      (canonical_eval_iff O hNE D hD t).mp hEvalD
+    have hnDmem : Concept.neg D ∈ t.carrier :=
+      htsub (by simp : Concept.neg D ∈ ({C, Concept.neg D} : Set _))
+    rcases mem_xor_neg O t D with ⟨_, hnnD⟩ | ⟨hDnotmem, _⟩
+    · exact hnnD hnDmem
+    · exact hDnotmem hDmem
+  · -- O is inconsistent.  Then top ⊑ bot is derivable; chain to SatC O C D.
+    unfold consistent at hCons
+    push_neg at hCons
+    obtain ⟨L, hLin, hSat⟩ := hCons
+    -- All elements of L are in ∅, so L = []; conjList [] = top.
+    have hLnil : L = [] := by
+      cases L with
+      | nil => rfl
+      | cons E Es => exact absurd (hLin E List.mem_cons_self) (by simp)
+    subst hLnil
+    -- hSat : SatC O (conjList []) bot = SatC O top bot
+    have hTopBot : SatC O Concept.top Concept.bot := by
+      have : conjList ([] : List Concept) = Concept.top := rfl
+      rw [this] at hSat
+      exact hSat
+    -- Now SatC O C D via C ⊑ top ⊑ bot ⊑ D.
+    apply hNot
+    exact SatC.trans (satC_top O C)
+            (SatC.trans hTopBot (satC_bot O D))
+
 end ALCHOQ
 end ELKSDD
