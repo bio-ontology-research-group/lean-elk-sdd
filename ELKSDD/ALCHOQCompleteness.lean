@@ -115,6 +115,14 @@ inductive SatC (O : Ontology) : Concept → Concept → Prop where
   | hasSelf_to_exist  : ∀ R, SatC O (.hasSelf R) (.exist R .top)
   | hasSelf_with_univ : ∀ R C,
       SatC O (.conj (.hasSelf R) (.univ R C)) C
+  -- Nominal case-analysis: at the element denoted by `nom i`, every
+  -- concept either holds or fails (classical EM at the nominal).  The
+  -- premises capture both branches; the conclusion lifts to `nom i ⊑ E`.
+  -- Sound at any model where `nom i` denotes a single element.
+  | nomCases : ∀ i C E,
+      SatC O (.conj (.nom i) C) E →
+      SatC O (.conj (.nom i) (.neg C)) E →
+      SatC O (.nom i) E
   -- Transitivity, of course.
   | trans       : ∀ {C D E}, SatC O C D → SatC O D E → SatC O C E
 
@@ -301,6 +309,12 @@ theorem satC_sound (O : Ontology) (C D : Concept) (h : SatC O C D) :
   | hasSelf_with_univ R C =>
       -- (hasSelf R ⊓ ∀R.C)(x) → C(x)
       exact hC.2 x hC.1
+  | nomCases i C E _ _ ihC ihNC =>
+      -- I.eval (.nom i) x, so x = I.ext_ind i.
+      -- Classical EM on I.eval C x picks the relevant branch.
+      by_cases hCx : I.eval C x
+      · exact ihC x ⟨hC, hCx⟩
+      · exact ihNC x ⟨hC, hCx⟩
   | trans hCD hDE ihCD ihDE => exact ihDE x (ihCD x hC)
 
 -- ============================================================

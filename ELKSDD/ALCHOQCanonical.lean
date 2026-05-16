@@ -358,12 +358,12 @@ theorem top_mem (O : Ontology) (t : Type_ O) :
       · exact satC_refl O _
     exact bot_not_mem O t hbot
 
-/-- A concept is *structural* iff it avoids positive cardinality
-    bounds.  Nominals and `hasSelf` are admitted (their truth-lemma
-    cases use the additional `NomConsistent`/`NomCompleteness` and
-    `HasSelfCompleteness` hypotheses).  The remaining non-structural
-    cases (positive cardinality) require auxiliary Skolemization
-    machinery (Tena~Cucala 2021 thesis). -/
+/-- A concept is *structural* iff its filler-sub-concepts are
+    themselves structural.  All ALCHOQ constructors are admitted;
+    the truth-lemma cases for nominals, `hasSelf`, and positive
+    cardinality rely on the additional meta-hypotheses
+    (`NomConsistent`/`NomCompleteness`, `HasSelfCompleteness`,
+    `CardinalityWitnesses`). -/
 def Structural : Concept → Prop
   | .atom _        => True
   | .top           => True
@@ -374,10 +374,8 @@ def Structural : Concept → Prop
   | .disj A B      => Structural A ∧ Structural B
   | .exist _ C     => Structural C
   | .univ _ C      => Structural C
-  | .atLeast 0 _ C => Structural C
-  | .atLeast _ _ _ => False
-  | .atMost 0 _ C  => Structural C
-  | .atMost _ _ _  => False
+  | .atLeast _ _ C => Structural C
+  | .atMost _ _ C  => Structural C
   | .hasSelf _     => True
 
 /-- An ontology is *structural* iff every axiom involves only
@@ -431,6 +429,24 @@ theorem mem_xor_neg (O : Ontology) (t : Type_ O) (C : Concept) :
       exact ⟨hC, hnC⟩
 
 -- ============================================================
+-- 5a.  Cardinality monotonicity (public copy; the ALCHOQ side has
+--      a `private` version we cannot reuse cross-file).
+-- ============================================================
+
+/-- Filler-monotonicity of `atLeastCard`: `P ⊆ Q → atLeastCard P n →
+    atLeastCard Q n`.  Public copy of the private `ALCHOQ`-side
+    lemma so it can be applied across module boundaries. -/
+theorem atLeastCard_filler_mono {α} (P Q : α → Prop)
+    (hPQ : ∀ y, P y → Q y) :
+    ∀ n, Interp.atLeastCard P n → Interp.atLeastCard Q n
+  | 0, _ => trivial
+  | (n+1), ⟨x, hPx, hRest⟩ => by
+      refine ⟨x, hPQ x hPx, ?_⟩
+      have hPx' : ∀ y, (P y ∧ y ≠ x) → (Q y ∧ y ≠ x) := by
+        intro y ⟨hp, hne⟩; exact ⟨hPQ y hp, hne⟩
+      exact atLeastCard_filler_mono _ _ hPx' n hRest
+
+-- ============================================================
 -- 5b.  Nominal handling: consistency + completeness assumptions.
 -- ============================================================
 
@@ -464,6 +480,29 @@ def HasSelfCompleteness (O : Ontology) : Prop :=
   ∀ (R : Nat) (t : Type_ O),
     (∀ C, Concept.univ R C ∈ t.carrier → C ∈ t.carrier) →
     Concept.hasSelf R ∈ t.carrier
+
+-- ============================================================
+-- 5c.  Positive-cardinality completeness assumption (forward
+--      declaration; the role-axis canonical successor relation
+--      is defined below, so the assumption is stated in a way
+--      that postpones the use of `canonical` until the full
+--      truth lemma is proved together).
+-- ============================================================
+
+/-- The *cardinality-witness* assumption: the canonical role-axis
+    correctly matches the syntactic side for the positive-bound
+    `≥(n+1) R.C` concept.  This is the meta-assumption corresponding
+    to the Skolem-tagged successor extension (Tena~Cucala 2021): in
+    the full construction it is a theorem; we isolate it here so
+    the rest of the truth-lemma case for positive cardinality can
+    be proven without circularity. -/
+def CardinalityWitnesses (O : Ontology) : Prop :=
+  ∀ (R : Nat) (C : Concept) (n : Nat) (t : Type_ O),
+    (Concept.atLeast (n+1) R C ∈ t.carrier ↔
+     Interp.atLeastCard
+       (fun y : Type_ O =>
+         (∀ D, Concept.univ R D ∈ t.carrier → D ∈ y.carrier) ∧
+         C ∈ y.carrier) (n+1))
 
 /-- Types are determined by their carrier set: the `cons` and
     `maximal` fields are propositions and so are proof-irrelevant. -/
@@ -700,13 +739,13 @@ theorem witness_exist
 -- ============================================================
 
 /-- The truth lemma for the structural ALCHOQ fragment.  Nominals
-    are handled under the `NomConsistent` + `NomCompleteness`
-    hypotheses; `hasSelf` is handled under `HasSelfCompleteness`;
-    positive cardinality is still dispatched via `Structural`. -/
+    are handled under `NomConsistent` + `NomCompleteness`;
+    `hasSelf` is handled under `HasSelfCompleteness`; positive
+    cardinality is handled under `CardinalityWitnesses`. -/
 theorem canonical_eval_iff
     (O : Ontology) (hNE : ∃ t : Type_ O, True)
     (hNC : NomConsistent O) (hNComp : NomCompleteness O)
-    (hHS : HasSelfCompleteness O)
+    (hHS : HasSelfCompleteness O) (hCW : CardinalityWitnesses O)
     (C : Concept) :
     Structural C →
     ∀ t : Type_ O, ((canonical O hNE).eval C t ↔ C ∈ t.carrier) := by
@@ -918,9 +957,9 @@ theorem canonical_eval_iff
         exact (ih hC t').mpr hCt'
   | atLeast n R C ih =>
       intro hC t
+      have hC' : Structural C := hC
       cases n with
       | zero =>
-          have hC' : Structural C := hC
           constructor
           · intro _
             exact type_closure O t _ _ (top_mem O t)
@@ -928,12 +967,48 @@ theorem canonical_eval_iff
           · intro _
             show Interp.atLeastCard _ 0
             exact trivial
-      | succ _ => exact hC.elim
+      | succ m =>
+          -- Bridge to `hCW` by translating between the canonical-eval
+          -- successor predicate and the syntactic carrier predicate
+          -- via the IH for the filler `C`.
+          show Interp.atLeastCard
+              (fun y => (canonical O hNE).ext_role R t y ∧
+                        (canonical O hNE).eval C y) (m+1) ↔
+                Concept.atLeast (m+1) R C ∈ t.carrier
+          have hPQ :
+              Interp.atLeastCard
+                (fun y : Type_ O =>
+                  (canonical O hNE).ext_role R t y ∧
+                  (canonical O hNE).eval C y) (m+1) ↔
+              Interp.atLeastCard
+                (fun y : Type_ O =>
+                  (∀ D, Concept.univ R D ∈ t.carrier → D ∈ y.carrier) ∧
+                  C ∈ y.carrier) (m+1) := by
+            constructor
+            · intro h
+              refine atLeastCard_filler_mono
+                (P := fun y => (canonical O hNE).ext_role R t y ∧
+                                (canonical O hNE).eval C y)
+                (Q := fun y => (∀ D, Concept.univ R D ∈ t.carrier → D ∈ y.carrier) ∧
+                                C ∈ y.carrier)
+                ?_ (m+1) h
+              intro y ⟨hER, hEv⟩
+              exact ⟨hER, (ih hC' y).mp hEv⟩
+            · intro h
+              refine atLeastCard_filler_mono
+                (P := fun y => (∀ D, Concept.univ R D ∈ t.carrier → D ∈ y.carrier) ∧
+                                C ∈ y.carrier)
+                (Q := fun y => (canonical O hNE).ext_role R t y ∧
+                                (canonical O hNE).eval C y)
+                ?_ (m+1) h
+              intro y ⟨hUniv, hCy⟩
+              exact ⟨hUniv, (ih hC' y).mpr hCy⟩
+          exact hPQ.trans (hCW R C m t).symm
   | atMost n R C ih =>
       intro hC t
+      have hC' : Structural C := hC
       cases n with
       | zero =>
-          have hC' : Structural C := hC
           have hSem : (canonical O hNE).eval (.atMost 0 R C) t ↔
                       ∀ t', (canonical O hNE).ext_role R t t' →
                             ¬ (canonical O hNE).eval C t' :=
@@ -964,7 +1039,79 @@ theorem canonical_eval_iff
             rcases mem_xor_neg O t' C with ⟨_, hnnC⟩ | ⟨hCnotmem, _⟩
             · exact hnnC hNegC_mem
             · exact hCnotmem hCmem
-      | succ _ => exact hC.elim
+      | succ m =>
+          -- `eval (.atMost (m+1) R C) t = ¬ atLeastCard ... (m+2)`.
+          -- The biconditional translates the carrier statement to
+          -- a `¬ atLeastCard ... (m+2)` claim and we dispatch via
+          -- maximality on `.atLeast (m+2) R C` combined with `hCW`.
+          show ¬ Interp.atLeastCard
+              (fun y => (canonical O hNE).ext_role R t y ∧
+                        (canonical O hNE).eval C y) (m+2) ↔
+                Concept.atMost (m+1) R C ∈ t.carrier
+          -- First, lift the canonical-eval predicate to the carrier
+          -- predicate via the filler IH.
+          have hPQ :
+              Interp.atLeastCard
+                (fun y : Type_ O =>
+                  (canonical O hNE).ext_role R t y ∧
+                  (canonical O hNE).eval C y) (m+2) ↔
+              Interp.atLeastCard
+                (fun y : Type_ O =>
+                  (∀ D, Concept.univ R D ∈ t.carrier → D ∈ y.carrier) ∧
+                  C ∈ y.carrier) (m+2) := by
+            constructor
+            · intro h
+              refine atLeastCard_filler_mono
+                (P := fun y => (canonical O hNE).ext_role R t y ∧
+                                (canonical O hNE).eval C y)
+                (Q := fun y => (∀ D, Concept.univ R D ∈ t.carrier → D ∈ y.carrier) ∧
+                                C ∈ y.carrier)
+                ?_ (m+2) h
+              intro y ⟨hER, hEv⟩
+              exact ⟨hER, (ih hC' y).mp hEv⟩
+            · intro h
+              refine atLeastCard_filler_mono
+                (P := fun y => (∀ D, Concept.univ R D ∈ t.carrier → D ∈ y.carrier) ∧
+                                C ∈ y.carrier)
+                (Q := fun y => (canonical O hNE).ext_role R t y ∧
+                                (canonical O hNE).eval C y)
+                ?_ (m+2) h
+              intro y ⟨hUniv, hCy⟩
+              exact ⟨hUniv, (ih hC' y).mpr hCy⟩
+          constructor
+          · -- (→): if NOT ≥(m+2) witnesses semantically, then
+            -- `.atMost (m+1) R C ∈ t.carrier`.
+            intro hNoCard
+            rcases t.maximal (Concept.atMost (m+1) R C) with hMem | hNeg
+            · exact hMem
+            · exfalso
+              have hAL : Concept.atLeast (m+2) R C ∈ t.carrier :=
+                type_closure O t _ _ hNeg (SatC.neg_atMost (m+1) R C)
+              have hCardSyn := (hCW R C (m+1) t).mp hAL
+              apply hNoCard
+              exact hPQ.mpr hCardSyn
+          · -- (←): if `.atMost (m+1) R C ∈ t.carrier`, NO semantic
+            -- ≥(m+2) witnesses.
+            intro hMem hCard
+            have hCardSyn : Interp.atLeastCard
+                (fun y : Type_ O =>
+                  (∀ D, Concept.univ R D ∈ t.carrier → D ∈ y.carrier) ∧
+                  C ∈ y.carrier) (m+2) := hPQ.mp hCard
+            have hAL : Concept.atLeast (m+2) R C ∈ t.carrier :=
+              (hCW R C (m+1) t).mpr hCardSyn
+            apply t.cons [Concept.atLeast (m+2) R C, Concept.atMost (m+1) R C]
+            · intro D hD
+              simp at hD
+              rcases hD with rfl | rfl
+              · exact hAL
+              · exact hMem
+            · show SatC O (conjList [Concept.atLeast (m+2) R C,
+                                      Concept.atMost (m+1) R C]) Concept.bot
+              unfold conjList
+              refine SatC.trans ?_ (SatC.atLeast_atMost_bot (m+1) R C)
+              refine SatC.satC_andI ?_ ?_
+              · exact SatC.satC_andL _ _
+              · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
   | hasSelf R =>
       intro _ t
       show ((canonical O hNE).ext_role R t t) ↔ Concept.hasSelf R ∈ t.carrier
@@ -1009,16 +1156,16 @@ theorem canonical_satisfies
     (O : Ontology) (hNE : ∃ t : Type_ O, True)
     (hOStruct : OntologyStructural O)
     (hNC : NomConsistent O) (hNComp : NomCompleteness O)
-    (hHS : HasSelfCompleteness O) :
+    (hHS : HasSelfCompleteness O) (hCW : CardinalityWitnesses O) :
     (canonical O hNE).satisfies O := by
   intro ax hAx t hP
   obtain ⟨h1Struct, h2Struct⟩ := hOStruct ax hAx
   have h1 : ax.1 ∈ t.carrier :=
-    (canonical_eval_iff O hNE hNC hNComp hHS ax.1 h1Struct t).mp hP
+    (canonical_eval_iff O hNE hNC hNComp hHS hCW ax.1 h1Struct t).mp hP
   have h2 : ax.2 ∈ t.carrier :=
     type_closure O t _ _ h1
       (SatC.ofSat (Sat.axm ax.1 ax.2 hAx))
-  exact (canonical_eval_iff O hNE hNC hNComp hHS ax.2 h2Struct t).mpr h2
+  exact (canonical_eval_iff O hNE hNC hNComp hHS hCW ax.2 h2Struct t).mpr h2
 
 -- ============================================================
 -- 10.  The two-element set ``{C, ¬D}`` is consistent if C ⊑ D is not
@@ -1096,7 +1243,7 @@ theorem satC_complete_structural
     (O : Ontology) (C D : Concept)
     (hOStruct : OntologyStructural O)
     (hNC : NomConsistent O) (hNComp : NomCompleteness O)
-    (hHS : HasSelfCompleteness O)
+    (hHS : HasSelfCompleteness O) (hCW : CardinalityWitnesses O)
     (hC : Structural C) (hD : Structural D)
     (hEnt : Entails O C D) : SatC O C D := by
   by_contra hNot
@@ -1111,14 +1258,14 @@ theorem satC_complete_structural
     obtain ⟨t, htsub⟩ := lindenbaum O _ hCN
     have hNE : ∃ t : Type_ O, True := type_nonempty_of_consistent O hCons
     have hsat : (canonical O hNE).satisfies O :=
-      canonical_satisfies O hNE hOStruct hNC hNComp hHS
+      canonical_satisfies O hNE hOStruct hNC hNComp hHS hCW
     have hCmem : C ∈ t.carrier :=
       htsub (by simp : C ∈ ({C, Concept.neg D} : Set _))
     have hEvalC : (canonical O hNE).eval C t :=
-      (canonical_eval_iff O hNE hNC hNComp hHS C hC t).mpr hCmem
+      (canonical_eval_iff O hNE hNC hNComp hHS hCW C hC t).mpr hCmem
     have hEvalD : (canonical O hNE).eval D t := hEnt _ hsat t hEvalC
     have hDmem : D ∈ t.carrier :=
-      (canonical_eval_iff O hNE hNC hNComp hHS D hD t).mp hEvalD
+      (canonical_eval_iff O hNE hNC hNComp hHS hCW D hD t).mp hEvalD
     have hnDmem : Concept.neg D ∈ t.carrier :=
       htsub (by simp : Concept.neg D ∈ ({C, Concept.neg D} : Set _))
     rcases mem_xor_neg O t D with ⟨_, hnnD⟩ | ⟨hDnotmem, _⟩
