@@ -65,6 +65,38 @@ inductive SatC (O : Ontology) : Concept → Concept → Prop where
   -- Nominal identity: ``{i} ⊑ {i}`` (trivial) and the
   -- nominal-membership identity.
   | nomRefl     : ∀ i, SatC O (.nom i) (.nom i)
+  -- Cardinality bridges (needed for canonical-model construction):
+  -- ≥(n+1) R.C ⊑ ∃R.C   and   ∃R.C ⊑ ≥1 R.C.
+  | atLeast_to_exist  : ∀ n R C,
+      SatC O (.atLeast (n+1) R C) (.exist R C)
+  | exist_to_atLeast1 : ∀ R C,
+      SatC O (.exist R C) (.atLeast 1 R C)
+  -- Cardinality monotonicity in the bound:
+  -- m ≥ n   ⟹   ≥m R.C ⊑ ≥n R.C   (covariant in n on the right)
+  -- m ≥ n   ⟹   ≤n R.C ⊑ ≤m R.C   (contravariant in n)
+  | atLeast_anti_n : ∀ {n m} R C, n ≤ m →
+      SatC O (.atLeast m R C) (.atLeast n R C)
+  | atMost_mono_n  : ∀ {n m} R C, n ≤ m →
+      SatC O (.atMost n R C) (.atMost m R C)
+  -- Cardinality contradiction: ≥(n+1) R.C ⊓ ≤n R.C ⊑ ⊥.
+  | atLeast_atMost_bot : ∀ n R C,
+      SatC O (.conj (.atLeast (n+1) R C) (.atMost n R C)) .bot
+  -- Cardinality duality (negation):
+  -- ¬(≥(n+1) R.C) ⊑ ≤n R.C   and   ¬(≤n R.C) ⊑ ≥(n+1) R.C, plus
+  -- the converse directions.
+  | neg_atLeast  : ∀ n R C,
+      SatC O (.neg (.atLeast (n+1) R C)) (.atMost n R C)
+  | neg_atLeast' : ∀ n R C,
+      SatC O (.atMost n R C) (.neg (.atLeast (n+1) R C))
+  | neg_atMost   : ∀ n R C,
+      SatC O (.neg (.atMost n R C)) (.atLeast (n+1) R C)
+  | neg_atMost'  : ∀ n R C,
+      SatC O (.atLeast (n+1) R C) (.neg (.atMost n R C))
+  -- Local reflexivity (hasSelf) bridges:
+  -- hasSelf R ⊑ ∃R.⊤   and   hasSelf R ⊓ ∀R.C ⊑ C.
+  | hasSelf_to_exist  : ∀ R, SatC O (.hasSelf R) (.exist R .top)
+  | hasSelf_with_univ : ∀ R C,
+      SatC O (.conj (.hasSelf R) (.univ R C)) C
   -- Transitivity, of course.
   | trans       : ∀ {C D E}, SatC O C D → SatC O D E → SatC O C E
 
@@ -80,6 +112,30 @@ private theorem atMost_zero_iff_univ_neg
     {α} (R : Nat) (I : Interp α) (C : Concept) (x : α) :
     I.eval (.atMost 0 R C) x ↔ ∀ y, I.ext_role R x y → ¬ I.eval C y :=
   Interp.eval_atMost_zero I R C x
+
+/-- `atLeastCard S (n+1)` says there's an element of S and the rest of
+    S has cardinality ≥ n: a witness exists. -/
+private theorem atLeastCard_succ_imp_nonempty {α} (S : α → Prop) (n : Nat)
+    (h : Interp.atLeastCard S (n+1)) : ∃ x, S x := by
+  unfold Interp.atLeastCard at h
+  obtain ⟨x, hSx, _⟩ := h
+  exact ⟨x, hSx⟩
+
+/-- Monotonicity of `atLeastCard` in the bound: greater bound implies
+    smaller bound, by simple induction. -/
+private theorem atLeastCard_anti_n {α} (S : α → Prop) :
+    ∀ {n m : Nat}, n ≤ m → Interp.atLeastCard S m → Interp.atLeastCard S n
+  | 0, _, _, _ => trivial
+  | _+1, 0, h, _ => absurd h (Nat.not_succ_le_zero _)
+  | n+1, m+1, hle, ⟨x, hSx, hRest⟩ => by
+      refine ⟨x, hSx, ?_⟩
+      exact atLeastCard_anti_n
+        (fun y => S y ∧ y ≠ x) (Nat.le_of_succ_le_succ hle) hRest
+
+/-- Contradiction between `≥(n+1)` and `≤n`. -/
+private theorem atLeast_atMost_card_bot {α} (S : α → Prop) (n : Nat)
+    (h1 : Interp.atLeastCard S (n+1)) (h2 : Interp.atMostCard S n) : False :=
+  h2 h1
 
 theorem satC_sound (O : Ontology) (C D : Concept) (h : SatC O C D) :
     Entails O C D := by
@@ -150,6 +206,47 @@ theorem satC_sound (O : Ontology) (C D : Concept) (h : SatC O C D) :
       intro y hR
       exact hC y hR
   | nomRefl _ => exact hC
+  | atLeast_to_exist n R C =>
+      -- ≥(n+1) R.C → ∃ y, R(x,y) ∧ C(y)
+      have hC' : Interp.atLeastCard
+                   (fun y => I.ext_role R x y ∧ I.eval C y) (n+1) := hC
+      obtain ⟨y, hSy⟩ := atLeastCard_succ_imp_nonempty _ n hC'
+      exact ⟨y, hSy.1, hSy.2⟩
+  | exist_to_atLeast1 R C =>
+      -- ∃R.C ⊑ ≥1 R.C
+      obtain ⟨y, hR, hCy⟩ := hC
+      show Interp.atLeastCard _ 1
+      exact ⟨y, ⟨hR, hCy⟩, trivial⟩
+  | atLeast_anti_n R C hle =>
+      exact atLeastCard_anti_n _ hle hC
+  | atMost_mono_n R C hle =>
+      intro hCard
+      apply hC
+      exact atLeastCard_anti_n _ (Nat.succ_le_succ hle) hCard
+  | atLeast_atMost_bot n R C =>
+      exact atLeast_atMost_card_bot _ n hC.1 hC.2
+  | neg_atLeast n R C =>
+      -- ¬(≥(n+1) R.C) ⊑ ≤n R.C, i.e., atMostCard S n
+      intro hCard
+      exact hC hCard
+  | neg_atLeast' n R C =>
+      -- ≤n R.C ⊑ ¬(≥(n+1) R.C), i.e., I.eval (≤n R.C) x → ¬ I.eval (≥(n+1) R.C) x
+      intro hCard
+      exact hC hCard
+  | neg_atMost n R C =>
+      -- ¬(≤n R.C) ⊑ ≥(n+1) R.C
+      show Interp.atLeastCard _ (n+1)
+      -- hC : ¬ I.eval (≤n R.C) x, i.e., ¬ ¬ atLeastCard S (n+1) = atLeastCard S (n+1) (classically)
+      exact Classical.byContradiction (fun hne => hC hne)
+  | neg_atMost' n R C =>
+      intro hne
+      exact hne hC
+  | hasSelf_to_exist R =>
+      -- hasSelf R ⊑ ∃R.⊤
+      exact ⟨x, hC, trivial⟩
+  | hasSelf_with_univ R C =>
+      -- (hasSelf R ⊓ ∀R.C)(x) → C(x)
+      exact hC.2 x hC.1
   | trans hCD hDE ihCD ihDE => exact ihDE x (ihCD x hC)
 
 -- ============================================================
