@@ -345,5 +345,178 @@ theorem skol_atLeast_forward
           exact hNeAll k (Nat.lt_succ_of_lt hk)
         · exact hNeAll b (Nat.lt_succ_self _)
 
+-- ============================================================
+-- 6.  Truth-lemma cases that the Skolem-tagging discharges
+--     unconditionally: existentials, hasSelf, universals.
+-- ============================================================
+
+/-- Type-membership of conjunctions: if both `C` and `D` are in a
+    type's carrier, so is `conj C D`.  Useful helper not in
+    `ALCHOQCanonical`. -/
+theorem conj_mem (O : Ontology) (t : Type_ O) (C D : Concept)
+    (hC : C ∈ t.carrier) (hD : D ∈ t.carrier) :
+    Concept.conj C D ∈ t.carrier := by
+  rcases t.maximal (Concept.conj C D) with hMem | hNeg
+  · exact hMem
+  · exfalso
+    -- neg (conj C D) ∈ t.carrier  with  C, D ∈ t.carrier.
+    -- By deMorganA: SatC O (neg (conj C D)) (disj (neg C) (neg D)).
+    -- By type_closure, disj (neg C) (neg D) ∈ t.carrier.
+    have hDisj : Concept.disj (Concept.neg C) (Concept.neg D) ∈ t.carrier :=
+      type_closure O t _ _ hNeg (SatC.deMorganA C D)
+    -- Now `[C, D, disj (neg C) (neg D)]` is inconsistent.
+    apply t.cons [C, D, Concept.disj (Concept.neg C) (Concept.neg D)]
+    · intro E hE
+      simp at hE
+      rcases hE with rfl | rfl | rfl
+      · exact hC
+      · exact hD
+      · exact hDisj
+    · show SatC O (conjList [C, D,
+                              Concept.disj (Concept.neg C) (Concept.neg D)])
+                  Concept.bot
+      unfold conjList
+      -- conj C (conj D (conj (disj (neg C) (neg D)) top)) ⊑ bot.
+      -- Strategy: discard the trailing top, rebracket to
+      -- `(conj C D) ⊓ (disj (neg C) (neg D))`, then via dist:
+      -- `(disj ((conj C D) ⊓ (neg C)) ((conj C D) ⊓ (neg D)))` ⊑ bot
+      -- by `nc`-on-each-disjunct.
+      have hCD : SatC O (.conj C (.conj D
+                  (.conj (.disj (.neg C) (.neg D)) .top)))
+                       (.conj (.conj C D) (.disj (.neg C) (.neg D))) := by
+        refine SatC.satC_andI ?_ ?_
+        · refine SatC.satC_andI ?_ ?_
+          · exact SatC.satC_andL _ _
+          · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
+        · refine SatC.trans (SatC.satC_andR _ _) ?_
+          refine SatC.trans (SatC.satC_andR _ _) ?_
+          exact SatC.satC_andL _ _
+      have hDist : SatC O (.conj (.conj C D) (.disj (.neg C) (.neg D)))
+                          (.disj (.conj (.conj C D) (.neg C))
+                                 (.conj (.conj C D) (.neg D))) :=
+        SatC.dist _ _ _
+      have hLeft : SatC O (.conj (.conj C D) (.neg C)) Concept.bot := by
+        refine SatC.trans ?_ (SatC.nc C)
+        refine SatC.satC_andI ?_ ?_
+        · exact SatC.trans (SatC.satC_andL _ _) (SatC.satC_andL _ _)
+        · exact SatC.satC_andR _ _
+      have hRight : SatC O (.conj (.conj C D) (.neg D)) Concept.bot := by
+        refine SatC.trans ?_ (SatC.nc D)
+        refine SatC.satC_andI ?_ ?_
+        · exact SatC.trans (SatC.satC_andL _ _) (SatC.satC_andR _ _)
+        · exact SatC.satC_andR _ _
+      exact SatC.trans hCD (SatC.trans hDist (SatC.satC_orE hLeft hRight))
+
+/-- **Truth lemma at hasSelf** in the Skolem model: needs no
+    meta-hypothesis.  The forward direction reads off the self-loop
+    clause of `ext_role`; the backward direction uses `hasSelf_with_univ`
+    plus type-closure for universal-self-propagation. -/
+theorem skol_eval_hasSelf_iff
+    (O : Ontology) (hCons : consistent O (∅ : Set Concept))
+    (R : Nat) (x : CanDom O) :
+    (skolCanonical O hCons).eval (.hasSelf R) x ↔
+      Concept.hasSelf R ∈ carrierSet O hCons x := by
+  show (skolCanonical O hCons).ext_role R x x ↔ _
+  constructor
+  · -- ext_role at (x, x) → second conjunct gives hasSelf.
+    rintro ⟨_, hSelf⟩
+    exact hSelf rfl
+  · -- hasSelf in carrier → ext_role at (x, x).
+    intro hSelf
+    refine ⟨?_, ?_⟩
+    · -- universal self-closure at x.
+      intro D hUniv
+      -- conj (hasSelf R) (univ R D) ⊑ D, hasSelf and univ both in carrier.
+      have hConj : Concept.conj (.hasSelf R) (.univ R D) ∈
+                       carrierSet O hCons x := by
+        unfold carrierSet at hSelf hUniv ⊢
+        exact conj_mem O (carrierType O hCons x) _ _ hSelf hUniv
+      unfold carrierSet at hConj ⊢
+      exact type_closure O (carrierType O hCons x) _ _ hConj
+        (SatC.hasSelf_with_univ R D)
+    · -- x = x → hasSelf in carrier.
+      intro _; exact hSelf
+
+/-- **Truth lemma at ∃R.C** in the Skolem model — modulo IH at the
+    filler `C`.  The forward direction uses the 0-th Skolem
+    successor as witness; the backward direction is by maximality
+    plus `negExist` + universal propagation. -/
+theorem skol_eval_exist_iff
+    (O : Ontology) (hCons : consistent O (∅ : Set Concept))
+    (R : Nat) (C : Concept) (x : CanDom O)
+    (ihC : ∀ y : CanDom O,
+      (skolCanonical O hCons).eval C y ↔ C ∈ carrierSet O hCons y) :
+    (skolCanonical O hCons).eval (.exist R C) x ↔
+      Concept.exist R C ∈ carrierSet O hCons x := by
+  show (∃ y, (skolCanonical O hCons).ext_role R x y ∧
+              (skolCanonical O hCons).eval C y) ↔ _
+  constructor
+  · -- (←): semantic witness gives existence by maximality argument.
+    rintro ⟨y, hR, hCy⟩
+    rcases (carrierType O hCons x).maximal (Concept.exist R C) with hMem | hNeg
+    · exact hMem
+    · -- neg ∃R.C ∈ carrier x → univ R (neg C) ∈ carrier x → neg C ∈ carrier y.
+      exfalso
+      have hUnivNegC : Concept.univ R (.neg C) ∈ carrierSet O hCons x := by
+        unfold carrierSet
+        exact type_closure O (carrierType O hCons x) _ _ hNeg
+          (SatC.negExist R C)
+      have hNegCy : Concept.neg C ∈ carrierSet O hCons y :=
+        hR.1 _ hUnivNegC
+      have hCy_mem : C ∈ carrierSet O hCons y := (ihC y).mp hCy
+      unfold carrierSet at hNegCy hCy_mem
+      rcases mem_xor_neg O (carrierType O hCons y) C with
+        ⟨_, hnnC⟩ | ⟨hCnotmem, _⟩
+      · exact hnnC hNegCy
+      · exact hCnotmem hCy_mem
+  · -- (→): given ∃R.C ∈ carrier x, witness with the 0-th Skolem successor.
+    intro hExist
+    refine ⟨.succ x R C 0, ?_, ?_⟩
+    · exact skol_succ_in_ext_role O hCons x R C 0 hExist
+    · -- C ∈ carrier (.succ x R C 0).
+      apply (ihC _).mpr
+      exact succ_carrier_contains_C O hCons x R C 0 hExist
+
+/-- **Truth lemma at ∀R.C** in the Skolem model — modulo IH at `C`. -/
+theorem skol_eval_univ_iff
+    (O : Ontology) (hCons : consistent O (∅ : Set Concept))
+    (R : Nat) (C : Concept) (x : CanDom O)
+    (ihC : ∀ y : CanDom O,
+      (skolCanonical O hCons).eval C y ↔ C ∈ carrierSet O hCons y) :
+    (skolCanonical O hCons).eval (.univ R C) x ↔
+      Concept.univ R C ∈ carrierSet O hCons x := by
+  show (∀ y, (skolCanonical O hCons).ext_role R x y →
+              (skolCanonical O hCons).eval C y) ↔ _
+  constructor
+  · -- (←) eval ∀R.C at x → ∀R.C ∈ carrier x, by maximality.
+    intro hAll
+    rcases (carrierType O hCons x).maximal (Concept.univ R C) with hMem | hNeg
+    · exact hMem
+    · exfalso
+      -- neg ∀R.C ∈ carrier → ∃R.(neg C) ∈ carrier → exists successor with
+      -- (neg C) in its carrier → contradicts ihC + hAll.
+      have hExistNeg : Concept.exist R (.neg C) ∈ carrierSet O hCons x := by
+        unfold carrierSet
+        exact type_closure O (carrierType O hCons x) _ _ hNeg
+          (SatC.negUniv R C)
+      -- Skolem successor witness.
+      let y := CanDom.succ x R (.neg C) 0
+      have hER : (skolCanonical O hCons).ext_role R x y :=
+        skol_succ_in_ext_role O hCons x R (.neg C) 0 hExistNeg
+      have hNegCy : Concept.neg C ∈ carrierSet O hCons y :=
+        succ_carrier_contains_C O hCons x R (.neg C) 0 hExistNeg
+      have hCy : (skolCanonical O hCons).eval C y := hAll y hER
+      have hCmem : C ∈ carrierSet O hCons y := (ihC y).mp hCy
+      unfold carrierSet at hNegCy hCmem
+      rcases mem_xor_neg O (carrierType O hCons y) C with
+        ⟨_, hnnC⟩ | ⟨hCnotmem, _⟩
+      · exact hnnC hNegCy
+      · exact hCnotmem hCmem
+  · -- (→) ∀R.C ∈ carrier x → eval ∀R.C at x, by universal propagation.
+    intro hUniv y hR
+    apply (ihC y).mpr
+    -- y is an R-successor of x; universal propagation gives C ∈ carrier y.
+    exact hR.1 C hUniv
+
 end ALCHOQ
 end ELKSDD
