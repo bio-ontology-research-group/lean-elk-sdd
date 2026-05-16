@@ -123,6 +123,13 @@ inductive SatC (O : Ontology) : Concept → Concept → Prop where
       SatC O (.conj (.nom i) C) E →
       SatC O (.conj (.nom i) (.neg C)) E →
       SatC O (.nom i) E
+  -- Nominal globality: every nominal denotes SOME element in every
+  -- interpretation, so if `nom i ⊑ ⊥` is derivable then the ontology
+  -- is unsatisfiable, hence ⊤ ⊑ ⊥.  This is the syntactic counterpart
+  -- of the "nominals are always inhabited" semantic invariant; it
+  -- closes the `NomConsistent` meta-hypothesis of the canonical-model
+  -- construction.
+  | nomGlobal : ∀ i, SatC O (.nom i) .bot → SatC O .top .bot
   -- Transitivity, of course.
   | trans       : ∀ {C D E}, SatC O C D → SatC O D E → SatC O C E
 
@@ -315,6 +322,13 @@ theorem satC_sound (O : Ontology) (C D : Concept) (h : SatC O C D) :
       by_cases hCx : I.eval C x
       · exact ihC x ⟨hC, hCx⟩
       · exact ihNC x ⟨hC, hCx⟩
+  | nomGlobal i _ ihNom =>
+      -- hC : I.eval .top x = True (trivial).
+      -- ihNom : ∀ x', I.eval (.nom i) x' → I.eval .bot x'.
+      -- Apply to x' = I.ext_ind i: I.eval (.nom i) (I.ext_ind i) holds by rfl,
+      -- so I.eval .bot _ holds — but I.eval .bot is False.  Contradiction
+      -- shows the .top → .bot conclusion (False elim).
+      exact (ihNom (I.ext_ind i) rfl).elim
   | trans hCD hDE ihCD ihDE => exact ihDE x (ihCD x hC)
 
 -- ============================================================

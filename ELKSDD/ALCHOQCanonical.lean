@@ -452,11 +452,53 @@ theorem atLeastCard_filler_mono {α} (P Q : α → Prop)
 
 /-- The ontology is *nominal-consistent* when every individual
     name `i` is satisfiable, i.e. the singleton ``{nom i}`` is
-    SatC-consistent under O.  Most ontologies of interest satisfy
-    this: it fails only when some ABox-style assertion makes a
-    specific individual unsatisfiable. -/
+    SatC-consistent under O.  In fact this is *automatic* whenever
+    O itself is consistent (see `nom_consistent_of_cons` below):
+    the SatC.nomGlobal rule lifts any nominal contradiction to a
+    global contradiction.  Kept here for the structural-fragment
+    truth-lemma signature; the Skolem-tagged construction discharges
+    it unconditionally. -/
 def NomConsistent (O : Ontology) : Prop :=
   ∀ i, consistent O ({.nom i} : Set Concept)
+
+/-- Helper: a conjunction of identical `.nom i` concepts is
+    SatC-entailed by `.nom i` alone.  Used to reduce any
+    `{nom i}`-list contradiction to a `.nom i`-contradiction. -/
+theorem satC_nom_to_conjList_of_noms (O : Ontology) (i : Nat) :
+    ∀ L : List Concept, (∀ E ∈ L, E = .nom i) →
+      SatC O (.nom i) (conjList L)
+  | [], _ => by
+      unfold conjList; exact satC_top O _
+  | E :: Es, hL => by
+      unfold conjList
+      have hE : E = .nom i := hL E List.mem_cons_self
+      subst hE
+      refine SatC.satC_andI ?_ ?_
+      · exact satC_refl O _
+      · exact satC_nom_to_conjList_of_noms O i Es
+                (fun F hF => hL F (List.mem_cons_of_mem _ hF))
+
+/-- `NomConsistent O` is automatic when O itself is SatC-consistent:
+    the SatC.nomGlobal rule converts any nominal-inconsistency into a
+    global `top ⊑ bot` derivation.  This is the first of the four
+    meta-hypotheses to be discharged unconditionally. -/
+theorem nom_consistent_of_cons (O : Ontology)
+    (hCons : consistent O (∅ : Set Concept)) : NomConsistent O := by
+  intro i L hLin hSat
+  -- All elements of L equal .nom i.
+  have hLnom : ∀ E ∈ L, E = .nom i := by
+    intro E hE
+    have := hLin E hE
+    simpa [Set.mem_singleton_iff] using this
+  -- SatC O (.nom i) (conjList L), so SatC O (.nom i) .bot by trans.
+  have hNomBot : SatC O (.nom i) .bot :=
+    SatC.trans (satC_nom_to_conjList_of_noms O i L hLnom) hSat
+  -- nomGlobal lifts to SatC O .top .bot, contradicting hCons (via L' = []).
+  have hTopBot : SatC O .top .bot := SatC.nomGlobal i hNomBot
+  apply hCons ([] : List Concept)
+  · intro E hE; exact absurd hE (List.not_mem_nil)
+  · show SatC O (conjList []) .bot
+    unfold conjList; exact hTopBot
 
 /-- SatC is *nominal-complete* for `O` when, for every individual
     name `i` and concept `C`, the calculus decides whether `nom i`
@@ -1242,7 +1284,7 @@ theorem type_nonempty_of_consistent (O : Ontology)
 theorem satC_complete_structural
     (O : Ontology) (C D : Concept)
     (hOStruct : OntologyStructural O)
-    (hNC : NomConsistent O) (hNComp : NomCompleteness O)
+    (hNComp : NomCompleteness O)
     (hHS : HasSelfCompleteness O) (hCW : CardinalityWitnesses O)
     (hC : Structural C) (hD : Structural D)
     (hEnt : Entails O C D) : SatC O C D := by
@@ -1252,7 +1294,10 @@ theorem satC_complete_structural
   -- derivable, so SatC O C D follows trivially — contradiction with
   -- hNot.
   by_cases hCons : consistent O (∅ : Set Concept)
-  · -- O is consistent.  Build a counter-model and contradict hEnt.
+  · -- O is consistent.  Derive `NomConsistent O` from `consistent O ∅`
+    -- via the `nomGlobal` SatC rule, then build a counter-model and
+    -- contradict hEnt.
+    have hNC : NomConsistent O := nom_consistent_of_cons O hCons
     have hCN : consistent O ({C, Concept.neg D} : Set Concept) :=
       c_negD_consistent O C D hNot
     obtain ⟨t, htsub⟩ := lindenbaum O _ hCN
