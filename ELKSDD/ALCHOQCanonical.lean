@@ -358,6 +358,31 @@ theorem top_mem (O : Ontology) (t : Type_ O) :
       · exact satC_refl O _
     exact bot_not_mem O t hbot
 
+/-- A concept is *structural* iff it avoids nominals, hasSelf, and
+    positive cardinality bounds.  The canonical model is faithful
+    on this fragment.  Lifting hasSelf, nominals, and positive
+    cardinality is the planned follow-on. -/
+def Structural : Concept → Prop
+  | .atom _        => True
+  | .top           => True
+  | .bot           => True
+  | .nom _         => False
+  | .neg C         => Structural C
+  | .conj A B      => Structural A ∧ Structural B
+  | .disj A B      => Structural A ∧ Structural B
+  | .exist _ C     => Structural C
+  | .univ _ C      => Structural C
+  | .atLeast 0 _ C => Structural C
+  | .atLeast _ _ _ => False
+  | .atMost 0 _ C  => Structural C
+  | .atMost _ _ _  => False
+  | .hasSelf _     => False
+
+/-- An ontology is *structural* iff every axiom involves only
+    structural concepts on both sides. -/
+def OntologyStructural (O : Ontology) : Prop :=
+  ∀ ax ∈ O, Structural ax.1 ∧ Structural ax.2
+
 /-- Exactly one of `C, ¬C` is in a type's carrier.  Returns the
     disjoint partition. -/
 theorem mem_xor_neg (O : Ontology) (t : Type_ O) (C : Concept) :
@@ -402,6 +427,172 @@ theorem mem_xor_neg (O : Ontology) (t : Type_ O) (C : Concept) :
         · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
     · right
       exact ⟨hC, hnC⟩
+
+-- ============================================================
+-- 6.  Canonical interpretation.
+-- ============================================================
+
+/-- A "default" type in `Type_ O` if one exists (otherwise we can't
+    define ext_ind cleanly).  For the structural fragment (no
+    nominals), `ext_ind` is unused so we use the empty default. -/
+noncomputable def Interp.defaultType (O : Ontology)
+    (h : ∃ t : Type_ O, True) : Type_ O :=
+  h.choose
+
+/-- The canonical interpretation, parameterised on a non-emptiness
+    witness for `Type_ O`.  The `ext_role` definition is the standard
+    ALC Hintikka clause; the truth lemma is proved for the
+    structural fragment (no hasSelf, no nominals, no positive
+    cardinality).  Extending the role with a self-loop case for
+    hasSelf, and the domain with nominal-quotient and
+    Skolem-cardinality-tagging, is the planned follow-on. -/
+noncomputable def canonical (O : Ontology)
+    (hNE : ∃ t : Type_ O, True) :
+    Interp (Type_ O) where
+  ext_concept n t := Concept.atom n ∈ t.carrier
+  ext_role R t t' :=
+    ∀ C, Concept.univ R C ∈ t.carrier → C ∈ t'.carrier
+  ext_ind _ := Interp.defaultType O hNE
+
+-- ============================================================
+-- 7.  Witness-existence for the existential truth-lemma case.
+-- ============================================================
+
+/-- The *successor seed* for a type `t` with `∃R.C ∈ t.carrier`: the
+    set containing `C` together with every `D` forced by a universal
+    `∀R.D ∈ t.carrier`.  We will Lindenbaum-extend this to a type. -/
+def successorSet (O : Ontology) (t : Type_ O) (R : Nat) (C : Concept) :
+    Set Concept :=
+  {C} ∪ {D | Concept.univ R D ∈ t.carrier}
+
+theorem mem_successorSet_iff (O : Ontology) (t : Type_ O) (R : Nat)
+    (C D : Concept) :
+    D ∈ successorSet O t R C ↔
+      D = C ∨ Concept.univ R D ∈ t.carrier := by
+  unfold successorSet
+  constructor
+  · rintro (rfl | h)
+    · left; rfl
+    · right; exact h
+  · rintro (rfl | h)
+    · left; rfl
+    · right; exact h
+
+/-- Universal-conjunction helper: maps a list of fillers to the
+    conjunction ∀R.D₁ ⊓ … ⊓ ∀R.Dₙ ⊓ ⊤. -/
+def univListConj (R : Nat) : List Concept → Concept
+  | []        => Concept.top
+  | D :: Ds   => Concept.conj (Concept.univ R D) (univListConj R Ds)
+
+/-- The role-axis join lemma (iterated `exForall`): from ∃R.C ⊓
+    (∀R.D₁ ⊓ … ⊓ ∀R.Dₙ) derive ∃R.(C ⊓ D₁ ⊓ … ⊓ Dₙ). -/
+theorem satC_exist_with_univs
+    (O : Ontology) (R : Nat) (C : Concept) :
+    ∀ Ds : List Concept,
+      SatC O (.conj (.exist R C) (univListConj R Ds))
+             (.exist R (.conj C (conjList Ds)))
+  | [] => by
+      unfold univListConj conjList
+      refine SatC.trans (SatC.satC_andL _ _) ?_
+      exact SatC.ofSat (Sat.monoExist R
+        (Sat.andI (Sat.refl C) (Sat.top C)))
+  | D :: Ds => by
+      unfold univListConj conjList
+      have ih := satC_exist_with_univs O R (.conj C D) Ds
+      have h_join : SatC O (.conj (.exist R C) (.univ R D))
+                            (.exist R (.conj C D)) :=
+        SatC.exForall R C D
+      have h_lift :
+          SatC O
+            (.conj (.exist R C) (.conj (.univ R D) (univListConj R Ds)))
+            (.conj (.exist R (.conj C D)) (univListConj R Ds)) := by
+        refine SatC.satC_andI ?_ ?_
+        · refine SatC.trans ?_ h_join
+          refine SatC.satC_andI ?_ ?_
+          · exact SatC.satC_andL _ _
+          · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
+        · refine SatC.trans (SatC.satC_andR _ _) (SatC.satC_andR _ _)
+      refine SatC.trans h_lift (SatC.trans ih ?_)
+      apply SatC.ofSat (Sat.monoExist R ?_)
+      -- Need: Sat O (conj (conj C D) (conjList Ds))
+      --                (conj C (conj D (conjList Ds)))
+      -- This is associativity rebracketing, provable in Sat.
+      exact (Sat.andI
+                (Sat.trans (Sat.andL _ _) (Sat.andL _ _))
+                (Sat.andI
+                    (Sat.trans (Sat.andL _ _) (Sat.andR _ _))
+                    (Sat.andR _ _)))
+
+theorem satC_map_univ_to_univListConj
+    (O : Ontology) (R : Nat) :
+    ∀ Ds : List Concept,
+      SatC O (conjList (Ds.map (Concept.univ R))) (univListConj R Ds)
+  | [] => by
+      unfold conjList univListConj
+      exact satC_refl O _
+  | D :: Ds => by
+      unfold conjList univListConj
+      refine SatC.satC_andI ?_ ?_
+      · exact SatC.satC_andL _ _
+      · refine SatC.trans (SatC.satC_andR _ _) ?_
+        exact satC_map_univ_to_univListConj O R Ds
+
+/-- The successor seed is consistent whenever `∃R.C` is in `t`. -/
+theorem successor_consistent
+    (O : Ontology) (t : Type_ O) (R : Nat) (C : Concept)
+    (hExist : Concept.exist R C ∈ t.carrier) :
+    consistent O (successorSet O t R C) := by
+  intro L hLin hSat
+  let Ds := L.filter (· ≠ C)
+  have hDs : ∀ D ∈ Ds, Concept.univ R D ∈ t.carrier := by
+    intro D hD
+    obtain ⟨hin, hne⟩ := List.mem_filter.mp hD
+    rcases (mem_successorSet_iff O t R C D).mp (hLin D hin) with hC | hUniv
+    · exact absurd hC (by simpa using hne)
+    · exact hUniv
+  apply t.cons (Concept.exist R C :: Ds.map (Concept.univ R))
+  · intro D' hD'
+    rcases List.mem_cons.mp hD' with rfl | hMap
+    · exact hExist
+    · obtain ⟨D, hD, rfl⟩ := List.mem_map.mp hMap
+      exact hDs D hD
+  · show SatC O (conjList (Concept.exist R C :: Ds.map (Concept.univ R)))
+              Concept.bot
+    unfold conjList
+    have h1 :
+        SatC O (.conj (.exist R C) (conjList (Ds.map (Concept.univ R))))
+               (.conj (.exist R C) (univListConj R Ds)) := by
+      refine SatC.satC_andI ?_ ?_
+      · exact SatC.satC_andL _ _
+      · exact SatC.trans (SatC.satC_andR _ _)
+          (satC_map_univ_to_univListConj O R Ds)
+    have h2 :
+        SatC O (.conj (.exist R C) (univListConj R Ds))
+               (.exist R (.conj C (conjList Ds))) :=
+      satC_exist_with_univs O R C Ds
+    have h3 : SatC O (.conj C (conjList Ds)) Concept.bot :=
+      SatC.trans (satC_conj_filter_implies_list O C L) hSat
+    have h4 : SatC O (.exist R (.conj C (conjList Ds))) (.exist R .bot) :=
+      SatC.satC_monoExist R h3
+    have h5 : SatC O (.exist R Concept.bot) Concept.bot := SatC.existBot R
+    refine SatC.trans h1 (SatC.trans h2 (SatC.trans h4 h5))
+
+/-- **Witness lemma for ∃R.·**: if `∃R.C ∈ t.carrier`, then in the
+    canonical model there is a successor type `t'` containing `C` and
+    bearing the R-edge from `t`. -/
+theorem witness_exist
+    (O : Ontology) (hNE : ∃ t : Type_ O, True)
+    (t : Type_ O) (R : Nat) (C : Concept)
+    (hExist : Concept.exist R C ∈ t.carrier) :
+    ∃ t' : Type_ O, (canonical O hNE).ext_role R t t' ∧ C ∈ t'.carrier := by
+  obtain ⟨t', ht'⟩ := lindenbaum O (successorSet O t R C)
+    (successor_consistent O t R C hExist)
+  refine ⟨t', ?_, ?_⟩
+  · -- ext_role: ∀ D, univ R D ∈ t → D ∈ t'
+    intro D hUniv
+    exact ht' ((mem_successorSet_iff O t R C D).mpr (Or.inr hUniv))
+  · -- C ∈ t'.carrier
+    exact ht' ((mem_successorSet_iff O t R C C).mpr (Or.inl rfl))
 
 end ALCHOQ
 end ELKSDD

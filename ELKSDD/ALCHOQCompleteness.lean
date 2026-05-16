@@ -45,6 +45,15 @@ inductive SatC (O : Ontology) : Concept → Concept → Prop where
   | satC_orE   : ∀ {C D E}, SatC O C E → SatC O D E → SatC O (.disj C D) E
   | satC_andL  : ∀ C D, SatC O (.conj C D) C
   | satC_andR  : ∀ C D, SatC O (.conj C D) D
+  -- Role-axis monotonicity at SatC level.
+  | satC_monoExist : ∀ R {C D}, SatC O C D →
+      SatC O (.exist R C) (.exist R D)
+  | satC_monoUniv  : ∀ R {C D}, SatC O C D →
+      SatC O (.univ R C) (.univ R D)
+  | satC_monoAtLeast : ∀ n R {C D}, SatC O C D →
+      SatC O (.atLeast n R C) (.atLeast n R D)
+  | satC_monoAtMost  : ∀ n R {C D}, SatC O C D →
+      SatC O (.atMost n R D) (.atMost n R C)
   -- Classical rules.
   | negNegI     : ∀ C, SatC O C (.neg (.neg C))
   | negNegE     : ∀ C, SatC O (.neg (.neg C)) C
@@ -146,6 +155,17 @@ private theorem atLeast_atMost_card_bot {α} (S : α → Prop) (n : Nat)
     (h1 : Interp.atLeastCard S (n+1)) (h2 : Interp.atMostCard S n) : False :=
   h2 h1
 
+/-- Filler-monotonicity of `atLeastCard`: `P ⊆ Q → atLeastCard P ⊑ atLeastCard Q`. -/
+private theorem atLeastCard_filler_mono {α} (P Q : α → Prop)
+    (hPQ : ∀ y, P y → Q y) :
+    ∀ n, Interp.atLeastCard P n → Interp.atLeastCard Q n
+  | 0, _ => trivial
+  | (n+1), ⟨x, hPx, hRest⟩ => by
+      refine ⟨x, hPQ x hPx, ?_⟩
+      have hPx' : ∀ y, (P y ∧ y ≠ x) → (Q y ∧ y ≠ x) := by
+        intro y ⟨hp, hne⟩; exact ⟨hPQ y hp, hne⟩
+      exact atLeastCard_filler_mono _ _ hPx' n hRest
+
 theorem satC_sound (O : Ontology) (C D : Concept) (h : SatC O C D) :
     Entails O C D := by
   intro α I hOK x hC
@@ -158,6 +178,24 @@ theorem satC_sound (O : Ontology) (C D : Concept) (h : SatC O C D) :
       | inr h => exact ihD x h
   | satC_andL _ _ => exact hC.1
   | satC_andR _ _ => exact hC.2
+  | satC_monoExist R _ ih =>
+      obtain ⟨y, hR, hCy⟩ := hC
+      exact ⟨y, hR, ih y hCy⟩
+  | satC_monoUniv R _ ih =>
+      intro y hR
+      exact ih y (hC y hR)
+  | satC_monoAtLeast n R _ ih =>
+      -- atLeast n on C ⊑ atLeast n on D since C ⊑ D
+      show Interp.atLeastCard _ n
+      apply atLeastCard_filler_mono (P := fun y => I.ext_role R x y ∧ I.eval _ y)
+                          (Q := fun y => I.ext_role R x y ∧ I.eval _ y)
+                          (fun y ⟨hr, hCy⟩ => ⟨hr, ih y hCy⟩) n hC
+  | satC_monoAtMost n R _ ih =>
+      intro hCard
+      apply hC
+      exact atLeastCard_filler_mono (P := fun y => I.ext_role R x y ∧ I.eval _ y)
+                          (Q := fun y => I.ext_role R x y ∧ I.eval _ y)
+                          (fun y ⟨hr, hDy⟩ => ⟨hr, ih y hDy⟩) (n+1) hCard
   | negNegI _ => intro hnC; exact hnC hC
   | negNegE _ => exact Classical.byContradiction (fun hnC => hC hnC)
   | em _ => exact Classical.em _
