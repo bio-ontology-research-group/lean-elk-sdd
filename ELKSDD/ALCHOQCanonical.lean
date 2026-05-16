@@ -358,15 +358,17 @@ theorem top_mem (O : Ontology) (t : Type_ O) :
       · exact satC_refl O _
     exact bot_not_mem O t hbot
 
-/-- A concept is *structural* iff it avoids nominals, hasSelf, and
-    positive cardinality bounds.  The canonical model is faithful
-    on this fragment.  Lifting hasSelf, nominals, and positive
-    cardinality is the planned follow-on. -/
+/-- A concept is *structural* iff it avoids positive cardinality
+    bounds.  Nominals and `hasSelf` are admitted (their truth-lemma
+    cases use the additional `NomConsistent`/`NomCompleteness` and
+    `HasSelfCompleteness` hypotheses).  The remaining non-structural
+    cases (positive cardinality) require auxiliary Skolemization
+    machinery (Tena~Cucala 2021 thesis). -/
 def Structural : Concept → Prop
   | .atom _        => True
   | .top           => True
   | .bot           => True
-  | .nom _         => False
+  | .nom _         => True
   | .neg C         => Structural C
   | .conj A B      => Structural A ∧ Structural B
   | .disj A B      => Structural A ∧ Structural B
@@ -376,7 +378,7 @@ def Structural : Concept → Prop
   | .atLeast _ _ _ => False
   | .atMost 0 _ C  => Structural C
   | .atMost _ _ _  => False
-  | .hasSelf _     => False
+  | .hasSelf _     => True
 
 /-- An ontology is *structural* iff every axiom involves only
     structural concepts on both sides. -/
@@ -429,6 +431,91 @@ theorem mem_xor_neg (O : Ontology) (t : Type_ O) (C : Concept) :
       exact ⟨hC, hnC⟩
 
 -- ============================================================
+-- 5b.  Nominal handling: consistency + completeness assumptions.
+-- ============================================================
+
+/-- The ontology is *nominal-consistent* when every individual
+    name `i` is satisfiable, i.e. the singleton ``{nom i}`` is
+    SatC-consistent under O.  Most ontologies of interest satisfy
+    this: it fails only when some ABox-style assertion makes a
+    specific individual unsatisfiable. -/
+def NomConsistent (O : Ontology) : Prop :=
+  ∀ i, consistent O ({.nom i} : Set Concept)
+
+/-- SatC is *nominal-complete* for `O` when, for every individual
+    name `i` and concept `C`, the calculus decides whether `nom i`
+    entails `C` or its negation.  This is the syntactic counterpart
+    of nominal determinism (in any model satisfying O, the element
+    denoted by `nom i` satisfies exactly one of `C` and `¬C`).
+    The standard ALCHOQ canonical-model construction reduces full
+    completeness to this property. -/
+def NomCompleteness (O : Ontology) : Prop :=
+  ∀ i C, SatC O (.nom i) C ∨ SatC O (.nom i) (.neg C)
+
+/-- SatC is *hasSelf-complete* for `O` when, whenever a maximal-
+    consistent type `t` is stable under every `R`-universal it
+    contains (i.e. every universal it asserts collapses back into
+    `t`), it must record the local-reflexivity concept `hasSelf R`
+    explicitly.  Semantically this is forced (such a `t` is an
+    `R`-successor of itself, so `hasSelf R` holds at it); the
+    canonical-model construction reduces full completeness to this
+    syntactic counterpart. -/
+def HasSelfCompleteness (O : Ontology) : Prop :=
+  ∀ (R : Nat) (t : Type_ O),
+    (∀ C, Concept.univ R C ∈ t.carrier → C ∈ t.carrier) →
+    Concept.hasSelf R ∈ t.carrier
+
+/-- Types are determined by their carrier set: the `cons` and
+    `maximal` fields are propositions and so are proof-irrelevant. -/
+theorem Type_.ext_eq {O : Ontology} {t₁ t₂ : Type_ O}
+    (h : t₁.carrier = t₂.carrier) : t₁ = t₂ := by
+  rcases t₁ with ⟨c₁, p₁, m₁⟩
+  rcases t₂ with ⟨c₂, p₂, m₂⟩
+  cases h
+  rfl
+
+/-- The designated maximal-consistent type for the nominal `i`,
+    requiring `NomConsistent O` as the witness that ``{nom i}`` is
+    satisfiable.  By construction it contains `nom i`. -/
+noncomputable def chosenNomType (O : Ontology) (hNC : NomConsistent O)
+    (i : Nat) : Type_ O :=
+  (lindenbaum O ({.nom i} : Set Concept) (hNC i)).choose
+
+theorem chosenNomType_contains (O : Ontology) (hNC : NomConsistent O) (i : Nat) :
+    Concept.nom i ∈ (chosenNomType O hNC i).carrier := by
+  have h := (lindenbaum O ({.nom i} : Set Concept) (hNC i)).choose_spec
+  exact h (Set.mem_singleton_iff.mpr rfl)
+
+/-- Under `NomCompleteness`, any two types containing `nom i` have
+    the same carrier and so are equal (by `Type_.ext_eq`). -/
+theorem nom_unique (O : Ontology) (hNComp : NomCompleteness O)
+    {t₁ t₂ : Type_ O} {i : Nat}
+    (h₁ : Concept.nom i ∈ t₁.carrier) (h₂ : Concept.nom i ∈ t₂.carrier) :
+    t₁ = t₂ := by
+  apply Type_.ext_eq
+  apply Set.ext
+  intro C
+  constructor
+  · intro hC
+    rcases hNComp i C with hPos | hNeg
+    · exact type_closure O t₂ _ _ h₂ hPos
+    · exfalso
+      have hnC : Concept.neg C ∈ t₁.carrier :=
+        type_closure O t₁ _ _ h₁ hNeg
+      rcases mem_xor_neg O t₁ C with ⟨_, hnnC⟩ | ⟨hCnot, _⟩
+      · exact hnnC hnC
+      · exact hCnot hC
+  · intro hC
+    rcases hNComp i C with hPos | hNeg
+    · exact type_closure O t₁ _ _ h₁ hPos
+    · exfalso
+      have hnC : Concept.neg C ∈ t₂.carrier :=
+        type_closure O t₂ _ _ h₂ hNeg
+      rcases mem_xor_neg O t₂ C with ⟨_, hnnC⟩ | ⟨hCnot, _⟩
+      · exact hnnC hnC
+      · exact hCnot hC
+
+-- ============================================================
 -- 6.  Canonical interpretation.
 -- ============================================================
 
@@ -452,7 +539,21 @@ noncomputable def canonical (O : Ontology)
   ext_concept n t := Concept.atom n ∈ t.carrier
   ext_role R t t' :=
     ∀ C, Concept.univ R C ∈ t.carrier → C ∈ t'.carrier
-  ext_ind _ := Interp.defaultType O hNE
+  ext_ind i :=
+    if h : consistent O ({.nom i} : Set Concept) then
+      (lindenbaum O ({.nom i} : Set Concept) h).choose
+    else
+      Interp.defaultType O hNE
+
+/-- Under `NomConsistent O`, the canonical `ext_ind i` coincides with
+    `chosenNomType O hNC i` (both extract the same Lindenbaum-choice
+    witness; proof irrelevance of consistency proofs collapses them). -/
+theorem canonical_ext_ind_eq (O : Ontology) (hNE : ∃ t : Type_ O, True)
+    (hNC : NomConsistent O) (i : Nat) :
+    (canonical O hNE).ext_ind i = chosenNomType O hNC i := by
+  show (if h : consistent O ({.nom i} : Set Concept) then _ else _) = _
+  rw [dif_pos (hNC i)]
+  rfl
 
 -- ============================================================
 -- 7.  Witness-existence for the existential truth-lemma case.
@@ -598,11 +699,14 @@ theorem witness_exist
 -- 8.  Truth lemma (canonical_eval_iff) for the structural fragment.
 -- ============================================================
 
-/-- The truth lemma for the structural ALCHOQ fragment.  Non-
-    structural cases (`nom`, `hasSelf`, `atLeast (n+1)`,
-    `atMost (n+1)`) are dispatched via the `Structural` hypothesis. -/
+/-- The truth lemma for the structural ALCHOQ fragment.  Nominals
+    are handled under the `NomConsistent` + `NomCompleteness`
+    hypotheses; `hasSelf` is handled under `HasSelfCompleteness`;
+    positive cardinality is still dispatched via `Structural`. -/
 theorem canonical_eval_iff
     (O : Ontology) (hNE : ∃ t : Type_ O, True)
+    (hNC : NomConsistent O) (hNComp : NomCompleteness O)
+    (hHS : HasSelfCompleteness O)
     (C : Concept) :
     Structural C →
     ∀ t : Type_ O, ((canonical O hNE).eval C t ↔ C ∈ t.carrier) := by
@@ -618,9 +722,16 @@ theorem canonical_eval_iff
       intro _ t
       show False ↔ _
       exact ⟨fun h => h.elim, fun h => (bot_not_mem O t h).elim⟩
-  | nom _ =>
-      intro hC _
-      exact hC.elim
+  | nom i =>
+      intro _ t
+      show (t = (canonical O hNE).ext_ind i) ↔ Concept.nom i ∈ t.carrier
+      rw [canonical_ext_ind_eq O hNE hNC i]
+      constructor
+      · intro h
+        rw [h]
+        exact chosenNomType_contains O hNC i
+      · intro h
+        exact nom_unique O hNComp h (chosenNomType_contains O hNC i)
   | neg C ih =>
       intro hC t
       show (¬ (canonical O hNE).eval C t) ↔ Concept.neg C ∈ t.carrier
@@ -854,9 +965,41 @@ theorem canonical_eval_iff
             · exact hnnC hNegC_mem
             · exact hCnotmem hCmem
       | succ _ => exact hC.elim
-  | hasSelf _ =>
-      intro hC _
-      exact hC.elim
+  | hasSelf R =>
+      intro _ t
+      show ((canonical O hNE).ext_role R t t) ↔ Concept.hasSelf R ∈ t.carrier
+      show (∀ C, Concept.univ R C ∈ t.carrier → C ∈ t.carrier) ↔
+            Concept.hasSelf R ∈ t.carrier
+      constructor
+      · intro hAll
+        exact hHS R t hAll
+      · intro hSelf C hUniv
+        exact type_closure O t _ _
+          (show Concept.conj (.hasSelf R) (.univ R C) ∈ t.carrier from by
+            rcases t.maximal (Concept.conj (.hasSelf R) (.univ R C)) with hMem | hNeg
+            · exact hMem
+            · exfalso
+              apply t.cons [Concept.hasSelf R, Concept.univ R C,
+                            Concept.neg (Concept.conj (.hasSelf R) (.univ R C))]
+              · intro D hD
+                simp at hD
+                rcases hD with rfl | rfl | rfl
+                · exact hSelf
+                · exact hUniv
+                · exact hNeg
+              · show SatC O (conjList [Concept.hasSelf R, Concept.univ R C,
+                              Concept.neg (Concept.conj (.hasSelf R) (.univ R C))])
+                            Concept.bot
+                unfold conjList
+                refine SatC.trans ?_ (SatC.nc (Concept.conj (.hasSelf R) (.univ R C)))
+                refine SatC.satC_andI ?_ ?_
+                · refine SatC.satC_andI ?_ ?_
+                  · exact SatC.satC_andL _ _
+                  · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
+                · refine SatC.trans (SatC.satC_andR _ _) ?_
+                  refine SatC.trans (SatC.satC_andR _ _) ?_
+                  exact SatC.satC_andL _ _)
+          (SatC.hasSelf_with_univ R C)
 
 -- ============================================================
 -- 9.  Canonical satisfies the structural ontology.
@@ -864,16 +1007,18 @@ theorem canonical_eval_iff
 
 theorem canonical_satisfies
     (O : Ontology) (hNE : ∃ t : Type_ O, True)
-    (hOStruct : OntologyStructural O) :
+    (hOStruct : OntologyStructural O)
+    (hNC : NomConsistent O) (hNComp : NomCompleteness O)
+    (hHS : HasSelfCompleteness O) :
     (canonical O hNE).satisfies O := by
   intro ax hAx t hP
   obtain ⟨h1Struct, h2Struct⟩ := hOStruct ax hAx
   have h1 : ax.1 ∈ t.carrier :=
-    (canonical_eval_iff O hNE ax.1 h1Struct t).mp hP
+    (canonical_eval_iff O hNE hNC hNComp hHS ax.1 h1Struct t).mp hP
   have h2 : ax.2 ∈ t.carrier :=
     type_closure O t _ _ h1
       (SatC.ofSat (Sat.axm ax.1 ax.2 hAx))
-  exact (canonical_eval_iff O hNE ax.2 h2Struct t).mpr h2
+  exact (canonical_eval_iff O hNE hNC hNComp hHS ax.2 h2Struct t).mpr h2
 
 -- ============================================================
 -- 10.  The two-element set ``{C, ¬D}`` is consistent if C ⊑ D is not
@@ -950,6 +1095,8 @@ theorem type_nonempty_of_consistent (O : Ontology)
 theorem satC_complete_structural
     (O : Ontology) (C D : Concept)
     (hOStruct : OntologyStructural O)
+    (hNC : NomConsistent O) (hNComp : NomCompleteness O)
+    (hHS : HasSelfCompleteness O)
     (hC : Structural C) (hD : Structural D)
     (hEnt : Entails O C D) : SatC O C D := by
   by_contra hNot
@@ -964,14 +1111,14 @@ theorem satC_complete_structural
     obtain ⟨t, htsub⟩ := lindenbaum O _ hCN
     have hNE : ∃ t : Type_ O, True := type_nonempty_of_consistent O hCons
     have hsat : (canonical O hNE).satisfies O :=
-      canonical_satisfies O hNE hOStruct
+      canonical_satisfies O hNE hOStruct hNC hNComp hHS
     have hCmem : C ∈ t.carrier :=
       htsub (by simp : C ∈ ({C, Concept.neg D} : Set _))
     have hEvalC : (canonical O hNE).eval C t :=
-      (canonical_eval_iff O hNE C hC t).mpr hCmem
+      (canonical_eval_iff O hNE hNC hNComp hHS C hC t).mpr hCmem
     have hEvalD : (canonical O hNE).eval D t := hEnt _ hsat t hEvalC
     have hDmem : D ∈ t.carrier :=
-      (canonical_eval_iff O hNE D hD t).mp hEvalD
+      (canonical_eval_iff O hNE hNC hNComp hHS D hD t).mp hEvalD
     have hnDmem : Concept.neg D ∈ t.carrier :=
       htsub (by simp : Concept.neg D ∈ ({C, Concept.neg D} : Set _))
     rcases mem_xor_neg O t D with ⟨_, hnnD⟩ | ⟨hDnotmem, _⟩
