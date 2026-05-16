@@ -84,6 +84,12 @@ inductive SatC (O : Ontology) : Concept → Concept → Prop where
   -- closure step.  Intuitionistically valid; sound trivially.
   | dist       : ∀ X C D,
       SatC O (.conj X (.disj C D)) (.disj (.conj X C) (.conj X D))
+  -- Role-axis closure: an unsatisfiable filler forces the
+  -- existential to be unsatisfiable.  Needed for the
+  -- witness-existence lemma.
+  | existBot   : ∀ R, SatC O (.exist R .bot) .bot
+  -- Dual: ⊤ is vacuously a universal-restriction filler.
+  | univTop    : ∀ R, SatC O .top (.univ R .top)
   -- Closure under the ALC Sat embedding (so every Sat-derivation
   -- lifts to a SatC-derivation).
   | ofSat      : ∀ {C D}, Sat O C D → SatC O C D
@@ -168,6 +174,11 @@ theorem satC_sound (O : Ontology) (C D : Concept) (h : SatC O C D) :
       cases hCD with
       | inl h => exact Or.inl ⟨hX, h⟩
       | inr h => exact Or.inr ⟨hX, h⟩
+  | existBot R =>
+      obtain ⟨_, _, hf⟩ := hC
+      exact hf
+  | univTop R =>
+      intro _ _; trivial
   | ofSat hS =>
       -- Soundness of the embedded Sat-derivation: reuse sat_sound.
       exact (sat_sound O _ _ hS) I hOK x hC
@@ -433,6 +444,46 @@ theorem lindenbaum_max (O : Ontology) (Γ : Set Concept)
   obtain ⟨M, hΓM, hMmax⟩ := key
   exact ⟨M, hΓM, hMmax.prop, hMmax⟩
 
+/-- The bridging lemma: any SatC-consistent list whose elements lie
+    in ``{C} ∪ rest`` collapses to a derivation from
+    ``conj C (conjList (filter (·≠C) L))``.  Used by the maximality
+    closure (and re-used later in the canonical-model successor
+    argument). -/
+theorem satC_conj_filter_implies_list
+    (O : Ontology) (C : Concept) :
+    ∀ L : List Concept,
+      SatC O (.conj C (conjList (L.filter (· ≠ C)))) (conjList L)
+  | [] => by
+      unfold conjList
+      exact SatC.top _
+  | E :: Es => by
+      have ih := satC_conj_filter_implies_list O C Es
+      by_cases hEC : E = C
+      · -- E = C: filter drops E
+        have hf : (E :: Es).filter (· ≠ C) = Es.filter (· ≠ C) := by
+          simp [hEC]
+        rw [hf]
+        show SatC O (.conj C (conjList (Es.filter (· ≠ C))))
+                   (conjList (E :: Es))
+        show SatC O (.conj C (conjList (Es.filter (· ≠ C))))
+                   (.conj E (conjList Es))
+        refine SatC.andI ?_ ?_
+        · rw [hEC]; exact SatC.andL _ _
+        · exact ih
+      · -- E ≠ C: filter keeps E
+        have hf : (E :: Es).filter (· ≠ C)
+                = E :: Es.filter (· ≠ C) := by
+          simp [hEC]
+        rw [hf]
+        show SatC O (.conj C (.conj E (conjList (Es.filter (· ≠ C)))))
+                   (.conj E (conjList Es))
+        refine SatC.andI ?_ ?_
+        · exact SatC.trans (SatC.andR _ _) (SatC.andL _ _)
+        · refine SatC.trans ?_ ih
+          refine SatC.andI ?_ ?_
+          · exact SatC.andL _ _
+          · exact SatC.trans (SatC.andR _ _) (SatC.andR _ _)
+
 /-- An inclusion-maximal consistent set is closed under the
     excluded middle: for every concept ``C``, the set contains
     either ``C`` or ``¬C``.  This is the "maximality-closure" step
@@ -498,12 +549,54 @@ theorem lindenbaum_max_closed
       · simp at h2
       · exact hM'
   case satBot =>
-    -- The combinatorial heart: given the two inconsistency
-    -- witnesses, derive an inconsistency from the residual.
-    -- This step is the canonical-model lemma of Lindenbaum
-    -- closure; we leave it as a stub here pending the full
-    -- de-Morgan / distribution surgery on the SatC derivations.
-    sorry
+    -- The combinatorial heart: combine the two inconsistency
+    -- witnesses via case analysis on ``C ⊔ ¬C`` (excluded middle)
+    -- to derive a single inconsistency from the residual ``Ls ++ Ln``.
+    --
+    --   hCs  : SatC O (conj C    (conjList Ls)) ⊥
+    --   hCn  : SatC O (conj ¬C   (conjList Ln)) ⊥
+    -- Goal: SatC O (conjList (Ls ++ Ln)) ⊥.
+    --
+    -- 1. conjList (Ls ++ Ln) ⊑ conj (conjList Ls) (conjList Ln)
+    --       via satC_conjList_append_to_split.
+    -- 2. conj (conjList Ls) (conjList Ln)
+    --       ⊑ conj (conj (conjList Ls) (conjList Ln)) (disj C ¬C)
+    --       via em.
+    -- 3. dist: ⊑ disj
+    --      (conj (conj (conjList Ls) (conjList Ln))  C)
+    --      (conj (conj (conjList Ls) (conjList Ln)) ¬C).
+    -- 4. orE: each branch reduces to ⊥ via hCs/hCn.
+    have hCs : SatC O (.conj C (conjList (L_C.filter (· ≠ C))))
+                       Concept.bot :=
+      SatC.trans (satC_conj_filter_implies_list O C L_C) hL_C_sat
+    have hCn : SatC O (.conj (.neg C)
+                             (conjList (L_N.filter (· ≠ Concept.neg C))))
+                       Concept.bot :=
+      SatC.trans (satC_conj_filter_implies_list O (.neg C) L_N) hL_N_sat
+    set Ls := L_C.filter (· ≠ C)
+    set Ln := L_N.filter (· ≠ Concept.neg C)
+    refine SatC.trans (satC_conjList_append_to_split O Ls Ln) ?_
+    -- Now: conj (conjList Ls) (conjList Ln) ⊑ ⊥
+    have hem :
+        SatC O (.conj (conjList Ls) (conjList Ln))
+               (.disj
+                  (.conj (.conj (conjList Ls) (conjList Ln)) C)
+                  (.conj (.conj (conjList Ls) (conjList Ln)) (.neg C))) := by
+      refine SatC.trans ?_ (SatC.dist _ C (.neg C))
+      refine SatC.andI (SatC.refl _) ?_
+      exact SatC.trans (SatC.top _) (SatC.em C)
+    refine SatC.trans hem ?_
+    refine SatC.orE ?_ ?_
+    · -- conj (conj (conjList Ls) (conjList Ln)) C ⊑ ⊥
+      refine SatC.trans ?_ hCs
+      refine SatC.andI ?_ ?_
+      · exact SatC.andR _ _
+      · exact SatC.trans (SatC.andL _ _) (SatC.andL _ _)
+    · -- conj (conj (conjList Ls) (conjList Ln)) ¬C ⊑ ⊥
+      refine SatC.trans ?_ hCn
+      refine SatC.andI ?_ ?_
+      · exact SatC.andR _ _
+      · exact SatC.trans (SatC.andL _ _) (SatC.andR _ _)
 
 /-- **Lindenbaum lemma** (standard form): every consistent set
     extends to a type. -/
@@ -531,6 +624,34 @@ theorem bot_not_mem (O : Ontology) (t : Type_ O) :
     show SatC O (conjList [Concept.bot]) Concept.bot
     unfold conjList
     exact SatC.trans (SatC.andL _ _) (SatC.refl _)
+
+/-- Types are closed under SatC consequence: if ``C`` is in a type's
+    carrier and ``C ⊑ D`` is derivable, then ``D`` is in the carrier.
+    This is the standard "deductive closure" property. -/
+theorem type_closure (O : Ontology) (t : Type_ O) (C D : Concept)
+    (hC : C ∈ t.carrier) (hCD : SatC O C D) : D ∈ t.carrier := by
+  by_contra hDne
+  -- By maximality, ¬D ∈ t.carrier.  Together with C, derive ⊥.
+  rcases t.maximal D with hDmem | hDneg
+  · exact hDne hDmem
+  · -- C and ¬D are both in t; their conjunction is inconsistent.
+    apply t.cons [C, Concept.neg D]
+    · intro E hE
+      simp at hE
+      rcases hE with rfl | rfl
+      · exact hC
+      · exact hDneg
+    · -- SatC O (conj C (conj (neg D) top)) bot
+      show SatC O (conjList [C, Concept.neg D]) Concept.bot
+      unfold conjList
+      -- Goal: conj C (conj (neg D) top) ⊑ bot
+      refine SatC.trans ?_ (SatC.nc D)
+      -- Need: ⊑ conj D (neg D)
+      refine SatC.andI ?_ ?_
+      · -- ⊑ D via the SatC O C D
+        exact SatC.trans (SatC.andL _ _) hCD
+      · -- ⊑ neg D
+        exact SatC.trans (SatC.andR _ _) (SatC.andL _ _)
 
 /-- For any concept ``C``, a type ``t`` contains exactly one of
     ``C`` and ``¬C``.  Combines maximality with non-contradiction. -/
@@ -576,19 +697,170 @@ theorem mem_xor_neg (O : Ontology) (t : Type_ O) (C : Concept) :
         · exact SatC.trans (SatC.andR _ _) (SatC.andL _ _)
     · exact Or.inr ⟨hC, hnC⟩
 
+-- ------------------------------------------------------------------
+-- Witness-existence machinery
+-- ------------------------------------------------------------------
+
+/-- Map a list of fillers ``[D₁, …, Dₙ]`` to the conjunction
+    ``∀R.D₁ ⊓ … ⊓ ∀R.Dₙ ⊓ ⊤``.  Used as the "context-of-universals"
+    in the witness-existence argument. -/
+def univListConj (R : Nat) : List Concept → Concept
+  | []        => Concept.top
+  | D :: Ds   => Concept.conj (Concept.univ R D) (univListConj R Ds)
+
+/-- The key combination lemma: from ``∃R.C`` and a list of universals
+    on the same role ``∀R.D₁, …, ∀R.Dₙ``, derive ``∃R.(C ⊓ D₁ ⊓ … ⊓ Dₙ)``.
+    Iterated `exForall`. -/
+theorem satC_exist_with_univs
+    (O : Ontology) (R : Nat) (C : Concept) :
+    ∀ Ds : List Concept,
+      SatC O (.conj (.exist R C) (univListConj R Ds))
+             (.exist R (.conj C (conjList Ds)))
+  | [] => by
+      unfold univListConj conjList
+      -- Goal: SatC O (conj (exist R C) top) (exist R (conj C top))
+      refine SatC.trans (SatC.andL _ _) ?_
+      exact SatC.monoExist R (SatC.andI (SatC.refl C) (SatC.top C))
+  | D :: Ds => by
+      unfold univListConj conjList
+      -- Goal: SatC O (conj (exist R C) (conj (univ R D) (univListConj R Ds)))
+      --              (exist R (conj C (conj D (conjList Ds))))
+      -- Strategy: first regroup to (conj (conj (exist R C) (univ R D))
+      --   (univListConj R Ds)), then apply exForall to get exist R (conj C D),
+      --   then induction on Ds.
+      have ih := satC_exist_with_univs O R (.conj C D) Ds
+      -- ih : SatC O (conj (exist R (conj C D)) (univListConj R Ds))
+      --              (exist R (conj (conj C D) (conjList Ds)))
+      -- We first prove: conj (exist R C) (univ R D) ⊑ exist R (conj C D)
+      have h_join : SatC O (.conj (.exist R C) (.univ R D))
+                            (.exist R (.conj C D)) :=
+        SatC.exForall R C D
+      -- Then: conj (exist R C) (conj (univ R D) (univListConj R Ds))
+      --       ⊑ conj (exist R (conj C D)) (univListConj R Ds)
+      have h_lift :
+          SatC O
+            (.conj (.exist R C) (.conj (.univ R D) (univListConj R Ds)))
+            (.conj (.exist R (.conj C D)) (univListConj R Ds)) := by
+        refine SatC.andI ?_ ?_
+        · -- ⊑ exist R (conj C D)
+          refine SatC.trans ?_ h_join
+          refine SatC.andI ?_ ?_
+          · exact SatC.andL _ _
+          · exact SatC.trans (SatC.andR _ _) (SatC.andL _ _)
+        · -- ⊑ univListConj R Ds
+          refine SatC.trans (SatC.andR _ _) (SatC.andR _ _)
+      -- Apply ih and then rebracket conj (conj C D) (conjList Ds)
+      -- to conj C (conj D (conjList Ds)).
+      refine SatC.trans h_lift (SatC.trans ih ?_)
+      apply SatC.monoExist R
+      -- Goal: conj (conj C D) (conjList Ds) ⊑ conj C (conj D (conjList Ds))
+      exact satC_conj_assoc O C D (conjList Ds)
+
+/-- Equivalence between ``conjList (Ds.map (univ R))`` and the
+    structural ``univListConj R Ds`` form.  Both directions. -/
+theorem satC_map_univ_to_univListConj
+    (O : Ontology) (R : Nat) :
+    ∀ Ds : List Concept,
+      SatC O (conjList (Ds.map (Concept.univ R))) (univListConj R Ds)
+  | [] => by
+      unfold conjList univListConj
+      exact SatC.refl _
+  | D :: Ds => by
+      unfold conjList univListConj
+      refine SatC.andI ?_ ?_
+      · exact SatC.andL _ _
+      · refine SatC.trans (SatC.andR _ _) ?_
+        exact satC_map_univ_to_univListConj O R Ds
+
+
+/-- The "successor set" of a type ``t`` along role ``R`` with the
+    witness filler ``C``: ``{D | ∀R.D ∈ t.carrier} ∪ {C}``. -/
+def successorSet {O : Ontology} (t : Type_ O) (R : Nat) (C : Concept) : Set Concept :=
+  {D | Concept.univ R D ∈ t.carrier} ∪ {C}
+
+/-- The successor set is SatC-consistent whenever ``∃R.C ∈ t.carrier``.
+    This is the central consistency-preservation step for the
+    canonical-model construction. -/
+theorem successor_consistent
+    (O : Ontology) (t : Type_ O) (R : Nat) (C : Concept)
+    (hExist : Concept.exist R C ∈ t.carrier) :
+    consistent O (successorSet t R C) := by
+  intro L hLin hSat
+  -- Split L into the C-part and the universal-filler part.  For
+  -- simplicity, project L onto the "filler concepts" (drop the C
+  -- element) and reconstruct the SatC derivation through
+  -- `satC_exist_with_univs`.
+  -- Filler list = elements of L that come from {D | univ R D ∈ t.carrier}.
+  let Ds := L.filter (· ≠ C)
+  -- For each D in Ds, univ R D ∈ t.carrier.
+  have hDs : ∀ D ∈ Ds, Concept.univ R D ∈ t.carrier := by
+    intro D hD
+    obtain ⟨hin, _⟩ := List.mem_filter.mp hD
+    rcases hLin D hin with hUniv | hC
+    · exact hUniv
+    · -- D = C (by definition of {C} as a set)
+      simp at hC
+      obtain ⟨_, hne⟩ := List.mem_filter.mp hD
+      exact absurd hC (by simpa using hne)
+  -- The full list-conjunction L is, up to permutation, [C, D₁, ..., Dₙ].
+  -- Build the t-side witness:
+  --   conjList [exist R C, univ R D₁, ..., univ R Dₙ] ⊑ bot.
+  -- Then t.cons applied to this list gives contradiction.
+  apply t.cons (Concept.exist R C ::
+                Ds.map (fun D => Concept.univ R D))
+  · -- All elements are in t.carrier.
+    intro D' hD'
+    rcases List.mem_cons.mp hD' with rfl | hMap
+    · exact hExist
+    · obtain ⟨D, hD, rfl⟩ := List.mem_map.mp hMap
+      exact hDs D hD
+  · -- The SatC derivation: conjList witnesses ⊑ bot.
+    -- conjList (exist R C :: map univR Ds)
+    --   = conj (exist R C) (conjList (map univR Ds))
+    -- Step 1: conjList (map univR Ds) ⊑ univListConj R Ds.
+    -- Step 2: conj (exist R C) (univListConj R Ds)
+    --           ⊑ exist R (conj C (conjList Ds))  via satC_exist_with_univs.
+    -- Step 3: conj C (conjList Ds) ⊑ conjList L ⊑ bot
+    --           via satC_conj_filter_implies_list + hSat.
+    -- Step 4: monoExist of Step 3 → exist R bot, then existBot → bot.
+    show SatC O (conjList (Concept.exist R C :: Ds.map (Concept.univ R)))
+              Concept.bot
+    unfold conjList
+    have h1 :
+        SatC O (.conj (.exist R C) (conjList (Ds.map (Concept.univ R))))
+               (.conj (.exist R C) (univListConj R Ds)) := by
+      refine SatC.andI ?_ ?_
+      · exact SatC.andL _ _
+      · exact SatC.trans (SatC.andR _ _)
+          (satC_map_univ_to_univListConj O R Ds)
+    have h2 :
+        SatC O (.conj (.exist R C) (univListConj R Ds))
+               (.exist R (.conj C (conjList Ds))) :=
+      satC_exist_with_univs O R C Ds
+    have h3 : SatC O (.conj C (conjList Ds)) Concept.bot :=
+      SatC.trans (satC_conj_filter_implies_list O C L) hSat
+    have h4 : SatC O (.exist R (.conj C (conjList Ds))) (.exist R .bot) :=
+      SatC.monoExist R h3
+    have h5 : SatC O (.exist R Concept.bot) Concept.bot := SatC.existBot R
+    -- Compose all four steps.
+    refine SatC.trans h1 (SatC.trans h2 (SatC.trans h4 h5))
+
 /-- **Witness lemma for ∃R.·**: if ``∃R.C`` is in type ``t``, then
     there is a successor type ``t'`` with ``C ∈ t'`` and the role
-    edge ``R(t, t')`` in the canonical model. -/
+    edge ``R(t, t')`` in the canonical model.  Proved via
+    `successor_consistent` + `lindenbaum`. -/
 theorem witness_exist
     (O : Ontology) (t : Type_ O) (R : Nat) (C : Concept)
     (hExist : Concept.exist R C ∈ t.carrier) :
     ∃ t' : Type_ O, (canonical O).ext_role R t t' ∧ C ∈ t'.carrier := by
-  -- The set ``{D | ∀R.D ∈ t} ∪ {C}`` is SatC-consistent (otherwise
-  -- ``∃R.C ⊓ ∀R.D₁ ⊓ … ⊓ ∀R.Dₙ ⊑ ⊥`` would be derivable, contradicting
-  -- ``t``'s consistency together with ``exForall``).  Lindenbaum
-  -- extends it to a type ``t'``.  Then by construction
-  -- ``(canonical O).ext_role R t t'`` and ``C ∈ t'.carrier``.
-  sorry
+  obtain ⟨t', ht'⟩ := lindenbaum O (successorSet t R C)
+    (successor_consistent O t R C hExist)
+  refine ⟨t', ?_, ?_⟩
+  · -- ext_role: ∀ D, univ R D ∈ t → D ∈ t'
+    intro D hUniv
+    exact ht' (Or.inl hUniv)
+  · -- C ∈ t'.carrier
+    exact ht' (Or.inr rfl)
 
 /-- ⊤ is always in the carrier of a type.  Provable from
     consistency + the `SatC.top` rule.  Specifically: if ⊤ ∉ t,
@@ -816,12 +1088,143 @@ theorem canonical_eval_iff
               refine SatC.trans (SatC.andR _ _) ?_
               exact SatC.andL _ _
   | exist R C ih =>
-      -- Role-axis case: needs witness_exist.  Stated as sorry per
-      -- "best-effort" scope.
-      sorry
+      -- (canonical O).eval (exist R C) t = ∃ t', ext_role R t t' ∧ eval C t'
+      -- Goal: ↔ exist R C ∈ t.carrier.
+      show (∃ t', (canonical O).ext_role R t t' ∧ (canonical O).eval C t')
+          ↔ Concept.exist R C ∈ t.carrier
+      constructor
+      · -- Forward: if a successor witnesses, then exist R C ∈ t (else
+        -- maximality gives ¬(exist R C) ∈ t, hence univ R (neg C) ∈ t,
+        -- so neg C ∈ t', contradicting eval C t' via the IH.)
+        rintro ⟨t', hR, hCt'⟩
+        rcases t.maximal (Concept.exist R C) with hMem | hNeg
+        · exact hMem
+        · -- ¬(exist R C) ∈ t.carrier; derive univ R (neg C) ∈ t via type_closure.
+          have hUniv : Concept.univ R (Concept.neg C) ∈ t.carrier :=
+            type_closure O t _ _ hNeg (SatC.negExist R C)
+          -- ext_role propagates univ R (neg C) ∈ t to neg C ∈ t'.
+          have hnC : Concept.neg C ∈ t'.carrier := hR _ hUniv
+          -- By IH, eval C t' iff C ∈ t'.  Combine with mem_xor_neg.
+          have hCmem : C ∈ t'.carrier := (ih t').mp hCt'
+          exfalso
+          rcases mem_xor_neg O t' C with ⟨_, hnnC⟩ | ⟨hCnotmem, _⟩
+          · exact hnnC hnC
+          · exact hCnotmem hCmem
+      · -- Backward: from exist R C ∈ t.carrier, get successor via witness_exist.
+        intro hExist
+        obtain ⟨t', hR, hCt'⟩ := witness_exist O t R C hExist
+        exact ⟨t', hR, (ih t').mpr hCt'⟩
   | univ R C ih =>
-      -- Role-axis case: dual to exist.  Stated as sorry.
-      sorry
+      -- (canonical O).eval (univ R C) t = ∀ t', ext_role R t t' → eval C t'
+      -- Goal: ↔ univ R C ∈ t.carrier.
+      show (∀ t', (canonical O).ext_role R t t' → (canonical O).eval C t')
+          ↔ Concept.univ R C ∈ t.carrier
+      constructor
+      · -- Forward: if all successors satisfy C, then univ R C ∈ t.
+        -- (Else by maximality ¬(univ R C) ∈ t, so exist R (neg C) ∈ t
+        -- via negUniv; witness_exist gives a successor with neg C,
+        -- contradicting the eval-hypothesis via IH + mem_xor_neg.)
+        intro hAll
+        rcases t.maximal (Concept.univ R C) with hMem | hNeg
+        · exact hMem
+        · have hExistNeg : Concept.exist R (Concept.neg C) ∈ t.carrier :=
+            type_closure O t _ _ hNeg (SatC.negUniv R C)
+          obtain ⟨t', hR, hnCt'⟩ := witness_exist O t R (Concept.neg C) hExistNeg
+          have hCt' : (canonical O).eval C t' := hAll t' hR
+          have hCmem : C ∈ t'.carrier := (ih t').mp hCt'
+          exfalso
+          rcases mem_xor_neg O t' C with ⟨_, hnnC⟩ | ⟨hCnotmem, _⟩
+          · exact hnnC hnCt'
+          · exact hCnotmem hCmem
+      · -- Backward: univ R C ∈ t.carrier → any successor satisfies C.
+        intro hUniv t' hR
+        have hCt' : C ∈ t'.carrier := hR C hUniv
+        exact (ih t').mpr hCt'
+
+/-- The canonical interpretation satisfies the ontology.  An axiom
+    ``(P, Q) ∈ O`` says ``P ⊑ Q`` semantically; at the canonical-model
+    level we use `type_closure` together with `SatC.axm` to propagate
+    ``P ∈ t.carrier`` to ``Q ∈ t.carrier``, and the truth lemma to
+    relate that to the canonical-model evaluation. -/
+theorem canonical_satisfies (O : Ontology) :
+    (canonical O).satisfies O := by
+  intro ax hAx t hP
+  -- From hP we recover ax.1 ∈ t.carrier via the truth lemma.
+  have h1 : ax.1 ∈ t.carrier := (canonical_eval_iff O t ax.1).mp hP
+  -- type_closure on the axiom moves us to ax.2 ∈ t.carrier.
+  have h2 : ax.2 ∈ t.carrier :=
+    type_closure O t _ _ h1 (SatC.axm ax.1 ax.2 hAx)
+  -- Truth lemma again.
+  exact (canonical_eval_iff O t ax.2).mpr h2
+
+/-- The two-element set ``{C, ¬D}`` is SatC-consistent whenever
+    ``C ⊑ D`` is *not* SatC-derivable.  Contrapositive: if every
+    finite-list witness consisting of ``C`` and ``¬D`` derives ``⊥``,
+    then so does ``conj C (neg D)`` (the minimal such witness), which
+    by case analysis on the two SatC-rules gives ``SatC O C D``. -/
+theorem c_negD_consistent (O : Ontology) (C D : Concept)
+    (hNotSat : ¬ SatC O C D) :
+    consistent O ({C, Concept.neg D} : Set Concept) := by
+  intro L hLin hSat
+  -- The shape of L's elements: each is either C or ¬D.
+  -- The SatC-derivation hSat : conjList L ⊑ bot.  Show: SatC O C D.
+  -- A clean way: from hSat we derive SatC O (conj C (neg D)) bot
+  -- (by structural manipulation), then use the propositional content
+  -- to extract SatC O C D.  We bypass the structural surgery by
+  -- using a uniform "weakening": SatC O (conj C (neg D)) (conjList L)
+  -- whenever every element of L is in {C, ¬D}.
+  -- Auxiliary: any list whose elements lie in {C, ¬D} has its
+  -- ``conjList`` SatC-derivable from ``C ⊓ ¬D``.  Inner recursive
+  -- argument so the hypothesis flows through.
+  have aux :
+      ∀ L' : List Concept,
+        (∀ E ∈ L', E ∈ ({C, Concept.neg D} : Set Concept)) →
+        SatC O (.conj C (.neg D)) (conjList L') := by
+    intro L'
+    induction L' with
+    | nil =>
+        intro _
+        unfold conjList
+        exact SatC.top _
+    | cons E Es ih =>
+        intro hL'in
+        unfold conjList
+        have hE_mem : E ∈ ({C, Concept.neg D} : Set Concept) :=
+          hL'in E List.mem_cons_self
+        -- E = C or E = ¬D
+        rcases hE_mem with hEC | hEnegD
+        · -- E = C
+          subst hEC
+          refine SatC.andI ?_ ?_
+          · exact SatC.andL _ _
+          · exact ih (fun F hF => hL'in F (List.mem_cons_of_mem _ hF))
+        · -- E ∈ {¬D}, which means E = ¬D (singleton)
+          have hEeq : E = Concept.neg D := hEnegD
+          subst hEeq
+          refine SatC.andI ?_ ?_
+          · exact SatC.andR _ _
+          · exact ih (fun F hF => hL'in F (List.mem_cons_of_mem _ hF))
+  have hCNeg : SatC O (.conj C (.neg D)) (conjList L) := aux L hLin
+  have hContra : SatC O (.conj C (.neg D)) Concept.bot :=
+    SatC.trans hCNeg hSat
+  -- Now: (C ⊓ ¬D) ⊑ ⊥ implies C ⊑ D.
+  -- Argument: take negNegE on D, em, etc.  Equivalently:
+  -- C ⊑ D iff C ⊓ ¬D ⊑ ⊥.  Backward direction:
+  --   Given C, by em on D: D or ¬D.
+  --   If D: done.
+  --   If ¬D: contradiction via hContra.
+  apply hNotSat
+  -- Goal: SatC O C D.
+  -- Strategy: C ⊑ C ⊓ ⊤ ⊑ C ⊓ (D ⊔ ¬D) ⊑ (C⊓D) ⊔ (C⊓¬D) ⊑ D.
+  -- The last step uses hContra to send (C⊓¬D) ⊑ ⊥ ⊑ D.
+  have step1 : SatC O C (.conj C (.disj D (.neg D))) :=
+    SatC.andI (SatC.refl C) (SatC.trans (SatC.top C) (SatC.em D))
+  have step2 : SatC O (.conj C (.disj D (.neg D))) D := by
+    refine SatC.trans (SatC.dist C D (Concept.neg D)) ?_
+    refine SatC.orE ?_ ?_
+    · exact SatC.andR _ _   -- conj C D ⊑ D
+    · exact SatC.trans hContra (SatC.bot D)
+  exact SatC.trans step1 step2
 
 /-- **Completeness of SatC**: every Tarskian-entailed subsumption is
     derivable.  Contradiction proof using the canonical model. -/
@@ -829,12 +1232,26 @@ theorem satC_complete (O : Ontology) (C D : Concept) :
     Entails O C D → SatC O C D := by
   intro hEnt
   by_contra hNot
-  -- The set ``{C, ¬D}`` is SatC-consistent under O (otherwise we
-  -- could derive ``C ⊓ ¬D ⊑ ⊥`` and hence ``C ⊑ D``).
-  -- Lindenbaum yields a type containing both, and the truth lemma
-  -- gives a model with ``C`` holding and ``D`` failing — contradicting
-  -- Entails.
-  sorry
+  -- ``{C, ¬D}`` is SatC-consistent (else SatC O C D).
+  have hCons : consistent O ({C, Concept.neg D} : Set Concept) :=
+    c_negD_consistent O C D hNot
+  -- Lindenbaum extends it to a type.
+  obtain ⟨t, htsub⟩ := lindenbaum O _ hCons
+  -- The canonical model satisfies O.
+  have hsat : (canonical O).satisfies O := canonical_satisfies O
+  -- t contains C, so eval C holds at t in the canonical model.
+  have hCmem : C ∈ t.carrier := htsub (by simp : C ∈ ({C, Concept.neg D} : Set _))
+  have hEvalC : (canonical O).eval C t := (canonical_eval_iff O t C).mpr hCmem
+  -- By Entails, eval D holds at t too.
+  have hEvalD : (canonical O).eval D t := hEnt _ hsat t hEvalC
+  -- So D ∈ t.carrier.
+  have hDmem : D ∈ t.carrier := (canonical_eval_iff O t D).mp hEvalD
+  -- But also ¬D ∈ t.carrier (from htsub), contradicting mem_xor_neg.
+  have hnDmem : Concept.neg D ∈ t.carrier :=
+    htsub (by simp : Concept.neg D ∈ ({C, Concept.neg D} : Set _))
+  rcases mem_xor_neg O t D with ⟨_, hnnD⟩ | ⟨hDnotmem, _⟩
+  · exact hnnD hnDmem
+  · exact hDnotmem hDmem
 
 -- ============================================================
 -- 5.  Connection back to `Sat`.
