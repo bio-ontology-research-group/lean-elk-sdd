@@ -512,6 +512,70 @@ theorem lindenbaum (O : Ontology) (Γ : Set Concept) (hΓ : consistent O Γ) :
   obtain ⟨M, hΓM, hMcons, hMmax⟩ := lindenbaum_max O Γ hΓ
   refine ⟨⟨M, hMcons, lindenbaum_max_closed O M hMcons hMmax⟩, hΓM⟩
 
+-- ------------------------------------------------------------------
+-- Helper lemmas about types: membership of ⊤ / ⊥; behaviour under ¬,
+-- ⊓, ⊔.  These reduce the propositional cases of the truth lemma to
+-- structural facts about SatC.
+-- ------------------------------------------------------------------
+
+/-- ⊥ is never in the carrier of a type. -/
+theorem bot_not_mem (O : Ontology) (t : Type_ O) :
+    Concept.bot ∉ t.carrier := by
+  intro hbot
+  -- The witness list [bot] is in t.carrier (singleton), and
+  -- conjList [bot] = conj bot top ⊑ bot via andL.
+  apply t.cons [Concept.bot]
+  · intro C hC
+    simp at hC; exact hC ▸ hbot
+  · -- SatC O (conj bot top) bot
+    show SatC O (conjList [Concept.bot]) Concept.bot
+    unfold conjList
+    exact SatC.trans (SatC.andL _ _) (SatC.refl _)
+
+/-- For any concept ``C``, a type ``t`` contains exactly one of
+    ``C`` and ``¬C``.  Combines maximality with non-contradiction. -/
+theorem mem_xor_neg (O : Ontology) (t : Type_ O) (C : Concept) :
+    (C ∈ t.carrier ∧ Concept.neg C ∉ t.carrier)
+      ∨ (C ∉ t.carrier ∧ Concept.neg C ∈ t.carrier) := by
+  rcases t.maximal C with hC | hnC
+  · left
+    refine ⟨hC, ?_⟩
+    intro hnC
+    apply t.cons [C, Concept.neg C]
+    · intro D hD
+      simp at hD
+      rcases hD with rfl | rfl
+      · exact hC
+      · exact hnC
+    · -- SatC O (conj C (conj (neg C) top)) bot
+      show SatC O (conjList [C, Concept.neg C]) Concept.bot
+      unfold conjList
+      -- Goal: conj C (conj (neg C) top) ⊑ bot
+      refine SatC.trans ?_ (SatC.nc C)
+      -- Need: conj C (conj (neg C) top) ⊑ conj C (neg C)
+      refine SatC.andI ?_ ?_
+      · exact SatC.andL _ _
+      · exact SatC.trans (SatC.andR _ _) (SatC.andL _ _)
+  · -- ¬C ∈ t.carrier; symmetric reasoning, by classical case on C
+    by_cases hC : C ∈ t.carrier
+    · -- both hold — derive inconsistency exactly as above
+      left
+      refine ⟨hC, ?_⟩
+      intro hnC'
+      apply t.cons [C, Concept.neg C]
+      · intro D hD
+        simp at hD
+        rcases hD with rfl | rfl
+        · exact hC
+        · exact hnC'
+      · show SatC O (conjList [C, Concept.neg C]) Concept.bot
+        unfold conjList
+        refine SatC.trans ?_ (SatC.nc C)
+        refine SatC.andI ?_ ?_
+        · exact SatC.andL _ _
+        · exact SatC.trans (SatC.andR _ _) (SatC.andL _ _)
+    · exact Or.inr ⟨hC, hnC⟩
+
 /-- **Witness lemma for ∃R.·**: if ``∃R.C`` is in type ``t``, then
     there is a successor type ``t'`` with ``C ∈ t'`` and the role
     edge ``R(t, t')`` in the canonical model. -/
@@ -526,16 +590,238 @@ theorem witness_exist
   -- ``(canonical O).ext_role R t t'`` and ``C ∈ t'.carrier``.
   sorry
 
+/-- ⊤ is always in the carrier of a type.  Provable from
+    consistency + the `SatC.top` rule.  Specifically: if ⊤ ∉ t,
+    then by maximality, ¬⊤ ∈ t — and ¬⊤ ⊑ ⊥ is SatC-derivable,
+    contradicting consistency. -/
+theorem top_mem (O : Ontology) (t : Type_ O) :
+    Concept.top ∈ t.carrier := by
+  by_contra hne
+  rcases t.maximal Concept.top with h | h
+  · exact hne h
+  · -- ¬⊤ ∈ t.carrier ⇒ consistency of [¬⊤] under SatC fails
+    apply t.cons [Concept.neg Concept.top]
+    · intro C hC
+      simp at hC; exact hC ▸ h
+    · -- SatC O (conj (neg top) top) bot
+      show SatC O (conjList [Concept.neg Concept.top]) Concept.bot
+      unfold conjList
+      -- Goal: conj (neg top) top ⊑ bot
+      -- ¬⊤ ⊑ ⊥ via:
+      -- ¬⊤ ⊑ ⊤ via SatC.top
+      -- (¬⊤ ∧ ⊤) ⊑ ¬⊤ ∧ ⊤ ≡ ⊥ via nc: nc needs ¬X ∧ X ⊑ ⊥
+      -- Here X = ⊤, so nc ⊤ : (⊤ ∧ ¬⊤) ⊑ ⊥, ie (conj top (neg top)) ⊑ ⊥
+      refine SatC.trans ?_ (SatC.nc Concept.top)
+      -- (conj (neg top) top) ⊑ (conj top (neg top))
+      exact satC_conj_comm _ _ _
+
 /-- **Truth lemma**: in the canonical model, a concept holds at a
-    type iff it belongs to the type's carrier set. -/
+    type iff it belongs to the type's carrier set.
+
+    The propositional cases (atom, top, bot, neg, conj, disj) are
+    proved here using the helper lemmas above.  The role-axis cases
+    (exist, univ) depend on `witness_exist` which carries its own
+    `sorry`; they are stated as the corresponding `sorry`s in their
+    branches of the induction. -/
 theorem canonical_eval_iff
     (O : Ontology) (t : Type_ O) (C : Concept) :
     (canonical O).eval C t ↔ C ∈ t.carrier := by
-  -- Standard induction on C.  The Boolean cases follow from
-  -- maximality of t; the role-axis cases use `witness_exist` for
-  -- ∃R.· and the definition of `ext_role` for ∀R.·.  The full proof
-  -- is mechanical but lengthy.
-  sorry
+  induction C generalizing t with
+  | atom n =>
+      -- (canonical O).ext_concept n t = atom n ∈ t.carrier
+      exact Iff.rfl
+  | top =>
+      -- True iff top ∈ t.carrier (which is always true)
+      simp [canonical, Interp.eval]
+      exact top_mem O t
+  | bot =>
+      -- False iff bot ∈ t.carrier (which is never true)
+      simp [canonical, Interp.eval]
+      exact fun h => (bot_not_mem O t h).elim
+  | neg C ih =>
+      -- ¬eval C t iff neg C ∈ t.carrier
+      show (¬ (canonical O).eval C t) ↔ Concept.neg C ∈ t.carrier
+      rw [ih]
+      rcases mem_xor_neg O t C with ⟨hC, hnC⟩ | ⟨hC, hnC⟩
+      · constructor
+        · intro h; exact absurd hC h
+        · intro h; exact absurd h hnC
+      · constructor
+        · intro _; exact hnC
+        · intro _; exact hC
+  | conj A B ihA ihB =>
+      -- eval (conj A B) t = eval A t ∧ eval B t  iff  conj A B ∈ t.carrier
+      show ((canonical O).eval A t ∧ (canonical O).eval B t) ↔
+           Concept.conj A B ∈ t.carrier
+      rw [ihA, ihB]
+      constructor
+      · rintro ⟨hA, hB⟩
+        -- From hA, hB derive (conj A B) ∈ t.carrier
+        -- By maximality, (conj A B) ∈ t.carrier ∨ neg (conj A B) ∈ t.carrier.
+        -- The second case is inconsistent with hA, hB via andI.
+        rcases t.maximal (Concept.conj A B) with hMem | hNeg
+        · exact hMem
+        · -- inconsistent
+          exfalso
+          apply t.cons [A, B, Concept.neg (Concept.conj A B)]
+          · intro D hD
+            simp at hD
+            rcases hD with rfl | rfl | rfl
+            · exact hA
+            · exact hB
+            · exact hNeg
+          · -- SatC O (conj A (conj B (conj (neg (conj A B)) top))) bot
+            show SatC O (conjList [A, B, Concept.neg (Concept.conj A B)])
+                       Concept.bot
+            unfold conjList
+            -- Goal: conj A (conj B (conj (neg (conj A B)) top)) ⊑ bot
+            -- Use SatC.nc on (conj A B): (conj A B ∧ neg (conj A B)) ⊑ bot
+            refine SatC.trans ?_ (SatC.nc (Concept.conj A B))
+            -- Need: conj A (conj B (conj (neg (conj A B)) top)) ⊑
+            --       conj (conj A B) (neg (conj A B))
+            refine SatC.andI ?_ ?_
+            · -- conj A B
+              refine SatC.andI ?_ ?_
+              · exact SatC.andL _ _
+              · exact SatC.trans (SatC.andR _ _) (SatC.andL _ _)
+            · -- neg (conj A B)
+              refine SatC.trans (SatC.andR _ _) ?_
+              refine SatC.trans (SatC.andR _ _) ?_
+              exact SatC.andL _ _
+      · intro hConj
+        constructor
+        · -- A ∈ t.carrier
+          by_contra hAne
+          rcases t.maximal A with hAmem | hAneg
+          · exact hAne hAmem
+          · -- both (conj A B) ∈ t and ¬A ∈ t: inconsistent
+            apply t.cons [Concept.conj A B, Concept.neg A]
+            · intro D hD
+              simp at hD
+              rcases hD with rfl | rfl
+              · exact hConj
+              · exact hAneg
+            · show SatC O (conjList [Concept.conj A B, Concept.neg A])
+                         Concept.bot
+              unfold conjList
+              -- conj (conj A B) (conj (neg A) top) ⊑ bot
+              refine SatC.trans ?_ (SatC.nc A)
+              -- Need: ⊑ conj A (neg A)
+              refine SatC.andI ?_ ?_
+              · -- conj (conj A B) (conj (neg A) top) ⊑ A
+                exact SatC.trans (SatC.andL _ _) (SatC.andL _ _)
+              · -- ⊑ neg A
+                exact SatC.trans (SatC.andR _ _) (SatC.andL _ _)
+        · -- B ∈ t.carrier — symmetric
+          by_contra hBne
+          rcases t.maximal B with hBmem | hBneg
+          · exact hBne hBmem
+          · apply t.cons [Concept.conj A B, Concept.neg B]
+            · intro D hD
+              simp at hD
+              rcases hD with rfl | rfl
+              · exact hConj
+              · exact hBneg
+            · show SatC O (conjList [Concept.conj A B, Concept.neg B])
+                         Concept.bot
+              unfold conjList
+              refine SatC.trans ?_ (SatC.nc B)
+              refine SatC.andI ?_ ?_
+              · -- ⊑ B
+                exact SatC.trans (SatC.andL _ _) (SatC.andR _ _)
+              · -- ⊑ neg B
+                exact SatC.trans (SatC.andR _ _) (SatC.andL _ _)
+  | disj A B ihA ihB =>
+      -- eval (disj A B) t = eval A t ∨ eval B t  iff  disj A B ∈ t.carrier
+      show ((canonical O).eval A t ∨ (canonical O).eval B t) ↔
+           Concept.disj A B ∈ t.carrier
+      rw [ihA, ihB]
+      constructor
+      · rintro (hA | hB)
+        · -- A ∈ t.carrier → disj A B ∈ t.carrier
+          rcases t.maximal (Concept.disj A B) with hMem | hNeg
+          · exact hMem
+          · exfalso
+            apply t.cons [A, Concept.neg (Concept.disj A B)]
+            · intro D hD
+              simp at hD
+              rcases hD with rfl | rfl
+              · exact hA
+              · exact hNeg
+            · show SatC O (conjList [A, Concept.neg (Concept.disj A B)])
+                         Concept.bot
+              unfold conjList
+              -- conj A (conj (neg (disj A B)) top) ⊑ bot
+              -- Use SatC.nc on (disj A B):
+              refine SatC.trans ?_ (SatC.nc (Concept.disj A B))
+              -- Need ⊑ conj (disj A B) (neg (disj A B))
+              refine SatC.andI ?_ ?_
+              · -- ⊑ disj A B via A
+                exact SatC.trans (SatC.andL _ _) (SatC.orL _ _)
+              · exact SatC.trans (SatC.andR _ _) (SatC.andL _ _)
+        · -- B case, symmetric
+          rcases t.maximal (Concept.disj A B) with hMem | hNeg
+          · exact hMem
+          · exfalso
+            apply t.cons [B, Concept.neg (Concept.disj A B)]
+            · intro D hD
+              simp at hD
+              rcases hD with rfl | rfl
+              · exact hB
+              · exact hNeg
+            · show SatC O (conjList [B, Concept.neg (Concept.disj A B)])
+                         Concept.bot
+              unfold conjList
+              refine SatC.trans ?_ (SatC.nc (Concept.disj A B))
+              refine SatC.andI ?_ ?_
+              · exact SatC.trans (SatC.andL _ _) (SatC.orR _ _)
+              · exact SatC.trans (SatC.andR _ _) (SatC.andL _ _)
+      · intro hDisj
+        -- disj A B ∈ t.carrier → A ∈ t.carrier ∨ B ∈ t.carrier
+        -- By classical case-analysis using maximality on A and B.
+        by_contra hNeither
+        push_neg at hNeither
+        obtain ⟨hAne, hBne⟩ := hNeither
+        -- Both A, B ∉ t.carrier; by maximality ¬A ∈ t, ¬B ∈ t.
+        rcases t.maximal A with hA | hnA
+        · exact hAne hA
+        rcases t.maximal B with hB | hnB
+        · exact hBne hB
+        -- Now disj A B ∈ t, ¬A ∈ t, ¬B ∈ t.  Derive bot:
+        -- conj (disj A B) (conj ¬A ¬B) ⊑ bot
+        -- = (disj A B) ∧ ¬(disj A B) [via deMorganO']
+        apply t.cons [Concept.disj A B, Concept.neg A, Concept.neg B]
+        · intro D hD
+          simp at hD
+          rcases hD with rfl | rfl | rfl
+          · exact hDisj
+          · exact hnA
+          · exact hnB
+        · show SatC O (conjList [Concept.disj A B,
+                                  Concept.neg A,
+                                  Concept.neg B]) Concept.bot
+          unfold conjList
+          -- Goal: conj (disj A B) (conj (neg A) (conj (neg B) top)) ⊑ bot
+          refine SatC.trans ?_ (SatC.nc (Concept.disj A B))
+          -- Need: ⊑ conj (disj A B) (neg (disj A B))
+          refine SatC.andI ?_ ?_
+          · exact SatC.andL _ _
+          · -- conj (disj A B) (conj (neg A) (conj (neg B) top)) ⊑ neg (disj A B)
+            -- via deMorganO': conj (neg A) (neg B) ⊑ neg (disj A B)
+            refine SatC.trans ?_ (SatC.deMorganO' A B)
+            -- Need: ⊑ conj (neg A) (neg B)
+            refine SatC.andI ?_ ?_
+            · exact SatC.trans (SatC.andR _ _) (SatC.andL _ _)
+            · refine SatC.trans (SatC.andR _ _) ?_
+              refine SatC.trans (SatC.andR _ _) ?_
+              exact SatC.andL _ _
+  | exist R C ih =>
+      -- Role-axis case: needs witness_exist.  Stated as sorry per
+      -- "best-effort" scope.
+      sorry
+  | univ R C ih =>
+      -- Role-axis case: dual to exist.  Stated as sorry.
+      sorry
 
 /-- **Completeness of SatC**: every Tarskian-entailed subsumption is
     derivable.  Contradiction proof using the canonical model. -/
