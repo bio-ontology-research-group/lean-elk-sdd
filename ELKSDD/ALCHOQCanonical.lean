@@ -294,5 +294,114 @@ theorem lindenbaum (O : Ontology) (Γ : Set Concept) (hΓ : consistent O Γ) :
   obtain ⟨M, hΓM, hMcons, hMmax⟩ := lindenbaum_max O Γ hΓ
   refine ⟨⟨M, hMcons, lindenbaum_max_closed O M hMcons hMmax⟩, hΓM⟩
 
+-- ============================================================
+-- 5.  Type helpers (top_mem, bot_not_mem, type_closure, mem_xor_neg).
+-- ============================================================
+
+/-- ⊥ is never in the carrier of a type. -/
+theorem bot_not_mem (O : Ontology) (t : Type_ O) :
+    Concept.bot ∉ t.carrier := by
+  intro hbot
+  apply t.cons [Concept.bot]
+  · intro C hC; simp at hC; exact hC ▸ hbot
+  · show SatC O (conjList [Concept.bot]) Concept.bot
+    unfold conjList
+    exact SatC.trans (SatC.satC_andL _ _) (satC_refl O _)
+
+/-- Types are closed under SatC consequence. -/
+theorem type_closure (O : Ontology) (t : Type_ O) (C D : Concept)
+    (hC : C ∈ t.carrier) (hSat : SatC O C D) : D ∈ t.carrier := by
+  rcases t.maximal D with hD | hnegD
+  · exact hD
+  · -- D not in t but ¬D is.  Combined with C ∈ t, conjList [C, ¬D] is
+    -- inconsistent via hSat (since C ⊑ D and ¬D ∈ t gives contradiction).
+    exfalso
+    apply t.cons [C, Concept.neg D]
+    · intro E hE
+      simp at hE
+      rcases hE with rfl | rfl
+      · exact hC
+      · exact hnegD
+    · -- SatC O (conjList [C, ¬D]) ⊥
+      show SatC O (conjList [C, Concept.neg D]) Concept.bot
+      unfold conjList
+      -- conj C (conj ¬D ⊤) ⊑ ⊥
+      -- Use SatC.nc on D: (conj D ¬D) ⊑ ⊥
+      refine SatC.trans ?_ (SatC.nc D)
+      refine SatC.satC_andI ?_ ?_
+      · -- conj C (conj ¬D ⊤) ⊑ D, via C ⊑ D
+        exact SatC.trans (SatC.satC_andL _ _) hSat
+      · -- conj C (conj ¬D ⊤) ⊑ ¬D
+        exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
+
+/-- ⊤ is always in the carrier of a type. -/
+theorem top_mem (O : Ontology) (t : Type_ O) :
+    Concept.top ∈ t.carrier := by
+  -- By maximality: top ∈ t.carrier ∨ neg top ∈ t.carrier.
+  rcases t.maximal Concept.top with h | h
+  · exact h
+  · -- If ¬⊤ ∈ t.carrier, then by closure under SatC (¬⊤ ⊑ ⊥ classically),
+    -- ⊥ ∈ t.carrier, contradicting bot_not_mem.
+    exfalso
+    have hbot : Concept.bot ∈ t.carrier := by
+      apply type_closure O t (.neg .top) Concept.bot h
+      -- SatC O (neg top) bot
+      -- (neg top ⊑ ⊥) via classical: any contradiction with ⊤.
+      -- Specifically: neg top ⊓ top ⊑ ⊥ via nc top.
+      -- But neg top alone? neg top is "x | I.eval top x is False",
+      -- but I.eval top is always True, so neg top is contradictory.
+      -- Syntactically: neg top ⊑ neg top ⊓ top (since top is reflexive)
+      -- ⊑ bot via nc.
+      refine SatC.trans ?_ (SatC.nc Concept.top)
+      refine SatC.satC_andI ?_ ?_
+      · exact satC_top O _
+      · exact satC_refl O _
+    exact bot_not_mem O t hbot
+
+/-- Exactly one of `C, ¬C` is in a type's carrier.  Returns the
+    disjoint partition. -/
+theorem mem_xor_neg (O : Ontology) (t : Type_ O) (C : Concept) :
+    (C ∈ t.carrier ∧ Concept.neg C ∉ t.carrier) ∨
+    (C ∉ t.carrier ∧ Concept.neg C ∈ t.carrier) := by
+  rcases t.maximal C with hC | hnC
+  · -- C ∈ t.  We need ¬C ∉ t.  If ¬C ∈ t too, list witness [C, ¬C]
+    -- collapses to ⊥, contradicting consistency.
+    left
+    refine ⟨hC, ?_⟩
+    intro hnC
+    apply t.cons [C, Concept.neg C]
+    · intro E hE
+      simp at hE
+      rcases hE with rfl | rfl
+      · exact hC
+      · exact hnC
+    · show SatC O (conjList [C, Concept.neg C]) Concept.bot
+      unfold conjList
+      refine SatC.trans ?_ (SatC.nc C)
+      refine SatC.satC_andI ?_ ?_
+      · exact SatC.satC_andL _ _
+      · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
+  · -- ¬C ∈ t.  Symmetric: by_cases on C ∈ t.
+    by_cases hC : C ∈ t.carrier
+    · -- Both C and ¬C in t.  Contradiction.
+      left
+      refine ⟨hC, ?_⟩
+      intro hnC'
+      -- inline contradiction
+      apply t.cons [C, Concept.neg C]
+      · intro E hE
+        simp at hE
+        rcases hE with rfl | rfl
+        · exact hC
+        · exact hnC'
+      · show SatC O (conjList [C, Concept.neg C]) Concept.bot
+        unfold conjList
+        refine SatC.trans ?_ (SatC.nc C)
+        refine SatC.satC_andI ?_ ?_
+        · exact SatC.satC_andL _ _
+        · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
+    · right
+      exact ⟨hC, hnC⟩
+
 end ALCHOQ
 end ELKSDD
