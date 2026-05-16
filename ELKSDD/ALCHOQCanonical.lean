@@ -3,22 +3,10 @@
   ----------------------------
   Canonical-model construction for the full ALCHOQ description logic.
 
-  This file extends the consequence-based saturation calculus
-  `ALCHOQ.SatC` (whose new rules — `atLeast_to_exist`,
-  `hasSelf_to_exist`, `hasSelf_with_univ`, the cardinality
-  dualities, etc. — are already proved sound in
-  `ELKSDD.ALCHOQCompleteness`) with a canonical-model construction
-  in the style of Horrocks--Sattler--Tobies 2000 lifted to Lean 4.
-
-  We progress section by section.  At any point the file should
-  build cleanly (no `sorry`s in committed shape); residual cases
-  are flagged as open theorems and we then close them by inductive
-  extension.
-
-  Axiom budget: only the standard Lean foundational axioms
-  (propext, Classical.choice, Quot.sound), inherited from
-  `ELKSDD.Completeness` (which provides the ALC base case) and
-  `ELKSDD.ALCHOQCompleteness`.
+  Built section by section.  At any committed state the file builds
+  cleanly with no `sorry`s; in-progress sections are excluded from
+  the export until they are closed.  Axiom budget: only the standard
+  Lean foundational axioms.
 -/
 
 import ELKSDD.ALCHOQCompleteness
@@ -33,13 +21,84 @@ namespace ALCHOQ
 open Classical
 
 -- ============================================================
--- 1.  Consistency and types (SatC-relative, ALCHOQ syntax).
+-- 1.  Helpers and structural SatC lemmas.
 -- ============================================================
 
-/-- `conjList` reuses the ALC definition pointwise on ALCHOQ concepts. -/
+/-- ALCHOQ-side `conjList`: ⋀L collapsed to nested `conj`s. -/
 def conjList : List Concept → Concept
   | []      => Concept.top
   | C :: Cs => Concept.conj C (conjList Cs)
+
+theorem satC_refl (O : Ontology) (C : Concept) : SatC O C C :=
+  SatC.ofSat (Sat.refl C)
+
+theorem satC_top (O : Ontology) (C : Concept) : SatC O C Concept.top :=
+  SatC.ofSat (Sat.top C)
+
+theorem satC_bot (O : Ontology) (C : Concept) : SatC O Concept.bot C :=
+  SatC.ofSat (Sat.bot C)
+
+theorem satC_orL (O : Ontology) (C D : Concept) :
+    SatC O C (.disj C D) := SatC.ofSat (Sat.orL C D)
+
+theorem satC_orR (O : Ontology) (C D : Concept) :
+    SatC O D (.disj C D) := SatC.ofSat (Sat.orR C D)
+
+/-- Strengthen the left side: `SatC O C E → SatC O (C ⊓ D) E`. -/
+theorem satC_weak_left (O : Ontology) {C D E : Concept}
+    (h : SatC O C E) : SatC O (.conj C D) E :=
+  SatC.trans (SatC.satC_andL C D) h
+
+/-- Strengthen the right side: `SatC O D E → SatC O (C ⊓ D) E`. -/
+theorem satC_weak_right (O : Ontology) {C D E : Concept}
+    (h : SatC O D E) : SatC O (.conj C D) E :=
+  SatC.trans (SatC.satC_andR C D) h
+
+theorem satC_conj_comm (O : Ontology) (C D : Concept) :
+    SatC O (.conj C D) (.conj D C) :=
+  SatC.satC_andI (SatC.satC_andR C D) (SatC.satC_andL C D)
+
+/-- Conjunction is associative (one direction). -/
+theorem satC_conj_assoc (O : Ontology) (A B C : Concept) :
+    SatC O (.conj A (.conj B C)) (.conj (.conj A B) C) :=
+  SatC.satC_andI
+    (SatC.satC_andI (SatC.satC_andL A _)
+                    (SatC.trans (SatC.satC_andR A _) (SatC.satC_andL B C)))
+    (SatC.trans (SatC.satC_andR A _) (SatC.satC_andR B C))
+
+/-- ⊤ is right-unit of ⊓ under SatC. -/
+theorem satC_conj_top_right (O : Ontology) (C : Concept) :
+    SatC O (.conj C .top) C := SatC.satC_andL _ _
+
+theorem satC_to_conj_top_right (O : Ontology) (C : Concept) :
+    SatC O C (.conj C .top) := SatC.satC_andI (satC_refl O C) (satC_top O C)
+
+/-- `conjList (L₁ ++ L₂)` ⊑ `conj (conjList L₁) (conjList L₂)`. -/
+theorem satC_conjList_append_to_split
+    (O : Ontology) :
+    ∀ L₁ L₂ : List Concept,
+      SatC O (conjList (L₁ ++ L₂)) (.conj (conjList L₁) (conjList L₂))
+  | [], L₂ => by
+      unfold conjList
+      -- Goal: conjList L₂ ⊑ conj top (conjList L₂)
+      exact SatC.satC_andI (satC_top O _) (satC_refl O _)
+  | C :: Cs, L₂ => by
+      have ih := satC_conjList_append_to_split O Cs L₂
+      show SatC O (conjList (C :: (Cs ++ L₂)))
+                 (.conj (conjList (C :: Cs)) (conjList L₂))
+      show SatC O (.conj C (conjList (Cs ++ L₂)))
+                 (.conj (.conj C (conjList Cs)) (conjList L₂))
+      refine SatC.satC_andI ?_ ?_
+      · refine SatC.satC_andI ?_ ?_
+        · exact SatC.satC_andL _ _
+        · exact SatC.trans (SatC.satC_andR _ _)
+                  (SatC.trans ih (SatC.satC_andL _ _))
+      · exact SatC.trans (SatC.satC_andR _ _)
+                (SatC.trans ih (SatC.satC_andR _ _))
+
+-- ============================================================
+-- 2.  Consistency and types.
+-- ============================================================
 
 /-- A concept set ``Γ`` is *SatC-consistent under O* if SatC does not
     derive ``⨅L ⊑ ⊥`` for any finite list ``L`` of elements of ``Γ``. -/
@@ -54,21 +113,186 @@ structure Type_ (O : Ontology) where
   maximal : ∀ C : Concept, C ∈ carrier ∨ Concept.neg C ∈ carrier
 
 -- ============================================================
--- 2.  Canonical interpretation skeleton.
---     `ext_role` uses the standard Hintikka clause; `ext_ind` is
---     the per-nominal designated type-representative.
+-- 3.  Canonical interpretation skeleton.
 -- ============================================================
 
-/-- `ext_role` definition lifted from ALC: every universal at `t`
-    must propagate to `t'`.  We additionally include the self-loop
-    case for `hasSelf`. -/
+/-- Canonical successor relation: every universal at `t` propagates,
+    *and* self-loops correspond to `hasSelf` membership.  The
+    self-loop clause is essential for the hasSelf-truth-lemma. -/
 def canonicalRole (O : Ontology) (R : Nat) (t t' : Type_ O) : Prop :=
   (∀ C, Concept.univ R C ∈ t.carrier → C ∈ t'.carrier) ∧
   (t' = t → Concept.hasSelf R ∈ t.carrier)
 
 -- ============================================================
--- 3.  Embedding into ALC canonical model — used for sanity checks.
+-- 4.  Chain-bound + Lindenbaum machinery.
 -- ============================================================
+
+theorem chain_finite_dominates_ALCHOQ {α : Type}
+    (c : Set (Set α)) (hchain : IsChain (· ⊆ ·) c)
+    (hnonempty : c.Nonempty) :
+    ∀ L : List α, (∀ a ∈ L, a ∈ ⋃₀ c) →
+      ∃ Δ ∈ c, ∀ a ∈ L, a ∈ Δ := by
+  intro L
+  induction L with
+  | nil =>
+      intro _
+      obtain ⟨Δ₀, hΔ₀⟩ := hnonempty
+      refine ⟨Δ₀, hΔ₀, ?_⟩
+      intro a ha; exact absurd ha (List.not_mem_nil)
+  | cons a L ih =>
+      intro hAll
+      have hAllRest : ∀ b ∈ L, b ∈ ⋃₀ c := by
+        intro b hb; exact hAll b (List.mem_cons_of_mem _ hb)
+      obtain ⟨Δ₁, hΔ₁c, hΔ₁L⟩ := ih hAllRest
+      have ha : a ∈ ⋃₀ c := hAll a List.mem_cons_self
+      obtain ⟨Δ₂, hΔ₂c, hΔ₂a⟩ := ha
+      rcases hchain.total hΔ₁c hΔ₂c with h12 | h21
+      · refine ⟨Δ₂, hΔ₂c, ?_⟩
+        intro b hb
+        cases List.mem_cons.mp hb with
+        | inl heq => exact heq ▸ hΔ₂a
+        | inr hbL => exact h12 (hΔ₁L b hbL)
+      · refine ⟨Δ₁, hΔ₁c, ?_⟩
+        intro b hb
+        cases List.mem_cons.mp hb with
+        | inl heq => exact heq ▸ (h21 hΔ₂a)
+        | inr hbL => exact hΔ₁L b hbL
+
+/-- Chain-union of consistent sets is consistent. -/
+theorem consistent_chain_union (O : Ontology)
+    (c : Set (Set Concept)) (hAllCons : ∀ Δ ∈ c, consistent O Δ)
+    (hchain : IsChain (· ⊆ ·) c) (hnonempty : c.Nonempty) :
+    consistent O (⋃₀ c) := by
+  intro L hLin hSat
+  obtain ⟨Δ, hΔc, hΔL⟩ :=
+    chain_finite_dominates_ALCHOQ c hchain hnonempty L hLin
+  exact hAllCons Δ hΔc L hΔL hSat
+
+/-- Lindenbaum part 1: every consistent set extends to a
+    maximal-consistent set (Zorn). -/
+theorem lindenbaum_max (O : Ontology) (Γ : Set Concept)
+    (hΓ : consistent O Γ) :
+    ∃ M : Set Concept, Γ ⊆ M ∧ consistent O M ∧
+      Maximal (· ∈ {Δ | consistent O Δ}) M := by
+  classical
+  have key :
+      ∃ M, Γ ⊆ M ∧ Maximal (· ∈ {Δ | consistent O Δ}) M := by
+    apply zorn_subset_nonempty (S := {Δ | consistent O Δ})
+    · intro c hcS hchain hne
+      refine ⟨⋃₀ c, ?_, ?_⟩
+      · exact consistent_chain_union O c (fun Δ hΔ => hcS hΔ) hchain hne
+      · intro Δ hΔ x hx; exact ⟨Δ, hΔ, hx⟩
+    · exact hΓ
+  obtain ⟨M, hΓM, hMmax⟩ := key
+  exact ⟨M, hΓM, hMmax.prop, hMmax⟩
+
+/-- Bridge: SatC-derive `conjList L` from `C ⊓ conjList (L.filter (·≠C))`. -/
+theorem satC_conj_filter_implies_list
+    (O : Ontology) (C : Concept) :
+    ∀ L : List Concept,
+      SatC O (.conj C (conjList (L.filter (· ≠ C)))) (conjList L)
+  | [] => by
+      unfold conjList
+      exact satC_top O _
+  | E :: Es => by
+      have ih := satC_conj_filter_implies_list O C Es
+      by_cases hEC : E = C
+      · have hf : (E :: Es).filter (· ≠ C) = Es.filter (· ≠ C) := by
+          simp [hEC]
+        rw [hf]
+        show SatC O (.conj C (conjList (Es.filter (· ≠ C))))
+                   (.conj E (conjList Es))
+        refine SatC.satC_andI ?_ ?_
+        · rw [hEC]; exact SatC.satC_andL _ _
+        · exact ih
+      · have hf : (E :: Es).filter (· ≠ C)
+                = E :: Es.filter (· ≠ C) := by
+          simp [hEC]
+        rw [hf]
+        show SatC O (.conj C (.conj E (conjList (Es.filter (· ≠ C)))))
+                   (.conj E (conjList Es))
+        refine SatC.satC_andI ?_ ?_
+        · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andL _ _)
+        · refine SatC.trans ?_ ih
+          refine SatC.satC_andI ?_ ?_
+          · exact SatC.satC_andL _ _
+          · exact SatC.trans (SatC.satC_andR _ _) (SatC.satC_andR _ _)
+
+/-- Lindenbaum part 2: a maximal-consistent set contains either ``C``
+    or ``¬C`` for every concept. -/
+theorem lindenbaum_max_closed
+    (O : Ontology) (M : Set Concept)
+    (hM : consistent O M)
+    (hMmax : Maximal (· ∈ {Δ | consistent O Δ}) M) :
+    ∀ C : Concept, C ∈ M ∨ Concept.neg C ∈ M := by
+  classical
+  intro C
+  by_contra hne
+  push_neg at hne
+  obtain ⟨hCnotM, hnotnegC⟩ := hne
+  have hMC_incons : ¬ consistent O (insert C M) := by
+    intro hMC
+    have hsub : M ⊆ insert C M := Set.subset_insert C M
+    have : insert C M ⊆ M := hMmax.le_of_ge hMC hsub
+    exact hCnotM (this (Set.mem_insert C M))
+  have hMnegC_incons : ¬ consistent O (insert (Concept.neg C) M) := by
+    intro hMnegC
+    have hsub : M ⊆ insert (Concept.neg C) M := Set.subset_insert _ M
+    have : insert (Concept.neg C) M ⊆ M := hMmax.le_of_ge hMnegC hsub
+    exact hnotnegC (this (Set.mem_insert (Concept.neg C) M))
+  unfold consistent at hMC_incons hMnegC_incons
+  push_neg at hMC_incons hMnegC_incons
+  obtain ⟨L_C, hL_C_in, hL_C_sat⟩ := hMC_incons
+  obtain ⟨L_N, hL_N_in, hL_N_sat⟩ := hMnegC_incons
+  refine hM (L_C.filter (· ≠ C) ++ L_N.filter (· ≠ Concept.neg C))
+    ?inM ?satBot
+  case inM =>
+    intro D hD
+    rcases List.mem_append.mp hD with h1 | h2
+    · obtain ⟨hin, _⟩ := List.mem_filter.mp h1
+      rcases hL_C_in D hin with rfl | hM'
+      · simp at h1
+      · exact hM'
+    · obtain ⟨hin, _⟩ := List.mem_filter.mp h2
+      rcases hL_N_in D hin with rfl | hM'
+      · simp at h2
+      · exact hM'
+  case satBot =>
+    have hCs : SatC O (.conj C (conjList (L_C.filter (· ≠ C))))
+                       Concept.bot :=
+      SatC.trans (satC_conj_filter_implies_list O C L_C) hL_C_sat
+    have hCn : SatC O (.conj (.neg C)
+                             (conjList (L_N.filter (· ≠ Concept.neg C))))
+                       Concept.bot :=
+      SatC.trans (satC_conj_filter_implies_list O (.neg C) L_N) hL_N_sat
+    set Ls := L_C.filter (· ≠ C)
+    set Ln := L_N.filter (· ≠ Concept.neg C)
+    refine SatC.trans (satC_conjList_append_to_split O Ls Ln) ?_
+    have hem :
+        SatC O (.conj (conjList Ls) (conjList Ln))
+               (.disj
+                  (.conj (.conj (conjList Ls) (conjList Ln)) C)
+                  (.conj (.conj (conjList Ls) (conjList Ln)) (.neg C))) := by
+      refine SatC.trans ?_ (SatC.dist _ C (.neg C))
+      refine SatC.satC_andI (satC_refl O _) ?_
+      exact SatC.trans (satC_top O _) (SatC.em C)
+    refine SatC.trans hem ?_
+    refine SatC.satC_orE ?_ ?_
+    · refine SatC.trans ?_ hCs
+      refine SatC.satC_andI ?_ ?_
+      · exact SatC.satC_andR _ _
+      · exact SatC.trans (SatC.satC_andL _ _) (SatC.satC_andL _ _)
+    · refine SatC.trans ?_ hCn
+      refine SatC.satC_andI ?_ ?_
+      · exact SatC.satC_andR _ _
+      · exact SatC.trans (SatC.satC_andL _ _) (SatC.satC_andR _ _)
+
+/-- **Lindenbaum lemma** (standard form): every consistent set extends
+    to a type. -/
+theorem lindenbaum (O : Ontology) (Γ : Set Concept) (hΓ : consistent O Γ) :
+    ∃ t : Type_ O, Γ ⊆ t.carrier := by
+  obtain ⟨M, hΓM, hMcons, hMmax⟩ := lindenbaum_max O Γ hΓ
+  refine ⟨⟨M, hMcons, lindenbaum_max_closed O M hMcons hMmax⟩, hΓM⟩
 
 end ALCHOQ
 end ELKSDD

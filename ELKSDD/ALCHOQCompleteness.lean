@@ -36,6 +36,15 @@ open Classical
 inductive SatC (O : Ontology) : Concept → Concept → Prop where
   -- Lift all ALCHOQ.Sat rules.
   | ofSat       : ∀ {C D}, Sat O C D → SatC O C D
+  -- Structural SatC-level primitives so we can build SatC derivations
+  -- without bouncing through `Sat`.  All four are direct images of
+  -- corresponding `Sat` rules but having them at SatC level lets us
+  -- conjunction-introduce SatC derivations whose premises are
+  -- themselves SatC (not necessarily Sat).
+  | satC_andI  : ∀ {C D E}, SatC O C D → SatC O C E → SatC O C (.conj D E)
+  | satC_orE   : ∀ {C D E}, SatC O C E → SatC O D E → SatC O (.disj C D) E
+  | satC_andL  : ∀ C D, SatC O (.conj C D) C
+  | satC_andR  : ∀ C D, SatC O (.conj C D) D
   -- Classical rules.
   | negNegI     : ∀ C, SatC O C (.neg (.neg C))
   | negNegE     : ∀ C, SatC O (.neg (.neg C)) C
@@ -142,6 +151,13 @@ theorem satC_sound (O : Ontology) (C D : Concept) (h : SatC O C D) :
   intro α I hOK x hC
   induction h generalizing x with
   | ofSat hS => exact sat_sound O _ _ hS I hOK x hC
+  | satC_andI _ _ ihD ihE => exact ⟨ihD x hC, ihE x hC⟩
+  | satC_orE _ _ ihC ihD =>
+      cases hC with
+      | inl h => exact ihC x h
+      | inr h => exact ihD x h
+  | satC_andL _ _ => exact hC.1
+  | satC_andR _ _ => exact hC.2
   | negNegI _ => intro hnC; exact hnC hC
   | negNegE _ => exact Classical.byContradiction (fun hnC => hC hnC)
   | em _ => exact Classical.em _
