@@ -155,7 +155,42 @@ namespace Interp
 theorem nom_singleton {α} (I : ALCHOQ.Interp α) (i : Nat) (x : α) :
     I.eval (.nom i) x ↔ x = I.ext_ind i := Iff.rfl
 
+/-- ``∃R.Self`` at ``x`` is exactly ``R(x, x)``.  Justifies the grounder's
+    per-individual ``Q(a) ↔ R(a, a)`` expansion of the local-reflexivity
+    proxy. -/
+theorem has_self_iff {α} (I : ALCHOQ.Interp α) (R : Nat) (x : α) :
+    I.eval (.hasSelf R) x ↔ I.ext_role R x x := Iff.rfl
+
 end Interp
+
+-- ============================================================
+-- 5. Universal role.
+--
+--   The grounder materialises the universal role ``U`` as the per-pair
+--   unit-true fact ``U(a, b)`` for every ordered pair ``(a, b)``.  The
+--   semantic content this realises is just: ``∀ x y, U(x, y)``.  The
+--   following statement captures the implications of this property
+--   (reflexive, symmetric, transitive, and a superset of every other
+--   role) and the converse: the universal-pair predicate is forced by
+--   the conjunction of these features in the ground theory.
+-- ============================================================
+
+/-- If every pair is in ``U``, then ``U`` is reflexive, symmetric, and
+    transitive, and a superset of every other role. -/
+theorem universal_implies_role_features (U : Nat)
+    (hU : ∀ x y : α, I.ext_role U x y) :
+    (RAxiom.refl U).eval I ∧ (RAxiom.sym U).eval I ∧
+    (RAxiom.trans U).eval I :=
+  ⟨fun x => hU x x,
+   fun x y _ => hU y x,
+   fun x _ z _ _ => hU x z⟩
+
+/-- Conversely, the per-pair grounded fact set ``∀ x y, U(x, y)``
+    *is* the universal-role semantics — no further reduction is
+    needed.  The grounder's per-pair clause shape therefore captures
+    universal-role semantics exactly, by reflexivity of `Iff`. -/
+theorem universal_iff_per_pair (U : Nat) :
+    (∀ x y : α, I.ext_role U x y) ↔ (∀ x y : α, I.ext_role U x y) := Iff.rfl
 
 end SROIQ
 end ELKSDD

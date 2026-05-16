@@ -42,6 +42,7 @@ inductive Concept : Type where
   | univ    : Nat → Concept → Concept                  -- ∀R.C
   | atLeast : Nat → Nat → Concept → Concept            -- ≥n R.C
   | atMost  : Nat → Nat → Concept → Concept            -- ≤n R.C
+  | hasSelf : Nat → Concept                            -- ∃R.Self
   deriving DecidableEq
 
 abbrev Axiom := Concept × Concept
@@ -88,6 +89,7 @@ def eval (I : Interp α) : Concept → α → Prop
       atLeastCard (fun y => I.ext_role R x y ∧ I.eval C y) n
   | .atMost n R C, x =>
       atMostCard (fun y => I.ext_role R x y ∧ I.eval C y) n
+  | .hasSelf R, x => I.ext_role R x x
 
 def satisfiesAxiom (I : Interp α) (ax : Axiom) : Prop :=
   ∀ x, I.eval ax.1 x → I.eval ax.2 x
