@@ -52,3 +52,10 @@ import ELKSDD.DISPONTERat
 import ELKSDD.SCCWMCUniform
 import ELKSDD.SCCNomLHS
 import ELKSDD.ALC
+import ELKSDD.Completeness
+import ELKSDD.CompletenessExamples
+import ELKSDD.ALCComplexity
+import ELKSDD.ALCHOQ
+import ELKSDD.ALCHOQCompleteness
+import ELKSDD.SROIQ
+import ELKSDD.SROIQCompleteness
