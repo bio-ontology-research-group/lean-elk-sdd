@@ -243,6 +243,37 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.empty_locallyConfluent_implies_confluent
 
 -- ============================================================
+-- §6.3.2.5+ — Newman's lemma, KB completion, naming, composite.
+-- ============================================================
+#print axioms ALCHOIQContext.reflTrans_trans
+#print axioms ALCHOIQContext.NoetherianWF
+#print axioms ALCHOIQContext.empty_noetherianWF
+#print axioms ALCHOIQContext.newman
+#print axioms ALCHOIQContext.empty_newman
+#print axioms ALCHOIQContext.CriticalPair
+#print axioms ALCHOIQContext.empty_no_critical_pair
+#print axioms ALCHOIQContext.KBStep
+#print axioms ALCHOIQContext.kbMeasure
+#print axioms ALCHOIQContext.kbStep_measure
+#print axioms ALCHOIQContext.kb_completion_empty_terminates
+#print axioms ALCHOIQContext.perTermFragment
+#print axioms ALCHOIQContext.perTermFragment_confluent
+#print axioms ALCHOIQContext.perTermFragment_noetherian
+#print axioms ALCHOIQContext.emptyNaming
+#print axioms ALCHOIQContext.singletonNaming
+#print axioms ALCHOIQContext.naming_exists
+#print axioms ALCHOIQContext.composeFragments
+#print axioms ALCHOIQContext.composeFragments_empty_confluent
+#print axioms ALCHOIQContext.compositeRewrites
+#print axioms ALCHOIQContext.composite_empty_list_confluent
+#print axioms ALCHOIQContext.composite_empties_eq_empty
+#print axioms ALCHOIQContext.composite_empties_confluent
+#print axioms ALCHOIQContext.boolHerbrand_satisfies_emptyOntology
+#print axioms ALCHOIQContext.composite_refutes_propRefutable
+#print axioms ALCHOIQContext.composite_refutes_when_not_inS_emptyO
+#print axioms ALCHOIQContext.tenaCucalaCompleteness_emptyO_via_composite
+
+-- ============================================================
 -- Populated (non-trivial) Bridge.
 -- ============================================================
 #print axioms SROIQ.reflClause0
