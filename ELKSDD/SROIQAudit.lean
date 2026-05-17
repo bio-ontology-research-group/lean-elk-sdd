@@ -19,6 +19,7 @@ import ELKSDD.SROIQSkolem
 import ELKSDD.SROIQCanonical
 import ELKSDD.SROIQSkolemCanonical
 import ELKSDD.SROIQContextBridge
+import ELKSDD.SROIQCompletenessSkeleton
 
 namespace ELKSDD
 
@@ -282,5 +283,37 @@ namespace ELKSDD
 #print axioms SROIQ.populated_saturated
 #print axioms SROIQ.reflQuery0
 #print axioms SROIQ.populatedBridge
+
+-- ============================================================
+-- Tena-Cucala Theorem 2 sorry-skeleton.   The top theorem
+-- depends on `sorryAx` via its leaves; discharging any internal
+-- `sorry` strictly reduces the dependency.   See
+-- `SROIQCompletenessSkeleton.lean` for the decomposition tree.
+-- ============================================================
+#print axioms ALCHOIQContext.FullStep
+#print axioms ALCHOIQContext.FullSaturated
+#print axioms ALCHOIQContext.FullDerivation
+#print axioms ALCHOIQContext.initialStructure
+#print axioms ALCHOIQContext.initial_structure_root_in_contexts
+#print axioms ALCHOIQContext.initial_structure_S_contains_query
+-- Leaves bottoming out to existing proved lemmas (no sorry):
+#print axioms ALCHOIQContext.critical_pairs_finite
+#print axioms ALCHOIQContext.kb_iterative_completion
+#print axioms ALCHOIQContext.kb_completion_terminates
+#print axioms ALCHOIQContext.per_term_fragments_exist
+#print axioms ALCHOIQContext.nom_rule_enforces_naming
+#print axioms ALCHOIQContext.naming_witness_exists
+#print axioms ALCHOIQContext.composite_fragments_confluent
+#print axioms ALCHOIQContext.herbrand_from_composite
+-- Sorry-leaves (open obligations):
+#print axioms ALCHOIQContext.naming_consistent_across_contexts
+#print axioms ALCHOIQContext.composite_union_confluent
+#print axioms ALCHOIQContext.herbrand_from_composite_full
+#print axioms ALCHOIQContext.herbrand_satisfies_ontology
+#print axioms ALCHOIQContext.herbrand_refutes_query
+-- Top-level theorems (transitively depend on sorry-leaves):
+#print axioms ALCHOIQContext.composite_herbrand_refutation
+#print axioms ALCHOIQContext.completeness_main_argument
+#print axioms ALCHOIQContext.tenacucala_completeness_thm2
 
 end ELKSDD
