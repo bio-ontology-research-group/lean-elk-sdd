@@ -15,6 +15,7 @@ import ELKSDD.ALCHOQ
 import ELKSDD.ALCHOQCompleteness
 import ELKSDD.SROIQCompleteness
 import ELKSDD.ALCHOIQContext
+import ELKSDD.SROIQSkolem
 
 namespace ELKSDD
 
@@ -61,5 +62,14 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.step_sound
 #print axioms ALCHOIQContext.deriv_sound
 #print axioms ALCHOIQContext.completeness
+
+-- ============================================================
+-- SROIQ Skolem completeness: empty-RBox case (PROVED), and the
+-- generalised theorem with canonical-RBox hypothesis (PROVED).
+-- ============================================================
+#print axioms SROIQ.sroiq_satC_complete_skolFragment_emptyRBox
+#print axioms SROIQ.sroiq_satC_complete_skolFragment_canonical
+#print axioms SROIQ.sroiq_canonical_satisfies_ontology
+#print axioms SROIQ.sroiq_canonical_satisfies_emptyRBox
 
 end ELKSDD
