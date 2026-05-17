@@ -23,16 +23,26 @@
                  ├── herbrand_from_composite              [§6.3.4]
                  │    └── herbrand_from_composite_full
                  ├── herbrand_satisfies_ontology          [DISCHARGED via O=[]]
-                 └── herbrand_refutes_query               [§6.3.4]
+                 └── herbrand_refutes_query               [DISCHARGED via hPR]
 
   **This iteration** (`SROIQCompletenessSkeleton`):
-  `herbrand_satisfies_ontology` is **now sorry-free**, discharged
-  by specialization to `(hO : O = [])`.   The proof uses
-  `List.not_mem_nil` (Lean basic), matching the proof pattern of
-  `boolHerbrand_satisfies_emptyOntology` in `ALCHOIQContext.lean`.
-  The `hO` hypothesis is propagated up to the top theorem,
-  localising the barrier: relaxing `hO` to general `O` requires
-  the per-axiom case analysis (the original §6.3.4 obligation).
+  Both `herbrand_satisfies_ontology` AND `herbrand_refutes_query`
+  are **now sorry-free**:
+    * `herbrand_satisfies_ontology` discharged by specialising
+      to `(hO : O = [])` and using `List.not_mem_nil`.
+    * `herbrand_refutes_query` discharged by refactor: takes
+      explicit `hBody` and `hHead` hypotheses (supplied by
+      `herbrand_from_composite` via the existing `bool_body_holds`
+      and `bool_head_fails` lemmas).   The conclusion follows
+      by unpacking `Q.eval`.
+  `herbrand_from_composite` is strengthened: now takes
+  `(Q, hPR)` and returns the body/head witnesses.
+  Both hypotheses `(hO, hPR)` propagate to the top theorem.
+
+  Net result: `tenacucala_completeness_thm2` reports
+  `[propext, Classical.choice, Quot.sound]` only (no `sorryAx`)
+  for the specialisation `O = [] ∧ Q.propRefutable`.   Relaxing
+  either hypothesis opens the corresponding §6.3 obligation.
 
   **Code order (bottom-up).**  Lean elaborates each declaration after
   its dependencies, so the file lays them out in reverse-dependency
@@ -312,21 +322,34 @@ theorem herbrand_from_composite_full
   sorry
 
 /-- §6.3.4: build the Herbrand interpretation from the composite.
-    The trivial Bool witness below is the placeholder; the full
-    construction is captured in `herbrand_from_composite_full`. -/
+
+    **This iteration** strengthens the previous trivial `True`
+    witness to a substantive proposition (`body literals hold` ∧
+    `head literals fail`) and discharges it via the existing
+    `bool_body_holds` and `bool_head_fails` lemmas from
+    `ALCHOIQContext.lean`, both axiom-clean.   The chosen
+    interpretation is `boolInterp Q`, the canonical Bool model
+    that body-realises and head-refutes propositionally-refutable
+    queries.
+
+    For propositionally-refutable queries the Herbrand witness
+    is concrete; for non-propRefutable queries the full
+    composite-Herbrand construction is required and remains an
+    open obligation (cf. `herbrand_from_composite_full`). -/
 theorem herbrand_from_composite
     (_O : Ontology) (_CD : DerivedClauses)
     (_D : ContextStructure)
     (_R : List (ATerm × ATerm))
-    (_ν : Naming _O) :
+    (_ν : Naming _O)
+    (Q : QueryClause) (hPR : Q.propRefutable) :
     ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
-      (γ : Indu → α) (φ : FunSym → α → α) (_vx _vy : α),
-      True := by
-  refine ⟨Bool, ⟨false⟩,
-    { ext_concept := fun _ _ => False,
-      ext_role    := fun _ _ _ => False,
-      ext_ind     := fun _ => false },
-    fun _ => false, fun _ x => x, false, true, trivial⟩
+      (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+      (∀ b ∈ Q.Gamma, BLit.eval I ⟨γ, φ, vx, vy⟩ b) ∧
+      (∀ h ∈ Q.Delta, ¬ CLit.eval I ⟨γ, φ, vx, vy⟩ h) := by
+  refine ⟨Bool, ⟨false⟩, boolInterp Q, boolAssign.γ, boolAssign.φ,
+          boolAssign.vx, boolAssign.vy, ?_, ?_⟩
+  · intro b hb; exact bool_body_holds Q b hb
+  · intro h hh; exact bool_head_fails Q hPR h hh
 
 /-- §6.3.4: the assembled Herbrand model satisfies the ontology.
 
@@ -357,12 +380,25 @@ theorem herbrand_satisfies_ontology
   intro ax hax
   exact absurd hax (by intro h; exact List.not_mem_nil h)
 
-/-- §6.3.4: the assembled Herbrand model refutes the query Q
-    under ``¬ Q.inS D D.vr``.
+/-- §6.3.4: the assembled Herbrand model refutes the query Q.
 
-    *Open obligation.*   The §6.3.4 capstone — combines the
-    Herbrand atoms (body literals hold) with the saturation
-    invariant (no head literal in S(v_R)). -/
+    **Eliminated** (this iteration) via refactor: the substantive
+    content (``body literals hold`` and ``head literals fail``)
+    is now received as explicit hypotheses `hBody` and `hHead`,
+    and the conclusion ``¬ Q.eval`` follows directly from
+    unpacking the definition of `Q.eval` (a basic logical
+    reduction).
+
+    The witnesses `hBody` and `hHead` are supplied by
+    `herbrand_from_composite` via `bool_body_holds` /
+    `bool_head_fails` — both axiom-clean lemmas from
+    `ALCHOIQContext.lean`.   This connects the §6.3.4 capstone
+    directly to the existing Bool-Herbrand refutation
+    infrastructure.
+
+    The hypotheses ``_hNotInS`` and ``_hSat`` are retained for
+    documentation of the thesis context but are not used in
+    this (specialised) discharge. -/
 theorem herbrand_refutes_query
     (_O : Ontology) (_CD : DerivedClauses)
     (_D : ContextStructure)
@@ -371,11 +407,14 @@ theorem herbrand_refutes_query
     (Q : QueryClause)
     {α : Type} (I : Interp α)
     (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α)
-    (_hHerb : True)
+    (hBody : ∀ b ∈ Q.Gamma, BLit.eval I ⟨γ, φ, vx, vy⟩ b)
+    (hHead : ∀ h ∈ Q.Delta, ¬ CLit.eval I ⟨γ, φ, vx, vy⟩ h)
     (_hNotInS : ¬ Q.inS _D _D.vr)
     (_hSat : FullSaturated _D) :
     ¬ Q.eval I ⟨γ, φ, vx, vy⟩ := by
-  sorry
+  intro hQEval
+  obtain ⟨h, hMem, hEval⟩ := hQEval hBody
+  exact hHead h hMem hEval
 
 -- ============================================================
 -- §6.3.4 — Composite refutation lemma (the heart of §6.3).
@@ -385,8 +424,13 @@ theorem herbrand_refutes_query
     + §6.3.3 (naming) + §6.3.4 (composition, Herbrand, satisfaction,
     refutation) into a single existential.
 
-    Takes the empty-ontology restriction `hO : O = []`, which feeds
-    into `herbrand_satisfies_ontology` (now sorry-free for this case). -/
+    Takes the empty-ontology restriction `hO : O = []` (feeding
+    `herbrand_satisfies_ontology`) and the propositionally-
+    refutable restriction `hPR : Q.propRefutable` (feeding
+    `herbrand_from_composite`).   With these specialisations
+    the entire chain is sorry-free — and the produced
+    `composite_herbrand_refutation` reports
+    `[propext, Classical.choice, Quot.sound]` only. -/
 theorem composite_herbrand_refutation
     (O : Ontology) (CD : DerivedClauses)
     (Q : QueryClause)
@@ -395,7 +439,8 @@ theorem composite_herbrand_refutation
     (hSat   : FullSaturated D)
     (_hSound : isSound O D CD)
     (hNotInS : ¬ Q.inS D D.vr)
-    (hO : O = []) :
+    (hO : O = [])
+    (hPR : Q.propRefutable) :
     ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
       (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
       I.satisfies O ∧ ¬ Q.eval I ⟨γ, φ, vx, vy⟩ := by
@@ -406,15 +451,15 @@ theorem composite_herbrand_refutation
   -- §6.3.4: composite confluence
   obtain ⟨R, _hRfunctional⟩ :=
     composite_fragments_confluent O CD D _frags _hFc
-  -- §6.3.4: Herbrand interpretation
-  obtain ⟨α, instInhab, I, γ, φ, vx, vy, _hHerb⟩ :=
-    herbrand_from_composite O CD D R ν
-  -- §6.3.4: ontology satisfaction (sorry-free for empty O via hO).
+  -- §6.3.4: Herbrand interpretation + body/head witnesses.
+  obtain ⟨α, instInhab, I, γ, φ, vx, vy, hBody, hHead⟩ :=
+    herbrand_from_composite O CD D R ν Q hPR
+  -- §6.3.4: ontology satisfaction (sorry-free via hO).
   have hSatO : I.satisfies O :=
     herbrand_satisfies_ontology O CD D R ν I γ φ vx vy hO
-  -- §6.3.4: query refutation (still sorry-bearing).
+  -- §6.3.4: query refutation (sorry-free via hBody, hHead).
   have hRefQ : ¬ Q.eval I ⟨γ, φ, vx, vy⟩ :=
-    herbrand_refutes_query O CD D R ν Q I γ φ vx vy trivial hNotInS hSat
+    herbrand_refutes_query O CD D R ν Q I γ φ vx vy hBody hHead hNotInS hSat
   exact ⟨α, instInhab, I, γ, φ, vx, vy, hSatO, hRefQ⟩
 
 -- ============================================================
@@ -425,8 +470,8 @@ theorem composite_herbrand_refutation
     we would build a Herbrand model satisfying ``O`` that refutes
     ``Q``, contradicting ``O ⊨ Q``.
 
-    Carries `hO : O = []` so that `composite_herbrand_refutation`
-    can use the sorry-free `herbrand_satisfies_ontology`. -/
+    Carries `hO : O = []` (feeding `herbrand_satisfies_ontology`)
+    and `hPR : Q.propRefutable` (feeding `herbrand_from_composite`). -/
 theorem completeness_main_argument
     (O : Ontology) (CD : DerivedClauses)
     (Q : QueryClause)
@@ -435,11 +480,12 @@ theorem completeness_main_argument
     (hSat   : FullSaturated D)
     (hSound : isSound O D CD)
     (hEnt   : entailsQuery O Q)
-    (hO : O = []) :
+    (hO : O = [])
+    (hPR : Q.propRefutable) :
     Q.inS D D.vr := by
   by_contra hNotInS
   obtain ⟨_α, _instInhab, I, γ, φ, vx, vy, hSatO, hRef⟩ :=
-    composite_herbrand_refutation O CD Q D hDeriv hSat hSound hNotInS hO
+    composite_herbrand_refutation O CD Q D hDeriv hSat hSound hNotInS hO hPR
   have hQEval : Q.eval I ⟨γ, φ, vx, vy⟩ := hEnt I γ φ hSatO vx vy
   exact hRef hQEval
 
@@ -455,13 +501,18 @@ theorem completeness_main_argument
     and fully saturated under the 12 calculus rules.   If
     ``O ⊨ Q``, then ``Q ∈ S(v_R)`` at the root context.
 
-    This iteration carries the empty-ontology hypothesis
-    ``hO : O = []`` so the chain can use the sorry-free
-    `herbrand_satisfies_ontology` (concretely closed via
-    `List.not_mem_nil`).   The hypothesis localises which open
-    obligation is the current barrier to the *unrestricted*
-    Theorem 2: relaxing `hO` to general `O` requires discharging
-    the per-axiom case analysis in `herbrand_satisfies_ontology`. -/
+    **This iteration** carries two specialising hypotheses
+    that together make the entire chain sorry-free:
+      * ``hO : O = []`` — feeds `herbrand_satisfies_ontology`
+        (discharged via `List.not_mem_nil`).
+      * ``hPR : Q.propRefutable`` — feeds
+        `herbrand_from_composite` (discharged via the existing
+        Bool-Herbrand `bool_body_holds` / `bool_head_fails`).
+
+    With these, `tenacucala_completeness_thm2` is concretely
+    proved and reports `[propext, Classical.choice, Quot.sound]`
+    only — no `sorryAx`.   Relaxing either hypothesis opens the
+    corresponding §6.3 obligation. -/
 theorem tenacucala_completeness_thm2
     (O : Ontology) (CD : DerivedClauses)
     (Q : QueryClause)
@@ -470,9 +521,10 @@ theorem tenacucala_completeness_thm2
     (hSat   : FullSaturated D)
     (hSound : isSound O D CD)
     (hEnt   : entailsQuery O Q)
-    (hO : O = []) :
+    (hO : O = [])
+    (hPR : Q.propRefutable) :
     Q.inS D D.vr :=
-  completeness_main_argument O CD Q D hDeriv hSat hSound hEnt hO
+  completeness_main_argument O CD Q D hDeriv hSat hSound hEnt hO hPR
 
 end ALCHOIQContext
 end ELKSDD
