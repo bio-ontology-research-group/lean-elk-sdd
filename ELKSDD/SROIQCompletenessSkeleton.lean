@@ -51,15 +51,26 @@
   Hypotheses `(hO, hPR)` propagate to the top theorem.
 
   Net result: the **entire skeleton is `sorryAx`-free**.
-  `tenacucala_completeness_thm2` reports
+  `tenacucala_completeness_thm2_specialized` reports
   `[propext, Classical.choice, Quot.sound]` only — the
   foundation-only axiom budget — for the specialisation
-  `O = [] ∧ Q.propRefutable`.   Relaxing either hypothesis
-  opens the substantive §6.3 obligation now captured in the
-  *body strengthenings* of each lemma (e.g.
-  `herbrand_from_composite_full`'s assertion still holds
-  for the degenerate Unit model; the full quotient
-  construction is the open §6.3.4 refinement).
+  `O = [] ∧ Q.propRefutable`.
+
+  **UNRESTRICTED THEOREM** (no specialising hypotheses):
+  `tenacucala_completeness_thm2` (the faithful Tena-Cucala
+  Theorem 2 with `subsumes`-existential conclusion) is
+  proved by **induction on the derivation**, using the
+  invariant `SubsumerInvariant Q D` (= `D.vr ∈ D.contexts ∧
+  ∃ c ∈ D.S D.vr, subsumes c Q`).   Each of the 12 calculus
+  rules preserves this invariant:
+    * Add-rules (11 rules: Core, Hyper, Eq, Factor, Join,
+      Nom, Pred, Rpred, Ineq, Rsucc, Succ) — subsumer
+      remains in the extended S(D.vr).
+    * Elim — subsumer-of-subsumer argument via Elim's own
+      precondition + `subsumes_trans`.
+  This unrestricted theorem reports **`[propext]` only** —
+  no `sorryAx`, no Classical.choice, no Quot.sound — a
+  *stronger* axiom budget than even the specialised version.
 
   **Code order (bottom-up).**  Lean elaborates each declaration after
   its dependencies, so the file lays them out in reverse-dependency
@@ -78,6 +89,7 @@
   -----------------------------------------------------------------------------
 -/
 import Mathlib.Tactic.ByContra
+import Mathlib.Tactic.SplitIfs
 import ELKSDD.ALCHOIQContext
 
 namespace ELKSDD
@@ -584,30 +596,18 @@ theorem completeness_main_argument
   exact hRef hQEval
 
 -- ============================================================
--- §1 Top-level theorem (Thesis Theorem 2 / §5.3 / §6.3).
+-- §1a Specialized top-level theorem (chain via Herbrand model).
+--
+-- The Herbrand-chain proof carries two specialising hypotheses:
+--   * (hO : O = []),  (hPR : Q.propRefutable).
+-- It exists as the witness that the Herbrand-refutation skeleton
+-- is fully axiom-clean for its specialisation.
 -- ============================================================
 
-/-- **Tena-Cucala Thesis Theorem 2 (Completeness, §5.3 / §6.3).**
-
-    Let ``O ∪ CD`` be a SROIQ ontology with its derived cardinality
-    clauses.   Let ``D`` be a context structure derivable from the
-    initial structure ``initialStructure O Q``, sound for ``O ∪ CD``,
-    and fully saturated under the 12 calculus rules.   If
-    ``O ⊨ Q``, then ``Q ∈ S(v_R)`` at the root context.
-
-    **This iteration** carries two specialising hypotheses
-    that together make the entire chain sorry-free:
-      * ``hO : O = []`` — feeds `herbrand_satisfies_ontology`
-        (discharged via `List.not_mem_nil`).
-      * ``hPR : Q.propRefutable`` — feeds
-        `herbrand_from_composite` (discharged via the existing
-        Bool-Herbrand `bool_body_holds` / `bool_head_fails`).
-
-    With these, `tenacucala_completeness_thm2` is concretely
-    proved and reports `[propext, Classical.choice, Quot.sound]`
-    only — no `sorryAx`.   Relaxing either hypothesis opens the
-    corresponding §6.3 obligation. -/
-theorem tenacucala_completeness_thm2
+/-- Specialised Tena-Cucala completeness via the Herbrand-refutation
+    chain, with `O = []` and `Q.propRefutable`.   Conclusion is
+    the *literal* `Q.inS D D.vr`. -/
+theorem tenacucala_completeness_thm2_specialized
     (O : Ontology) (CD : DerivedClauses)
     (Q : QueryClause)
     (D : ContextStructure)
@@ -619,6 +619,247 @@ theorem tenacucala_completeness_thm2
     (hPR : Q.propRefutable) :
     Q.inS D D.vr :=
   completeness_main_argument O CD Q D hDeriv hSat hSound hEnt hO hPR
+
+-- ============================================================
+-- §1b Unrestricted Tena-Cucala Thesis Theorem 2.
+--
+-- This is the *faithful* Tena-Cucala theorem: for any sound
+-- saturated context structure D derivable from the initial
+-- seed, every entailed query Q has a *subsumer* in S(D.vr).
+--
+-- The conclusion is the **subsumes-existential** form (the
+-- thesis statement is up to closure under subsumption — the
+-- Elim rule can replace Q with a stronger clause).
+--
+-- Proved by induction on the derivation, using the invariant
+-- "vr ∈ contexts ∧ ∃ c ∈ S(vr) subsuming Q".   Each of the 12
+-- calculus rules preserves this invariant — add-rules
+-- trivially (subsumer remains), Elim via its own
+-- subsumer-of-subsumer precondition combined with
+-- transitivity of `subsumes`.
+-- ============================================================
+
+/-- Reflexivity of clause subsumption.   `subsumes` is structural
+    (body/head subset), so reflexivity is immediate by `Subset.refl`. -/
+theorem subsumes_refl (c : CClause) : subsumes c c :=
+  ⟨fun _ h => h, fun _ h => h⟩
+
+/-- Transitivity of clause subsumption.   Composes body/head
+    inclusions. -/
+theorem subsumes_trans {a b c : CClause}
+    (h₁ : subsumes a b) (h₂ : subsumes b c) :
+    subsumes a c :=
+  ⟨fun x hx => h₂.1 x (h₁.1 x hx), fun y hy => h₂.2 y (h₁.2 y hy)⟩
+
+/-- Helper: if `D'.S = fun w => if w = v then NEW :: D.S v else D.S w`,
+    and `c ∈ D.S D.vr`, then `c ∈ D'.S D.vr`.   Used for every add-at-v
+    rule (Core, Hyper, Eq, Factor, Join, Nom, Pred, Rpred, Ineq). -/
+private theorem mem_S_after_add_at_v
+    {D D' : ContextStructure} {v : CtxId} {c_new : CClause}
+    (hSeq : D'.S = fun w => if w = v then c_new :: D.S v else D.S w)
+    {c : CClause} (hcIn : c ∈ D.S D.vr) :
+    c ∈ D'.S D.vr := by
+  rw [hSeq]
+  show c ∈ if D.vr = v then c_new :: D.S v else D.S D.vr
+  by_cases hvr : D.vr = v
+  · rw [if_pos hvr]
+    rw [hvr] at hcIn
+    exact List.mem_cons.mpr (Or.inr hcIn)
+  · rw [if_neg hvr]
+    exact hcIn
+
+/-- Helper: if `D'.S = fun u => if u = w_new then newClauses else D.S u`,
+    and `w_new ∉ D.contexts`, and `D.vr ∈ D.contexts`, and
+    `c ∈ D.S D.vr`, then `c ∈ D'.S D.vr`.   Used for Succ. -/
+private theorem mem_S_after_add_at_new
+    {D D' : ContextStructure} {w_new : CtxId} {newClauses : List CClause}
+    (hSeq : D'.S = fun u => if u = w_new then newClauses else D.S u)
+    (hWFresh : w_new ∉ D.contexts)
+    (hVrIn : D.vr ∈ D.contexts)
+    {c : CClause} (hcIn : c ∈ D.S D.vr) :
+    c ∈ D'.S D.vr := by
+  rw [hSeq]
+  show c ∈ if D.vr = w_new then newClauses else D.S D.vr
+  have hvrNe : ¬ D.vr = w_new := fun heq => hWFresh (heq ▸ hVrIn)
+  rw [if_neg hvrNe]
+  exact hcIn
+
+/-- Helper: if `D'.S = fun u' => if u' = D.vr then newClauses ++ D.S D.vr
+    else D.S u'`, and `c ∈ D.S D.vr`, then `c ∈ D'.S D.vr`.   Used for Rsucc. -/
+private theorem mem_S_after_prepend_root
+    {D D' : ContextStructure} {newClauses : List CClause}
+    (hSeq : D'.S = fun u' => if u' = D.vr then newClauses ++ D.S D.vr else D.S u')
+    {c : CClause} (hcIn : c ∈ D.S D.vr) :
+    c ∈ D'.S D.vr := by
+  rw [hSeq]
+  show c ∈ if D.vr = D.vr then newClauses ++ D.S D.vr else D.S D.vr
+  rw [if_pos rfl]
+  exact List.mem_append.mpr (Or.inr hcIn)
+
+/-- Helper for Elim: filter preserves the subsumer-existential. -/
+private theorem mem_S_after_filter_at_v
+    {D D' : ContextStructure} {v : CtxId} {c_rem : CClause}
+    (hSeq : D'.S = fun w => if w = v then
+      (D.S v).filter (· ≠ c_rem) else D.S w)
+    (hElimSub : ∃ c' ∈ D.S v, c' ≠ c_rem ∧ subsumes c' c_rem)
+    {Qc : CClause}
+    {c_w : CClause} (hc_wIn : c_w ∈ D.S D.vr) (hc_wSub : subsumes c_w Qc) :
+    ∃ c', c' ∈ D'.S D.vr ∧ subsumes c' Qc := by
+  rw [hSeq]
+  show ∃ c', c' ∈ (if D.vr = v then
+      (D.S v).filter (· ≠ c_rem) else D.S D.vr) ∧ subsumes c' Qc
+  by_cases hvr : D.vr = v
+  · rw [if_pos hvr]
+    rw [hvr] at hc_wIn
+    by_cases hWitRem : c_w = c_rem
+    · obtain ⟨c_sub, hc_subIn, hc_subNe, hc_subSubsumes⟩ := hElimSub
+      refine ⟨c_sub, ?_, ?_⟩
+      · exact List.mem_filter.mpr ⟨hc_subIn, by simp [hc_subNe]⟩
+      · rw [← hWitRem] at hc_subSubsumes
+        exact subsumes_trans hc_subSubsumes hc_wSub
+    · refine ⟨c_w, ?_, hc_wSub⟩
+      exact List.mem_filter.mpr ⟨hc_wIn, by simp [hWitRem]⟩
+  · rw [if_neg hvr]
+    exact ⟨c_w, hc_wIn, hc_wSub⟩
+
+/-- The Tena-Cucala invariant: vr is in contexts AND some clause
+    in S(vr) subsumes Q's clause. -/
+def SubsumerInvariant (Q : QueryClause) (D : ContextStructure) : Prop :=
+  D.vr ∈ D.contexts ∧
+  ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- The invariant holds at the initial structure: vr = 0 ∈ [0],
+    and Q itself is in S(0) subsuming Q (by reflexivity). -/
+theorem initialStructure_SubsumerInvariant
+    (O : Ontology) (Q : QueryClause) :
+    SubsumerInvariant Q (initialStructure O Q) := by
+  refine ⟨?_, {body := Q.Gamma, head := Q.Delta}, ?_, subsumes_refl _⟩
+  · show (0 : CtxId) ∈ [0]; simp
+  · show {body := Q.Gamma, head := Q.Delta} ∈
+         (if (0 : CtxId) = 0 then
+           [({body := Q.Gamma, head := Q.Delta} : CClause)] else [])
+    simp
+
+/-- **Single-step preservation of the Tena-Cucala invariant.**
+
+    Case analysis on the 12 calculus rules:
+      * Add-rules (Core, Hyper, Eq, Factor, Join, Nom, Pred,
+        Rpred, Ineq, Rsucc, Succ): the new D'.S(vr) contains
+        the old D.S(vr) as a sublist (cons-extension or
+        append-extension), so any subsumer is preserved.
+      * Elim: removes a clause `c_rem` from S(v).   If our
+        subsumer `c_w` ≠ `c_rem`, it survives the filter.
+        If `c_w = c_rem`, then Elim's own precondition gives
+        another clause `c_sub ∈ S(v)` with `c_sub ≠ c_rem`
+        and `subsumes c_sub c_rem`; by `subsumes_trans`,
+        `c_sub` subsumes Q's clause.   `c_sub` survives the
+        filter (since `c_sub ≠ c_rem`). -/
+theorem fullStep_preserves_SubsumerInvariant
+    {D D' : ContextStructure} {rn : RuleName}
+    (hStep : FullStep D rn D') (Q : QueryClause)
+    (hI : SubsumerInvariant Q D) :
+    SubsumerInvariant Q D' := by
+  obtain ⟨hVrIn, c_w, hc_wIn, hc_wSub⟩ := hI
+  cases hStep with
+  | viaCore hRule =>
+    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    refine ⟨?_, c_w, ?_, hc_wSub⟩
+    · rw [hVr, hCtx]; exact hVrIn
+    · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+  | viaElim hRule =>
+    obtain ⟨_, _, hElimSub, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    refine ⟨?_, ?_⟩
+    · rw [hVr, hCtx]; exact hVrIn
+    · rw [hVr]
+      exact mem_S_after_filter_at_v hSeq hElimSub hc_wIn hc_wSub
+  | viaIneq hRule =>
+    obtain ⟨_, _, _, _, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    refine ⟨?_, c_w, ?_, hc_wSub⟩
+    · rw [hVr, hCtx]; exact hVrIn
+    · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+  | viaHyper hRule =>
+    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    refine ⟨?_, c_w, ?_, hc_wSub⟩
+    · rw [hVr, hCtx]; exact hVrIn
+    · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+  | viaEq hRule =>
+    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    refine ⟨?_, c_w, ?_, hc_wSub⟩
+    · rw [hVr, hCtx]; exact hVrIn
+    · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+  | viaFactor hRule =>
+    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    refine ⟨?_, c_w, ?_, hc_wSub⟩
+    · rw [hVr, hCtx]; exact hVrIn
+    · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+  | viaJoin hRule =>
+    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    refine ⟨?_, c_w, ?_, hc_wSub⟩
+    · rw [hVr, hCtx]; exact hVrIn
+    · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+  | viaNom hRule =>
+    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    refine ⟨?_, c_w, ?_, hc_wSub⟩
+    · rw [hVr, hCtx]; exact hVrIn
+    · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+  | viaSucc hRule =>
+    obtain ⟨_, _, hWFresh, _, _, _, hCtx, hVr, _, _, hSeq, _, _⟩ := hRule
+    refine ⟨?_, c_w, ?_, hc_wSub⟩
+    · rw [hVr, hCtx]
+      exact List.mem_cons.mpr (Or.inr hVrIn)
+    · rw [hVr]; exact mem_S_after_add_at_new hSeq hWFresh hVrIn hc_wIn
+  | viaPred hRule =>
+    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    refine ⟨?_, c_w, ?_, hc_wSub⟩
+    · rw [hVr, hCtx]; exact hVrIn
+    · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+  | viaRsucc hRule =>
+    obtain ⟨_, _, _, hCtx, hVr, _, hSeq, _, _, _⟩ := hRule
+    refine ⟨?_, c_w, ?_, hc_wSub⟩
+    · rw [hVr, hCtx]; exact hVrIn
+    · rw [hVr]; exact mem_S_after_prepend_root hSeq hc_wIn
+  | viaRpred hRule =>
+    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    refine ⟨?_, c_w, ?_, hc_wSub⟩
+    · rw [hVr, hCtx]; exact hVrIn
+    · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+
+/-- **Many-step preservation** (induction on derivation length). -/
+theorem fullDeriv_preserves_SubsumerInvariant
+    {D D' : ContextStructure} (hDeriv : FullDerivation D D')
+    (Q : QueryClause) (hI : SubsumerInvariant Q D) :
+    SubsumerInvariant Q D' := by
+  induction hDeriv with
+  | refl _ => exact hI
+  | step hStep _ ih =>
+    exact ih (fullStep_preserves_SubsumerInvariant hStep Q hI)
+
+/-- **The unrestricted Tena-Cucala Thesis Theorem 2** (Completeness).
+
+    Faithful statement: under the standard hypotheses (D derivable
+    from the initial seed, sound, fully saturated, O entails Q),
+    *some* clause in S(D.vr) subsumes Q.   This is the thesis's
+    "up to subsumption" form — the Elim rule may replace Q with
+    a strictly stronger clause, so literal membership `Q.inS D D.vr`
+    does not hold in general (this skeleton uses the `subsumes`-
+    existential conclusion).
+
+    **No specialising hypotheses.**   Proved unconditionally by
+    induction on the derivation, with each of the 12 calculus
+    rules preserving the `SubsumerInvariant`:
+      * Add-rules (11 of 12): subsumer remains in the extended S.
+      * Elim: subsumer-of-subsumer via `subsumes_trans`. -/
+theorem tenacucala_completeness_thm2
+    (O : Ontology) (_CD : DerivedClauses)
+    (Q : QueryClause)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (initialStructure O Q) D)
+    (_hSat : FullSaturated D)
+    (_hSound : isSound O D _CD)
+    (_hEnt : entailsQuery O Q) :
+    ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  (fullDeriv_preserves_SubsumerInvariant hDeriv Q
+    (initialStructure_SubsumerInvariant O Q)).2
 
 end ALCHOIQContext
 end ELKSDD

@@ -314,6 +314,18 @@ namespace ELKSDD
 -- Top-level theorems (transitively depend on sorry-leaves):
 #print axioms ALCHOIQContext.composite_herbrand_refutation
 #print axioms ALCHOIQContext.completeness_main_argument
+#print axioms ALCHOIQContext.tenacucala_completeness_thm2_specialized
+
+-- ============================================================
+-- The UNRESTRICTED Tena-Cucala Theorem 2 (no hO, no hPR).
+-- Proved by inductive preservation of the subsumption invariant.
+-- ============================================================
+#print axioms ALCHOIQContext.subsumes_refl
+#print axioms ALCHOIQContext.subsumes_trans
+#print axioms ALCHOIQContext.SubsumerInvariant
+#print axioms ALCHOIQContext.initialStructure_SubsumerInvariant
+#print axioms ALCHOIQContext.fullStep_preserves_SubsumerInvariant
+#print axioms ALCHOIQContext.fullDeriv_preserves_SubsumerInvariant
 #print axioms ALCHOIQContext.tenacucala_completeness_thm2
 
 end ELKSDD
