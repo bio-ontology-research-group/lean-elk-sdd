@@ -963,6 +963,241 @@ theorem step_nom_sound
   step_add_entailed_sound O CD D D' v c hStep hSound
 
 -- ============================================================
+-- §5.2 Succ / Pred / r-Succ / r-Pred rules: refined with edge
+-- addition.  These don't fit the pure mono_ext pattern since they
+-- add new edges and (possibly) new contexts.
+--
+-- For Succ: add a fresh context w with edge ⟨v, w, .fn f⟩,
+-- core_w correctly transferred under the substitution, and
+-- clauses in S_w entailed at the new anchor f(vx).
+-- ============================================================
+
+/-- ``StepSucc O CD D v f w newCore newClauses D'`` says: ``D'`` is
+    obtained from ``D`` by the Succ rule firing at context ``v`` on
+    Skolem function ``f``: a fresh context ``w`` is introduced with
+    ``core_w = newCore`` and ``S_w = newClauses``, and an edge
+    ``⟨v, w, .fn f⟩`` is added.
+
+    Preconditions encode the rule semantics: ``v`` is non-root,
+    ``w`` is fresh, ``D`` is well-formed (every edge endpoint is in
+    ``D.contexts``), ``newCore`` is correctly anchored under
+    ``x ↦ f(x), y ↦ x`` from ``core_v``, and every clause in
+    ``newClauses`` is entailed under the new anchor. -/
+def StepSucc (O : Ontology) (CD : DerivedClauses)
+    (D : ContextStructure) (v : CtxId) (f : FunSym) (w : CtxId)
+    (newCore : CoreSet) (newClauses : List CClause)
+    (D' : ContextStructure) : Prop :=
+  v ∈ D.contexts ∧
+  v ≠ D.vr ∧
+  w ∉ D.contexts ∧
+  -- D well-formed: every edge endpoint is in D.contexts.
+  (∀ (a b : CtxId) (l : EdgeLabel), (a, b, l) ∈ D.edges →
+     a ∈ D.contexts ∧ b ∈ D.contexts) ∧
+  -- newCore is correctly anchored at f(vx) under core_v.
+  (∀ {α : Type} (I : Interp α) (γ : Indu → α) (φ : FunSym → α → α),
+    I.satisfies O → InterpSatisfiesCD I γ φ CD →
+    ∀ vx vy : α, coreSat I ⟨γ, φ, vx, vy⟩ (D.core v) →
+      coreSat I ⟨γ, φ, φ f vx, vx⟩ newCore) ∧
+  -- newClauses are entailed at the new anchor.
+  (∀ c ∈ newClauses, ∀ {α : Type} (I : Interp α) (γ : Indu → α)
+    (φ : FunSym → α → α),
+    I.satisfies O → InterpSatisfiesCD I γ φ CD →
+    ∀ vx vy : α, coreSat I ⟨γ, φ, vx, vy⟩ newCore →
+      CClause.eval I ⟨γ, φ, vx, vy⟩ c) ∧
+  D'.contexts = w :: D.contexts ∧
+  D'.vr = D.vr ∧
+  D'.edges = (v, w, EdgeLabel.fn f) :: D.edges ∧
+  D'.core = (fun u => if u = w then newCore else D.core u) ∧
+  D'.S = (fun u => if u = w then newClauses else D.S u) ∧
+  D'.m = D.m ∧
+  D'.θ = D.θ
+
+/-- **Soundness of the Succ rule.**  The fresh context ``w`` has
+    `S_w = newClauses` (all entailed by hypothesis); the new edge
+    `⟨v, w, .fn f⟩` propagates `core_v` to `core_w` (by hypothesis);
+    every other context and edge is unchanged. -/
+theorem step_succ_sound
+    (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure) (v : CtxId) (f : FunSym) (w : CtxId)
+    (newCore : CoreSet) (newClauses : List CClause)
+    (hStep : StepSucc O CD D v f w newCore newClauses D')
+    (hSound : isSound O D CD) :
+    isSound O D' CD := by
+  obtain ⟨hvD, hvne, hwfresh, hWellFormed, hAnchor, hClauses,
+          hCtx, hVr, hEdges, hCoreFn, hSeq, _hM, _hθ⟩ := hStep
+  refine ⟨?_, ?_⟩
+  · -- S1.
+    intro u hu c hc α I γ φ hIO hICD vx vy hcoreU
+    rcases List.mem_cons.mp (hCtx ▸ hu) with hUW | hUold
+    · -- u = w: new context with newClauses.
+      rw [hSeq] at hc
+      simp only at hc
+      have hif : (if u = w then newClauses else D.S u) = newClauses := by
+        simp [hUW]
+      rw [hif] at hc
+      have hcoreW : coreSat I ⟨γ, φ, vx, vy⟩ newCore := by
+        have hCoreEq : D'.core u = newCore := by
+          rw [hCoreFn]; simp [hUW]
+        rw [← hCoreEq]; exact hcoreU
+      exact hClauses c hc I γ φ hIO hICD vx vy hcoreW
+    · -- u was already in D.contexts.
+      have hUneW : u ≠ w := by
+        intro hUW; apply hwfresh; rw [← hUW]; exact hUold
+      have hcoreD : coreSat I ⟨γ, φ, vx, vy⟩ (D.core u) := by
+        have hCoreEq : D'.core u = D.core u := by
+          rw [hCoreFn]; simp [hUneW]
+        rw [← hCoreEq]; exact hcoreU
+      have hSEq : D'.S u = D.S u := by
+        rw [hSeq]; simp [hUneW]
+      rw [hSEq] at hc
+      exact hSound.1 u hUold c hc I γ φ hIO hICD vx vy hcoreD
+  · -- S2.
+    intro u u' f' hEdge hune α I γ φ hIO hICD vx vy hcoreU
+    have hEdgeD' : (u, u', EdgeLabel.fn f') ∈ D'.edges := hEdge
+    rw [hEdges] at hEdgeD'
+    rcases List.mem_cons.mp hEdgeD' with hNew | hOld
+    · -- Edge is the new one ⟨v, w, .fn f⟩.
+      simp only [Prod.mk.injEq] at hNew
+      obtain ⟨hUv, hU'w, hf'f⟩ := hNew
+      cases hUv
+      cases hU'w
+      cases hf'f
+      have hvNeW : v ≠ w := by
+        intro h; apply hwfresh; rw [← h]; exact hvD
+      have hcoreV : coreSat I ⟨γ, φ, vx, vy⟩ (D.core v) := by
+        have : D'.core v = D.core v := by rw [hCoreFn]; simp [hvNeW]
+        rw [← this]; exact hcoreU
+      intro p hp
+      have hCoreEq : D'.core w = newCore := by rw [hCoreFn]; simp
+      rw [hCoreEq] at hp
+      exact hAnchor I γ φ hIO hICD vx vy hcoreV p hp
+    · -- Old edge: use existing S2 + well-formedness to get u, u' ∈ D.contexts.
+      have hEdgeD : D.hasEdge u u' (EdgeLabel.fn f') := hOld
+      obtain ⟨huInCtx, hu'InCtx⟩ := hWellFormed u u' (EdgeLabel.fn f') hOld
+      have huneD : u ≠ D.vr := by rw [← hVr]; exact hune
+      have hUneW : u ≠ w := by
+        intro hUW; apply hwfresh; rw [← hUW]; exact huInCtx
+      have hU'neW : u' ≠ w := by
+        intro hU'W; apply hwfresh; rw [← hU'W]; exact hu'InCtx
+      have hcoreD : coreSat I ⟨γ, φ, vx, vy⟩ (D.core u) := by
+        have hCoreEq : D'.core u = D.core u := by
+          rw [hCoreFn]; simp [hUneW]
+        rw [← hCoreEq]; exact hcoreU
+      intro p hp
+      have hCoreEq : D'.core u' = D.core u' := by
+        rw [hCoreFn]; simp [hU'neW]
+      rw [hCoreEq] at hp
+      exact hSound.2 u u' f' hEdgeD huneD I γ φ hIO hICD vx vy hcoreD p hp
+
+/-- The **Pred rule** (Table 5.2) — backward propagation through a
+    Skolem-function edge.  Refined via `StepAddEntailed` since Pred
+    only adds clauses to an existing context (the predecessor), not
+    edges or contexts. -/
+def StepPred (O : Ontology) (CD : DerivedClauses)
+    (D : ContextStructure) (v : CtxId) (c : CClause)
+    (D' : ContextStructure) : Prop :=
+  StepAddEntailed O CD D v c D'
+
+theorem step_pred_sound
+    (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure) (v : CtxId) (c : CClause)
+    (hStep : StepPred O CD D v c D')
+    (hSound : isSound O D CD) :
+    isSound O D' CD :=
+  step_add_entailed_sound O CD D D' v c hStep hSound
+
+/-- The **r-Succ rule** (Table 5.2) — propagation from a non-root
+    context to the root via an auxiliary-constant edge.
+
+    Like Succ but the edge label is an Indu (auxiliary constant)
+    rather than a Skolem function symbol.  The new clauses are
+    added directly to the root's S, anchored at the root's core
+    (which is what isSound's S1 obligation reads).  -/
+def StepRsucc (O : Ontology) (CD : DerivedClauses)
+    (D : ContextStructure) (v : CtxId) (u : Indu)
+    (newClauses : List CClause)
+    (D' : ContextStructure) : Prop :=
+  v ∈ D.contexts ∧
+  v ≠ D.vr ∧
+  -- New clauses are entailed at the root's core anchor.
+  (∀ c ∈ newClauses, ∀ {α : Type} (I : Interp α) (γ : Indu → α)
+    (φ : FunSym → α → α),
+    I.satisfies O → InterpSatisfiesCD I γ φ CD →
+    ∀ vx vy : α, coreSat I ⟨γ, φ, vx, vy⟩ (D.core D.vr) →
+      CClause.eval I ⟨γ, φ, vx, vy⟩ c) ∧
+  D'.contexts = D.contexts ∧
+  D'.vr = D.vr ∧
+  D'.edges = (v, D.vr, EdgeLabel.uind u) :: D.edges ∧
+  D'.S = (fun u' => if u' = D.vr then newClauses ++ D.S D.vr else D.S u') ∧
+  D'.core = D.core ∧
+  D'.m = D.m ∧
+  D'.θ = D.θ
+
+theorem step_rsucc_sound
+    (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure) (v : CtxId) (u : Indu)
+    (newClauses : List CClause)
+    (hStep : StepRsucc O CD D v u newClauses D')
+    (hSound : isSound O D CD) :
+    isSound O D' CD := by
+  obtain ⟨_hvD, _hvne, hClauses, hCtx, hVr, hEdges, hSeq, hCoreEq, _hM, _hθ⟩
+      := hStep
+  refine ⟨?_, ?_⟩
+  · -- S1.
+    intro u' hu' c hc α I γ φ hIO hICD vx vy hcoreU
+    have hu'D : u' ∈ D.contexts := by rw [hCtx] at hu'; exact hu'
+    have hcoreD : coreSat I ⟨γ, φ, vx, vy⟩ (D.core u') := by
+      have : D.core u' = D'.core u' := by rw [hCoreEq]
+      rw [this]; exact hcoreU
+    rw [hSeq] at hc
+    simp only at hc
+    by_cases hVr' : u' = D.vr
+    · have hif : (if u' = D.vr then newClauses ++ D.S D.vr else D.S u')
+               = newClauses ++ D.S D.vr := by simp [hVr']
+      rw [hif] at hc
+      rcases List.mem_append.mp hc with hcNew | hcOld
+      · -- c ∈ newClauses: entailed at core_vr anchor.
+        subst hVr'
+        exact hClauses c hcNew I γ φ hIO hICD vx vy hcoreD
+      · subst hVr'
+        exact hSound.1 D.vr hu'D c hcOld I γ φ hIO hICD vx vy hcoreD
+    · have hif : (if u' = D.vr then newClauses ++ D.S D.vr else D.S u') = D.S u' := by
+        simp [hVr']
+      rw [hif] at hc
+      exact hSound.1 u' hu'D c hc I γ φ hIO hICD vx vy hcoreD
+  · -- S2: new edge is .uind (not .fn), so S2 only fires on old edges.
+    intro u' u'' f' hEdge hune α I γ φ hIO hICD vx vy hcoreU
+    have hEdgeList : (u', u'', EdgeLabel.fn f') ∈ D'.edges := hEdge
+    rw [hEdges] at hEdgeList
+    rcases List.mem_cons.mp hEdgeList with hNew | hOld
+    · simp only [Prod.mk.injEq] at hNew
+      exact absurd hNew.2.2 (by intro h; cases h)
+    · have huneD : u' ≠ D.vr := by rw [← hVr]; exact hune
+      have hcoreD : coreSat I ⟨γ, φ, vx, vy⟩ (D.core u') := by
+        have : D.core u' = D'.core u' := by rw [hCoreEq]
+        rw [this]; exact hcoreU
+      intro p hp
+      have : (D.core u'').atoms = (D'.core u'').atoms := by rw [hCoreEq]
+      rw [← this] at hp
+      exact hSound.2 u' u'' f' hOld huneD I γ φ hIO hICD vx vy hcoreD p hp
+
+/-- The **r-Pred rule** (Table 5.2) — propagation from root back to
+    a non-root context.  Refined via `StepAddEntailed` since r-Pred
+    only adds clauses (no edges/contexts). -/
+def StepRpred (O : Ontology) (CD : DerivedClauses)
+    (D : ContextStructure) (v : CtxId) (c : CClause)
+    (D' : ContextStructure) : Prop :=
+  StepAddEntailed O CD D v c D'
+
+theorem step_rpred_sound
+    (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure) (v : CtxId) (c : CClause)
+    (hStep : StepRpred O CD D v c D')
+    (hSound : isSound O D CD) :
+    isSound O D' CD :=
+  step_add_entailed_sound O CD D D' v c hStep hSound
+
+-- ============================================================
 -- §5.2 Ineq rule, concretely refined.
 --
 -- Ineq rule (Table 5.1): ``Γ → Δ ∨ t ≉ t  ⟹  Γ → Δ``.

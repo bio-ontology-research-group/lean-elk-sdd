@@ -167,6 +167,14 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.step_join_sound
 #print axioms ALCHOIQContext.StepNom
 #print axioms ALCHOIQContext.step_nom_sound
+#print axioms ALCHOIQContext.StepSucc
+#print axioms ALCHOIQContext.step_succ_sound
+#print axioms ALCHOIQContext.StepPred
+#print axioms ALCHOIQContext.step_pred_sound
+#print axioms ALCHOIQContext.StepRsucc
+#print axioms ALCHOIQContext.step_rsucc_sound
+#print axioms ALCHOIQContext.StepRpred
+#print axioms ALCHOIQContext.step_rpred_sound
 #print axioms SROIQ.sroiq_complete_via_TC
 #print axioms SROIQ.sroiq_iff_via_TC
 #print axioms SROIQ.trivialContextStructure
