@@ -14,6 +14,7 @@ import ELKSDD.SROIQ
 import ELKSDD.ALCHOQ
 import ELKSDD.ALCHOQCompleteness
 import ELKSDD.SROIQCompleteness
+import ELKSDD.ALCHOIQContext
 
 namespace ELKSDD
 
@@ -51,5 +52,14 @@ namespace ELKSDD
 -- ============================================================
 #print axioms SROIQ.satC_sound
 #print axioms SROIQ.satC_of_alchoq
+
+-- ============================================================
+-- Tena-Cucala ALCHOIQ+ context-structure calculus
+-- (DPhil thesis, Oxford 2019, Chapters 5-6).
+-- Headline soundness + completeness results.
+-- ============================================================
+#print axioms ALCHOIQContext.step_sound
+#print axioms ALCHOIQContext.deriv_sound
+#print axioms ALCHOIQContext.completeness
 
 end ELKSDD
