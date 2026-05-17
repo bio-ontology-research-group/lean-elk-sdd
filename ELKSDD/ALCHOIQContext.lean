@@ -507,6 +507,103 @@ inductive Derivation : ContextStructure → ContextStructure → Prop where
            Derivation D D''
 
 -- ============================================================
+-- §5.2 Core rule, concretely refined (illustration of the
+-- refinement pattern users follow for each of the 12 rules).
+--
+-- Core rule (Table 5.1): for every ``A ∈ core_v``, add the clause
+-- ``⊤ → A``  (i.e., empty body, single head atom ``A``) to
+-- ``S_v``.  We expose this as a concrete `Step` refinement so that
+-- (a) it's clear what the framework's user must produce per rule,
+-- and (b) we can prove a real soundness lemma for at least one case.
+-- ============================================================
+
+/-- The clause produced by the Core rule for core atom ``A``: empty
+    body, head ``A ≈ true``. -/
+def coreClause (A : PTerm) : CClause :=
+  { body := [], head := [CLit.atomTrue A] }
+
+/-- ``StepCore D v D'`` says: ``D'`` is obtained from ``D`` by
+    applying the Core rule at context ``v``, picking core atom
+    ``A`` and adding ``coreClause A`` to ``S v``.
+
+    Concretely: ``v ∈ D.contexts``, ``A ∈ (D.core v).atoms``,
+    ``coreClause A ∉ D.S v``, and ``D'`` agrees with ``D`` on every
+    field except ``S`` where ``S v`` gains ``coreClause A`` at the
+    front. -/
+def StepCore (D : ContextStructure) (v : CtxId) (A : PTerm)
+    (D' : ContextStructure) : Prop :=
+  v ∈ D.contexts ∧
+  A ∈ (D.core v).atoms ∧
+  coreClause A ∉ D.S v ∧
+  D'.contexts = D.contexts ∧
+  D'.vr = D.vr ∧
+  D'.edges = D.edges ∧
+  D'.core = D.core ∧
+  D'.m = D.m ∧
+  D'.θ = D.θ ∧
+  D'.S = fun w => if w = v then coreClause A :: D.S v else D.S w
+
+/-- **Soundness of the Core rule.**  Under the strengthened
+    semantic `isSound`, applying Core at any (v, A) preserves
+    soundness: the new clause `⊤ → A` is entailed because
+    `A ∈ core_v` is part of the anchor condition. -/
+theorem step_core_sound (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure) (v : CtxId) (A : PTerm)
+    (hStep : StepCore D v A D')
+    (hSound : isSound O D CD) :
+    isSound O D' CD := by
+  obtain ⟨hvD, hA, _hNew, hCtx, hVr, hEdges, hCore, _hM, _hθ, hSeq⟩ := hStep
+  refine ⟨?_, ?_⟩
+  · -- S1: every clause in D'.S v is entailed.
+    intro w hw c hc α I γ φ hIO hICD vx vy hcoreW
+    have hwD : w ∈ D.contexts := by rw [hCtx] at hw; exact hw
+    have hcoreD : coreSat I ⟨γ, φ, vx, vy⟩ (D.core w) := by
+      have : D.core w = D'.core w := by rw [hCore]
+      rw [this]; exact hcoreW
+    -- Case split on whether c is the newly added clause.
+    by_cases hwv : w = v
+    · -- w = v.  D'.S w = D'.S v = coreClause A :: D.S v.
+      have hSw : D'.S w = coreClause A :: D.S v := by
+        rw [hSeq]; simp [hwv]
+      rw [hSw] at hc
+      simp at hc
+      rcases hc with hcEq | hcOld
+      · -- c is the new coreClause A.
+        subst hcEq
+        intro _
+        refine ⟨CLit.atomTrue A, ?_, ?_⟩
+        · simp [coreClause]
+        · -- A holds at the anchor since A ∈ core_v.
+          show CLit.eval I ⟨γ, φ, vx, vy⟩ (CLit.atomTrue A)
+          simp [CLit.eval]
+          have : D.core w = D.core v := by rw [hwv]
+          rw [this] at hcoreD
+          exact hcoreD A hA
+      · -- c was already in D.S v.  Use existing soundness on D.
+        have hwvD : v ∈ D.contexts := hvD
+        have : D.core w = D.core v := by rw [hwv]
+        have hcoreD' : coreSat I ⟨γ, φ, vx, vy⟩ (D.core v) := by
+          rw [← this]; exact hcoreD
+        exact hSound.1 v hwvD c hcOld I γ φ hIO hICD vx vy hcoreD'
+    · -- w ≠ v: S w is unchanged.
+      have : D'.S w = D.S w := by
+        rw [hSeq]; simp [hwv]
+      rw [this] at hc
+      exact hSound.1 w hwD c hc I γ φ hIO hICD vx vy hcoreD
+  · -- S2: edges unchanged ⇒ S2 obligation inherits.
+    intro w w' f hEdge hwne α I γ φ hIO hICD vx vy hcoreW
+    have hEdgeD : D.hasEdge w w' (.fn f) := by
+      unfold ContextStructure.hasEdge at hEdge ⊢; rw [← hEdges]; exact hEdge
+    have hwneD : w ≠ D.vr := by rw [← hVr]; exact hwne
+    have hcoreD : coreSat I ⟨γ, φ, vx, vy⟩ (D.core w) := by
+      have : D.core w = D'.core w := by rw [hCore]
+      rw [this]; exact hcoreW
+    intro p hp
+    have : (D.core w').atoms = (D'.core w').atoms := by rw [hCore]
+    rw [← this] at hp
+    exact hSound.2 w w' f hEdgeD hwneD I γ φ hIO hICD vx vy hcoreD p hp
+
+-- ============================================================
 -- Theorem 1: Soundness  (Tena-Cucala 2019, §6.2)
 -- ============================================================
 
