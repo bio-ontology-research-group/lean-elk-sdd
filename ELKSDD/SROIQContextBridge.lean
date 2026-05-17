@@ -120,6 +120,52 @@ theorem sroiq_iff_via_TC
   intro hSat
   exact satC_sound R O C E hSat
 
+/-- **Refined headline**: SROIQ completeness via the *Composite
+    Refutation Lemma* (the heart of Tena-Cucala §6.3.4).
+
+    This is a strictly more concrete handle than
+    `sroiq_complete_via_TC`: a user proves `CompositeRefutationLemma`
+    by concretely constructing the per-term Herbrand fragments R_t^*
+    (§6.3.2), naming nominal-like elements (§6.3.3), and assembling
+    the composite model (§6.3.4); plus showing the Herbrand model is
+    an actual model of the ontology. -/
+theorem sroiq_complete_via_CRL
+    (crl : ALCHOIQContext.CompositeRefutationLemma)
+    (herb_models_O :
+      ∀ (O' : Ontology) (CM : ALCHOIQContext.CompositeModel)
+        (H : ALCHOIQContext.HerbrandModel CM),
+        ∃ (I : Interp H.Dom)
+          (γ : ALCHOIQContext.Indu → H.Dom)
+          (φ : ALCHOIQContext.FunSym → H.Dom → H.Dom),
+          I.satisfies O' ∧
+          (∀ Q : QueryClause, H.refutesQuery Q →
+            ∃ vx vy : H.Dom, ¬ Q.eval I ⟨γ, φ, vx, vy⟩))
+    {R : RBox} {O : Ontology} (br : Bridge R O)
+    (C E : Concept) (hEnt : Entails R O C E) :
+    SatC R O C E :=
+  sroiq_complete_via_TC
+    (ALCHOIQContext.tc_from_refutation_lemma crl herb_models_O)
+    br C E hEnt
+
+/-- **Iff variant** of the CRL-based completeness. -/
+theorem sroiq_iff_via_CRL
+    (crl : ALCHOIQContext.CompositeRefutationLemma)
+    (herb_models_O :
+      ∀ (O' : Ontology) (CM : ALCHOIQContext.CompositeModel)
+        (H : ALCHOIQContext.HerbrandModel CM),
+        ∃ (I : Interp H.Dom)
+          (γ : ALCHOIQContext.Indu → H.Dom)
+          (φ : ALCHOIQContext.FunSym → H.Dom → H.Dom),
+          I.satisfies O' ∧
+          (∀ Q : QueryClause, H.refutesQuery Q →
+            ∃ vx vy : H.Dom, ¬ Q.eval I ⟨γ, φ, vx, vy⟩))
+    {R : RBox} {O : Ontology} (br : Bridge R O)
+    (C E : Concept) :
+    Entails R O C E ↔ SatC R O C E :=
+  sroiq_iff_via_TC
+    (ALCHOIQContext.tc_from_refutation_lemma crl herb_models_O)
+    br C E
+
 -- ============================================================
 -- Concrete `Bridge` instance: a *trivial* context structure that
 -- demonstrates the framework is non-vacuous and that constructing a

@@ -149,5 +149,7 @@ namespace ELKSDD
 #print axioms SROIQ.trivial_sound
 #print axioms SROIQ.trivial_saturated
 #print axioms SROIQ.trivialBridge
+#print axioms SROIQ.sroiq_complete_via_CRL
+#print axioms SROIQ.sroiq_iff_via_CRL
 
 end ELKSDD
