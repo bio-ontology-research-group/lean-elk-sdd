@@ -186,4 +186,34 @@ namespace ELKSDD
 #print axioms SROIQ.sroiq_complete_via_canonical
 #print axioms SROIQ.sroiq_complete_dispatch
 
+-- ============================================================
+-- §6.3.4 concrete: Bool Herbrand model + propositional refutation
+-- + concretely-proved completeness slice for empty O + propRefutable.
+-- ============================================================
+#print axioms ALCHOIQContext.atermEvalBool
+#print axioms ALCHOIQContext.aterm_eval_bool_agrees
+#print axioms ALCHOIQContext.QueryClause.propRefutable
+#print axioms ALCHOIQContext.trivialCompositeModel
+#print axioms ALCHOIQContext.boolHerbrandModel
+#print axioms ALCHOIQContext.boolInterp
+#print axioms ALCHOIQContext.boolAssign
+#print axioms ALCHOIQContext.bool_body_holds
+#print axioms ALCHOIQContext.bool_head_fails
+#print axioms ALCHOIQContext.bool_refutes_propRefutable
+#print axioms ALCHOIQContext.compositeRefutationLemma_propRefutable
+#print axioms ALCHOIQContext.HerbModelsOPerQ
+#print axioms ALCHOIQContext.tc_from_refutation_lemma_per_Q
+#print axioms ALCHOIQContext.boolHerb_emptyO_per_Q
+#print axioms ALCHOIQContext.tenaCucalaCompleteness_emptyO_propRefutable
+
+-- ============================================================
+-- Populated (non-trivial) Bridge.
+-- ============================================================
+#print axioms SROIQ.reflClause0
+#print axioms SROIQ.populatedContextStructure
+#print axioms SROIQ.populated_sound
+#print axioms SROIQ.populated_saturated
+#print axioms SROIQ.reflQuery0
+#print axioms SROIQ.populatedBridge
+
 end ELKSDD

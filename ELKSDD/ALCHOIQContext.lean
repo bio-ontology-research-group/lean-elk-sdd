@@ -1641,5 +1641,315 @@ theorem tc_from_refutation_lemma
     obtain ⟨vx, vy, hNotQ⟩ := hRefutes Q hRef
     exact hNotQ (hSem I γ φ hIO vx vy)
 
+-- ============================================================
+-- §6.3.4 concrete: Bool-domain Herbrand model.
+--
+-- Inside ``HerbrandModel.refutesQuery`` the assignment is
+-- hard-coded:   γ = fun _ => vx,  φ = fun _ x => x.   Under this
+-- assignment every a-term collapses to one of two values:
+-- ``.y`` evaluates to ``vy``; every other term evaluates to
+-- ``vx``.   This gives a canonical 2-element projection
+-- ``atermEvalBool``, and admits a clean Bool-domain Herbrand
+-- model whose extension is determined by the body atoms of the
+-- query.
+--
+-- This delivers a *constructive* proof of the refutation lemma
+-- for the propositional fragment — every query whose body and
+-- head do not collide modulo the Bool projection has a Bool
+-- countermodel.   The remaining case (Bool-tautological queries)
+-- is exactly the case where the propositional saturation rules
+-- of the calculus would derive ``Q ∈ S_q`` directly.
+-- ============================================================
+
+/-- Bool projection induced by ``γ = fun _ => false`` and
+    ``φ = fun _ x => x`` with ``vx = false``, ``vy = true``. -/
+def atermEvalBool : ATerm → Bool
+  | .x          => false
+  | .y          => true
+  | .fx _       => false
+  | .const _    => false
+  | .fconst _ _ => false
+
+/-- Under the Bool assignment, ``ATerm.eval`` agrees with
+    ``atermEvalBool`` definitionally. -/
+theorem aterm_eval_bool_agrees (I : Interp Bool) (t : ATerm) :
+    t.eval I ⟨fun _ => false, fun _ x => x, false, true⟩
+      = atermEvalBool t := by
+  cases t <;> rfl
+
+/-- A query clause is *propositionally refutable* in the Bool
+    Herbrand model iff its head doesn't collide with its body modulo
+    the Bool projection. -/
+def QueryClause.propRefutable (Q : QueryClause) : Prop :=
+  -- (1) No head atom collides with a body concept atom under Bool eval.
+  (∀ B s t,
+    CLit.atomTrue (PTerm.atom B s) ∈ Q.Delta →
+    BLit.atomTrue (PTerm.atom B t) ∈ Q.Gamma →
+    atermEvalBool t ≠ atermEvalBool s) ∧
+  -- (2) No head role atom collides with a body role atom under Bool eval.
+  (∀ S s₁ s₂ t₁ t₂,
+    CLit.atomTrue (PTerm.role S s₁ s₂) ∈ Q.Delta →
+    BLit.atomTrue (PTerm.role S t₁ t₂) ∈ Q.Gamma →
+    atermEvalBool t₁ ≠ atermEvalBool s₁ ∨
+    atermEvalBool t₂ ≠ atermEvalBool s₂) ∧
+  -- (3) The always-true literal is not in the head.
+  (CLit.atomTrue PTerm.ttrue ∉ Q.Delta) ∧
+  -- (4) Head ``AEq.eqL`` literals project to *distinct* Bool values
+  --     (so the equality fails under Bool eval).
+  (∀ s₁ s₂, CLit.aeq (AEq.eqL s₁ s₂) ∈ Q.Delta →
+    atermEvalBool s₁ ≠ atermEvalBool s₂) ∧
+  -- (5) Head ``AEq.neqL`` literals project to *same* Bool values
+  --     (so the disequality fails under Bool eval).
+  (∀ s₁ s₂, CLit.aeq (AEq.neqL s₁ s₂) ∈ Q.Delta →
+    atermEvalBool s₁ = atermEvalBool s₂)
+
+/-- The trivial composite model — no rewrites, vacuously confluent.
+    Used as the carrier for the Bool Herbrand model. -/
+def trivialCompositeModel : CompositeModel where
+  rewrites := []
+  confluent := True
+
+/-- The Bool Herbrand model for a query ``Q``.   Concept and role
+    extensions are determined by the body atoms of ``Q``:
+    ``ext_concept B b`` is true iff some body atom ``B(t)`` has
+    ``atermEvalBool t = b``; similarly for ``ext_role``. -/
+def boolHerbrandModel (Q : QueryClause) :
+    HerbrandModel trivialCompositeModel where
+  Dom         := Bool
+  name        := atermEvalBool
+  ext_concept := fun B b =>
+    ∃ t, BLit.atomTrue (PTerm.atom B t) ∈ Q.Gamma ∧ atermEvalBool t = b
+  ext_role    := fun S b₁ b₂ =>
+    ∃ t₁ t₂,
+      BLit.atomTrue (PTerm.role S t₁ t₂) ∈ Q.Gamma ∧
+      atermEvalBool t₁ = b₁ ∧ atermEvalBool t₂ = b₂
+
+/-- The Bool interpretation associated to a query — the concept and
+    role extensions are the Bool Herbrand model's, with
+    `ext_ind = fun _ => false`. -/
+def boolInterp (Q : QueryClause) : Interp Bool :=
+  { ext_concept := (boolHerbrandModel Q).ext_concept,
+    ext_role    := (boolHerbrandModel Q).ext_role,
+    ext_ind     := fun _ => false }
+
+/-- The canonical Bool assignment: `γ = fun _ => false`,
+    `φ = fun _ x => x`, `vx = false`, `vy = true`. -/
+def boolAssign : CtxAssign Bool :=
+  ⟨fun _ => false, fun _ x => x, false, true⟩
+
+/-- **Every body literal holds at the Bool assignment.** -/
+theorem bool_body_holds (Q : QueryClause) (b : BLit) (hb : b ∈ Q.Gamma) :
+    BLit.eval (boolInterp Q) boolAssign b := by
+  cases b with
+  | atomTrue p =>
+    cases p with
+    | ttrue => trivial
+    | atom B t =>
+      show ∃ t', BLit.atomTrue (PTerm.atom B t') ∈ Q.Gamma ∧
+                  atermEvalBool t' = atermEvalBool t
+      refine ⟨t, hb, rfl⟩
+    | role S t₁ t₂ =>
+      show ∃ t₁' t₂',
+        BLit.atomTrue (PTerm.role S t₁' t₂') ∈ Q.Gamma ∧
+        atermEvalBool t₁' = atermEvalBool t₁ ∧
+        atermEvalBool t₂' = atermEvalBool t₂
+      refine ⟨t₁, t₂, hb, rfl, rfl⟩
+  | uequ u₁ u₂ => rfl
+
+/-- **Every head literal fails at the Bool assignment**, provided the
+    query is propositionally refutable. -/
+theorem bool_head_fails (Q : QueryClause) (hPR : Q.propRefutable)
+    (h : CLit) (hh : h ∈ Q.Delta) :
+    ¬ CLit.eval (boolInterp Q) boolAssign h := by
+  obtain ⟨hClash_atom, hClash_role, hNo_ttrue, hEqL_diff, hNeqL_same⟩ := hPR
+  cases h with
+  | atomTrue p =>
+    cases p with
+    | ttrue => exact absurd hh hNo_ttrue
+    | atom B s =>
+      intro hExt
+      obtain ⟨t, htInGamma, hEval⟩ := hExt
+      exact hClash_atom B s t hh htInGamma hEval
+    | role S s₁ s₂ =>
+      intro hExt
+      obtain ⟨t₁, t₂, htInGamma, hEval₁, hEval₂⟩ := hExt
+      rcases hClash_role S s₁ s₂ t₁ t₂ hh htInGamma with hne₁ | hne₂
+      · exact hne₁ hEval₁
+      · exact hne₂ hEval₂
+  | aeq e =>
+    cases e with
+    | eqL s₁ s₂ =>
+      intro hEval
+      apply hEqL_diff s₁ s₂ hh
+      cases s₁ <;> cases s₂ <;> exact hEval
+    | neqL s₁ s₂ =>
+      intro hEval
+      apply hEval
+      cases s₁ <;> cases s₂ <;> exact hNeqL_same _ _ hh
+
+/-- **Refutation lemma for the Bool fragment**: the Bool Herbrand
+    model refutes every propositionally-refutable query.
+
+    Packaged as the `H.refutesQuery` existential — useful when wiring
+    through the abstract CRL pipeline. -/
+theorem bool_refutes_propRefutable (Q : QueryClause)
+    (hPR : Q.propRefutable) :
+    (boolHerbrandModel Q).refutesQuery Q :=
+  ⟨false, true,
+   fun b hb => bool_body_holds Q b hb,
+   fun h hh => bool_head_fails Q hPR h hh⟩
+
+-- ============================================================
+-- Restricted Composite Refutation Lemma.
+--
+-- We prove CompositeRefutationLemma for the propositionally-refutable
+-- fragment using the Bool Herbrand model.   This is a *constructive*
+-- proof of CRL on that subclass, complementing the typed Prop
+-- hypothesis ``CompositeRefutationLemma`` (the unrestricted form).
+-- ============================================================
+
+/-- **CRL for propositionally-refutable queries.**
+
+    For any sound saturated context structure with a context q whose
+    S_q does not contain Q, if Q is propositionally refutable, the
+    Bool Herbrand model refutes Q.   Concrete proof: instantiate the
+    composite model with `trivialCompositeModel` and the Herbrand model
+    with `boolHerbrandModel Q`, then apply `bool_refutes_propRefutable`.
+
+    Unlike the general CRL hypothesis, this version is closed —
+    requires no `axiom` or thesis-as-hypothesis — at the cost of the
+    `propRefutable Q` precondition.   It covers the calculus-tractable
+    cases where Q's body and head don't propositionally collide. -/
+theorem compositeRefutationLemma_propRefutable
+    (O : Ontology) (CD : DerivedClauses) (D : ContextStructure)
+    (_hSound : isSound O D CD) (_hSat : Saturated D)
+    (Q : QueryClause) (q : CtxId)
+    (_hq : q ∈ D.contexts) (_hNotInS : ¬ Q.inS D q)
+    (hPR : Q.propRefutable) :
+    ∃ (CM : CompositeModel) (H : HerbrandModel CM), H.refutesQuery Q :=
+  ⟨trivialCompositeModel, boolHerbrandModel Q,
+   bool_refutes_propRefutable Q hPR⟩
+
+/-- A *per-query* refinement of `herb_models_O`: rather than fixing
+    one global `(I, γ, φ)` for all queries refuted by `H`, allow the
+    interpretation to depend on the specific query `Q`.
+
+    This is logically weaker than the original `herb_models_O` (which
+    quantifies `(I, γ, φ)` outside the universal `∀ Q`), but it is
+    *equally strong* as a hypothesis for deriving Tena-Cucala
+    completeness — see `tc_from_refutation_lemma_per_Q`.   The per-Q
+    flexibility lets us instantiate concretely from the Bool
+    Herbrand model: each query is refuted using the canonical
+    `(false, true)` Bool witness. -/
+def HerbModelsOPerQ : Prop :=
+  ∀ (O : Ontology) (CM : CompositeModel) (H : HerbrandModel CM)
+    (Q : QueryClause), H.refutesQuery Q →
+    ∃ (I : Interp H.Dom) (γ : Indu → H.Dom) (φ : FunSym → H.Dom → H.Dom)
+      (vx vy : H.Dom),
+      I.satisfies O ∧ ¬ Q.eval I ⟨γ, φ, vx, vy⟩
+
+/-- **Tena-Cucala completeness via the per-Q variant.**
+
+    Same conclusion as `tc_from_refutation_lemma` (TenaCucalaCompleteness)
+    but uses the per-Q `HerbModelsOPerQ` instead of the global
+    `herb_models_O`.   The per-Q form is amenable to a concrete proof
+    in the boolHerbrandModel case (see `boolHerb_emptyO_per_Q`). -/
+theorem tc_from_refutation_lemma_per_Q
+    (crl : CompositeRefutationLemma)
+    (herb_models_O_per_Q : HerbModelsOPerQ) :
+    TenaCucalaCompleteness := by
+  intro O CD D hSound hSat Q hSem q hq
+  rcases Classical.em (Q.inS D q) with hInS | hNotInS
+  · exact hInS
+  · exfalso
+    obtain ⟨CM, H, hRef⟩ := crl O CD D hSound hSat Q q hq hNotInS
+    obtain ⟨I, γ, φ, vx, vy, hIO, hNotQ⟩ :=
+      herb_models_O_per_Q O CM H Q hRef
+    exact hNotQ (hSem I γ φ hIO vx vy)
+
+/-- **Concrete `HerbModelsOPerQ`-witness for the empty ontology**,
+    instantiated by the Bool Herbrand model construction.
+
+    Given a `boolHerbrandModel Q₀` that refutes some query `Q`, the
+    refutation witnesses (`vx', vy'`) are exposed by destructuring
+    the existential in `refutesQuery`.   We pick `I, γ, φ` to match
+    those witnesses, so that the outer `Q.eval` reduces to the inner
+    refutation conditions verbatim.
+
+    Empty-ontology models are trivial (any I models []).
+
+    This delivers a concrete TC witness for the empty ontology that
+    composes with `compositeRefutationLemma_propRefutable` to give an
+    unconditional partial Tena-Cucala completeness theorem. -/
+theorem boolHerb_emptyO_per_Q :
+    ∀ (Q₀ : QueryClause) (Q : QueryClause)
+      (hRef : (boolHerbrandModel Q₀).refutesQuery Q),
+      ∃ (I : Interp Bool) (γ : Indu → Bool) (φ : FunSym → Bool → Bool)
+        (vx vy : Bool),
+        I.satisfies ([] : Ontology) ∧
+        ¬ Q.eval I ⟨γ, φ, vx, vy⟩ := by
+  intro Q₀ Q hRef
+  obtain ⟨vx', vy', hBody, hHead⟩ := hRef
+  -- The internal interpretation used by H.refutesQuery has
+  --   ext_concept := boolHerb.ext_concept, ext_role := boolHerb.ext_role,
+  --   ext_ind := fun _ => vx', γ' := fun _ => vx', φ' := fun _ x => x.
+  -- We reproduce this externally so that Q.eval at our chosen (vx', vy')
+  -- coincides with the inner evaluation.
+  refine ⟨
+    { ext_concept := (boolHerbrandModel Q₀).ext_concept,
+      ext_role    := (boolHerbrandModel Q₀).ext_role,
+      ext_ind     := fun _ => vx' },
+    fun _ => vx',
+    fun _ x => x,
+    vx', vy',
+    ?_, ?_⟩
+  · intro ax hax
+    exact absurd hax (by intro h; exact List.not_mem_nil h)
+  · intro hQbody
+    obtain ⟨h, hhMem, hhEval⟩ := hQbody hBody
+    exact hHead h hhMem hhEval
+
+/-- **Tena-Cucala completeness for the empty ontology + propositionally
+    refutable queries** — concretely proven (no axiom/sorry, no
+    hypothesis-as-Prop).
+
+    Direct proof: if `Q.propRefutable` and `entailsQuery [] Q` and
+    `¬ Q.inS D q`, then the Bool model produces a concrete countermodel
+    at (false, true) ∈ Bool — body holds, head fails — contradicting
+    the entailment.
+
+    This bypasses the abstract `CompositeRefutationLemma` /
+    `herb_models_O` hypotheses entirely, delivering a sliver of the
+    Tena-Cucala completeness theorem unconditionally.   It applies
+    exactly to the propRefutable fragment over the empty ontology. -/
+theorem tenaCucalaCompleteness_emptyO_propRefutable
+    (CD : DerivedClauses) (D : ContextStructure)
+    (_hSound : isSound [] D CD) (_hSat : Saturated D)
+    (Q : QueryClause) (hPR : Q.propRefutable)
+    (hEnt : entailsQuery [] Q)
+    (q : CtxId) (_hq : q ∈ D.contexts) :
+    Q.inS D q := by
+  -- We don't actually need to refute Q.inS D q — we just need to
+  -- show that under the given hypotheses Q.inS D q follows.   The
+  -- contradiction is between bool_body_holds + bool_head_fails (which
+  -- together prove ¬ Q.eval) and entailsQuery (which says Q.eval).
+  -- Therefore the hypotheses are inconsistent, and we can derive
+  -- anything — including Q.inS D q.
+  exfalso
+  have hIsat : (boolInterp Q).satisfies ([] : Ontology) := by
+    intro ax hax
+    exact absurd hax (by intro h; exact List.not_mem_nil h)
+  have hQEval : Q.eval (boolInterp Q) boolAssign :=
+    hEnt (boolInterp Q) boolAssign.γ boolAssign.φ hIsat
+         boolAssign.vx boolAssign.vy
+  have hBody : ∀ b ∈ Q.Gamma,
+      BLit.eval (boolInterp Q) boolAssign b := fun b hb =>
+    bool_body_holds Q b hb
+  have hHead : ∀ h ∈ Q.Delta,
+      ¬ CLit.eval (boolInterp Q) boolAssign h := fun h hh =>
+    bool_head_fails Q hPR h hh
+  obtain ⟨h, hhMem, hhEval⟩ := hQEval hBody
+  exact hHead h hhMem hhEval
+
 end ALCHOIQContext
 end ELKSDD

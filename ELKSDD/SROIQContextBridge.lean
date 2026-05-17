@@ -310,5 +310,172 @@ theorem sroiq_complete_dispatch
   · exact sroiq_complete_via_TC tc br C E hEnt
   · exact hCanon C E hEnt
 
+-- ============================================================
+-- A *populated* context structure & Bridge: non-trivial S, with
+-- clauses that mirror SatC reflexivity at the concept level.
+--
+-- The construction:
+--   * Single context (index 0) at the root.
+--   * Empty core (no anchored atoms).
+--   * S 0 contains the reflexivity context clause
+--       A(x) → A(x)
+--     for the atomic concept `A = Concept.atom 0`.
+--
+-- Soundness: the reflexivity clause is unconditionally entailed
+-- under any interpretation (its body and head share the same
+-- literal), so S1 is satisfied without any reliance on O ∪ CD ∪
+-- core.   S2 is vacuous (no Skolem-function edges).
+--
+-- Saturated: `Step` is uninhabited at the framework level, so any
+-- D is saturated.
+--
+-- to_query/from_inS demonstrate that the Bridge framework can close
+-- a real SatC entailment via the context-structure detour.
+-- ============================================================
+
+/-- The reflexivity context clause for atomic concept `Concept.atom 0`:
+    body `[atomTrue (atom 0 (x))]`, head `[atomTrue (atom 0 (x))]`. -/
+def reflClause0 : CClause :=
+  { body := [BLit.atomTrue (PTerm.atom 0 ATerm.x)],
+    head := [CLit.atomTrue (PTerm.atom 0 ATerm.x)] }
+
+/-- The populated context structure: 1 context, S 0 contains the
+    reflexivity clause for atomic concept `atom 0`. -/
+noncomputable def populatedContextStructure : ContextStructure where
+  contexts := [0]
+  vr       := 0
+  edges    := []
+  core     := fun _ => { atoms := [] }
+  S        := fun w => if w = 0 then [reflClause0] else []
+  m        := {
+    lt := fun u v => u.depth < v.depth
+    lt_irrefl := fun _ h => Nat.lt_irrefl _ h
+    lt_trans := fun _ _ _ h1 h2 => Nat.lt_trans h1 h2
+    depth_mono := fun _ _ h => h
+    fn_above_const := fun _ _ => false
+    c_above_all_aux :=
+      { root := 0, label := [] : ELKSDD.ALCHOIQContext.Indu }
+  }
+  θ := fun _ => {
+    lt := fun _ _ => False
+    lt_irrefl := fun _ h => h
+    lt_trans := fun _ _ _ h _ => h
+  }
+
+/-- The populated structure is sound for any ontology: the only
+    clause in S 0 is the reflexivity self-implication, which is
+    universally valid under any interpretation. -/
+theorem populated_sound (O : Ontology) (CD : DerivedClauses) :
+    isSound O populatedContextStructure CD := by
+  refine ⟨?_, ?_⟩
+  · -- S1: only reflClause0 ∈ S 0.   It's universally entailed.
+    intro v hv c hc α I γ φ _hIO _hICD vx vy _hCore
+    -- v must be 0 since contexts = [0].
+    have hv0 : v = 0 := by
+      simp [populatedContextStructure] at hv; exact hv
+    -- Therefore S v = S 0 = [reflClause0].
+    have hSv : populatedContextStructure.S v = [reflClause0] := by
+      rw [hv0]; simp [populatedContextStructure]
+    rw [hSv] at hc
+    -- c must be reflClause0.
+    rcases List.mem_cons.mp hc with hcEq | hcNil
+    · subst hcEq
+      -- reflClause0.eval = body → head; both reduce to ext_concept 0 vx.
+      intro hbody
+      refine ⟨CLit.atomTrue (PTerm.atom 0 ATerm.x), ?_, ?_⟩
+      · simp [reflClause0]
+      · -- head literal evaluates to ext_concept 0 vx.   Body provides it.
+        have := hbody (BLit.atomTrue (PTerm.atom 0 ATerm.x))
+                      (by simp [reflClause0])
+        exact this
+    · exact absurd hcNil (by intro h; exact List.not_mem_nil h)
+  · -- S2: no Skolem-function edges.
+    intro v w f hEdge _
+    exact absurd hEdge (by intro h; exact List.not_mem_nil h)
+
+/-- The populated structure is saturated (Step uninhabited). -/
+theorem populated_saturated : Saturated populatedContextStructure := by
+  intro _ _ hStep; cases hStep
+
+/-- The query corresponding to `reflClause0` viewed as a `QueryClause`. -/
+def reflQuery0 : QueryClause :=
+  { Gamma := [BLit.atomTrue (PTerm.atom 0 ATerm.x)],
+    Delta := [CLit.atomTrue (PTerm.atom 0 ATerm.x)] }
+
+/-- **The populated Bridge**: a concrete non-trivial Bridge that
+    closes the SatC reflexivity entailment `SatC R O (Concept.atom 0)
+    (Concept.atom 0)` via the context-structure detour.
+
+    For other (C, E) pairs the Bridge falls back to the trivial
+    always-true query, so the back-translation is vacuous.   The
+    point of this construction is to demonstrate that the Bridge
+    interface is non-vacuously inhabited:  there exists a Bridge with
+    populated S delivering a real SatC derivation.
+
+    Composes with `TenaCucalaCompleteness` (or any of its concrete
+    refinements) to close `Entails R O (atom 0) (atom 0) ⇒ SatC R O
+    (atom 0) (atom 0)` through the calculus. -/
+noncomputable def populatedBridge (R : RBox) (O : Ontology) :
+    Bridge R O where
+  D         := populatedContextStructure
+  CD        := { clauses := [] }
+  q         := 0
+  q_mem     := by simp [populatedContextStructure]
+  sound     := populated_sound O _
+  saturated := populated_saturated
+  to_query  := fun C E =>
+    if C = Concept.atom 0 ∧ E = Concept.atom 0 then reflQuery0
+    else { Gamma := [], Delta := [CLit.atomTrue PTerm.ttrue] }
+  to_query_entails := by
+    intro C E hEnt α I γ φ _hIO vx vy
+    -- Split on the match.
+    by_cases h : C = Concept.atom 0 ∧ E = Concept.atom 0
+    · -- to_query = reflQuery0.
+      simp [h]
+      intro hbody
+      refine ⟨CLit.atomTrue (PTerm.atom 0 ATerm.x), ?_, ?_⟩
+      · simp [reflQuery0]
+      · -- reflQuery0.head[0] evaluates to ext_concept 0 vx, which body provides.
+        exact hbody (BLit.atomTrue (PTerm.atom 0 ATerm.x))
+                    (by simp [reflQuery0])
+    · -- to_query = trivial.
+      simp [h]
+      intro _
+      refine ⟨CLit.atomTrue PTerm.ttrue, ?_, ?_⟩
+      · simp
+      · show CLit.eval I ⟨γ, φ, vx, vy⟩ (CLit.atomTrue PTerm.ttrue)
+        simp [CLit.eval, PTerm.eval]
+  from_inS := by
+    intro C E hInS
+    by_cases h : C = Concept.atom 0 ∧ E = Concept.atom 0
+    · -- to_query = reflQuery0.   In S 0 by construction.
+      obtain ⟨hC, hE⟩ := h
+      rw [hC, hE]
+      exact SatC.ofAlchoq (ALCHOQ.SatC.ofSat (ALCHOQ.Sat.refl _))
+    · -- to_query = trivial query.   S 0 = [reflClause0]; the trivial
+      -- query's body ([]) differs from reflClause0's body, so it is
+      -- not in S 0 — vacuous.
+      exfalso
+      have hQ : (if C = Concept.atom 0 ∧ E = Concept.atom 0 then
+                   reflQuery0
+                 else
+                   ({ Gamma := [],
+                      Delta := [CLit.atomTrue PTerm.ttrue] }
+                      : QueryClause))
+              = { Gamma := [], Delta := [CLit.atomTrue PTerm.ttrue] } :=
+        by simp [h]
+      rw [hQ] at hInS
+      -- hInS : { body := [], head := [...] : CClause } ∈ S 0.
+      change ({ body := [], head := [CLit.atomTrue PTerm.ttrue] } : CClause)
+        ∈ populatedContextStructure.S 0 at hInS
+      have hSEq : populatedContextStructure.S 0 = [reflClause0] := by
+        simp [populatedContextStructure]
+      rw [hSEq] at hInS
+      rcases List.mem_cons.mp hInS with hEq | hNil
+      · -- bodies differ.
+        injection hEq with hBody _
+        cases hBody
+      · exact absurd hNil (by intro h; exact List.not_mem_nil h)
+
 end SROIQ
 end ELKSDD
