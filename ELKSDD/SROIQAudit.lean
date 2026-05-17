@@ -16,6 +16,7 @@ import ELKSDD.ALCHOQCompleteness
 import ELKSDD.SROIQCompleteness
 import ELKSDD.ALCHOIQContext
 import ELKSDD.SROIQSkolem
+import ELKSDD.SROIQCanonical
 
 namespace ELKSDD
 
@@ -71,5 +72,24 @@ namespace ELKSDD
 #print axioms SROIQ.sroiq_satC_complete_skolFragment_canonical
 #print axioms SROIQ.sroiq_canonical_satisfies_ontology
 #print axioms SROIQ.sroiq_canonical_satisfies_emptyRBox
+
+-- ============================================================
+-- SROIQ canonical-model construction over SROIQ.SatC.
+-- The carrier-type construction rebuilt so types are closed under
+-- SROIQ-only rules (roleIncl_univ, roleChain_two, roleTrans_exist,
+-- roleTrans_univ, roleIncl_hasSelf).
+-- ============================================================
+#print axioms SROIQ.consistent
+#print axioms SROIQ.alchoq_consistent_of_sroiq
+#print axioms SROIQ.bot_not_mem
+#print axioms SROIQ.top_mem
+#print axioms SROIQ.mem_xor_neg
+#print axioms SROIQ.type_closure
+#print axioms SROIQ.consistent_chain_union
+#print axioms SROIQ.lindenbaum_max
+#print axioms SROIQ.lindenbaum_max_closed
+#print axioms SROIQ.lindenbaum
+#print axioms SROIQ.c_negD_consistent
+#print axioms SROIQ.type_nonempty_of_consistent
 
 end ELKSDD

@@ -111,6 +111,23 @@ inductive SatC (R : RBox) (O : Ontology) : Concept → Concept → Prop where
   | roleDisj_self   : ∀ {r s} (i : Nat),
       RAxiom.disj r s ∈ R →
       SatC R O (.conj (.exist r (.nom i)) (.exist s (.nom i))) .bot
+  -- Structural conjunction / disjunction primitives at the SROIQ
+  -- level (so we can build derivations whose premises are themselves
+  -- SROIQ derivations, not necessarily lifted from ALCHOQ).
+  | satC_andI : ∀ {C D E}, SatC R O C D → SatC R O C E → SatC R O C (.conj D E)
+  | satC_orE  : ∀ {C D E}, SatC R O C E → SatC R O D E → SatC R O (.disj C D) E
+  -- r ⊑ s ⟹ hasSelf r ⊑ hasSelf s
+  -- (needed so the canonical model satisfies role inclusion at
+  -- self-loop pairs.)
+  | roleIncl_hasSelf : ∀ {r s}, RAxiom.incl r s ∈ R →
+      SatC R O (.hasSelf r) (.hasSelf s)
+  -- Trans(r) ⟹ ∀r.C ⊑ ∀r.(∀r.C)
+  -- (the universal-dual of `roleTrans_exist`; needed so the
+  -- canonical-model `ext_role` for `r` is transitive whenever the
+  -- carriers are closed under the rule.)
+  | roleTrans_univ : ∀ {r} (C : Concept),
+      RAxiom.trans r ∈ R →
+      SatC R O (.univ r C) (.univ r (.univ r C))
   -- Transitivity of the SatC relation.
   | trans : ∀ {C D E}, SatC R O C D → SatC R O D E → SatC R O C E
 
@@ -229,6 +246,21 @@ theorem satC_sound (R : RBox) (O : Ontology) (C D : Concept)
       have hyz : y = z := by rw [hy_eq, hz_eq]
       have hrxz : I.ext_role r x z := hyz ▸ hrxy
       exact disj_of_mem hR hMem x z ⟨hrxz, hsxz⟩
+  | satC_andI hCD hCE ihD ihE =>
+      exact ⟨ihD x hC, ihE x hC⟩
+  | satC_orE hCE hDE ihCE ihDE =>
+      rcases hC with hC' | hD'
+      · exact ihCE x hC'
+      · exact ihDE x hD'
+  | @roleIncl_hasSelf r s hMem =>
+      -- hC : I.ext_role r x x.  Goal : I.ext_role s x x.
+      exact incl_of_mem hR hMem x x hC
+  | roleTrans_univ C hMem =>
+      -- hC : ∀ y, I.ext_role r x y → I.eval (univ r C) y
+      -- Wait: hC : I.eval (univ r C) x = ∀ y, r x y → I.eval C y
+      -- Goal : I.eval (univ r (univ r C)) x = ∀ y, r x y → ∀ z, r y z → I.eval C z
+      intro y hrxy z hryz
+      exact hC z (trans_of_mem hR hMem x y z hrxy hryz)
   | trans hCD hDE ihCD ihDE =>
       exact ihDE x (ihCD x hC)
 
