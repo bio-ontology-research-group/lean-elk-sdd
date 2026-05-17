@@ -309,6 +309,36 @@ theorem skolCanonical_satisfies_refl
       Concept.top (Concept.hasSelf r)
       (top_mem R O _) (SatC.roleRefl_hasSelf hMem)
 
+/-- **Universal-propagation half of canonical binary role chains.**
+
+    Given `r₁ ∘ r₂ ⊑ s ∈ R` and `ext_role r₁ x y`, `ext_role r₂ y z`,
+    the universal-propagation half of `ext_role s x z` holds via
+    `type_closure` with `roleChain_two_univ`.  The self-loop half
+    (when `z = x`) needs a `hasSelf`-aware chain rule and is left as
+    a follow-up. -/
+theorem skolCanonical_chain_two_univ
+    (R : RBox) (O : Ontology) (hCons : consistent R O (∅ : Set Concept))
+    (r₁ r₂ s : Nat) (hMem : RAxiom.chain [r₁, r₂] s ∈ R) :
+    ∀ x y z : CanDom R O,
+      (∀ D, Concept.univ r₁ D ∈ carrierSet R O hCons x →
+            D ∈ carrierSet R O hCons y) →
+      (∀ D, Concept.univ r₂ D ∈ carrierSet R O hCons y →
+            D ∈ carrierSet R O hCons z) →
+      (∀ D, Concept.univ s D ∈ carrierSet R O hCons x →
+            D ∈ carrierSet R O hCons z) := by
+  intro x y z hxy hyz C hUnivS
+  -- type_closure with roleChain_two_univ:
+  --   univ s C ∈ carrier x  ⟹  univ r₁ (univ r₂ C) ∈ carrier x.
+  have hU12 : Concept.univ r₁ (Concept.univ r₂ C) ∈ carrierSet R O hCons x :=
+    type_closure R O (carrierType R O hCons x)
+      (Concept.univ s C) (Concept.univ r₁ (Concept.univ r₂ C))
+      hUnivS (SatC.roleChain_two_univ C hMem)
+  -- Apply ext_role r₁ x y: D = univ r₂ C.
+  have hU2 : Concept.univ r₂ C ∈ carrierSet R O hCons y :=
+    hxy (Concept.univ r₂ C) hU12
+  -- Apply ext_role r₂ y z: D = C.
+  exact hyz C hU2
+
 -- ============================================================
 -- (c.3) Truth lemma at hasSelf, ∃R.C, ∀R.C.
 -- ============================================================

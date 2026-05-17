@@ -137,6 +137,12 @@ inductive SatC (R : RBox) (O : Ontology) : Concept → Concept → Prop where
   -- satisfies hasSelf for every element when refl r ∈ R.
   | roleRefl_hasSelf : ∀ {r}, RAxiom.refl r ∈ R →
       SatC R O .top (.hasSelf r)
+  -- r₁ ∘ r₂ ⊑ s  ⟹  ∀s.C ⊑ ∀r₁.∀r₂.C
+  -- The universal-dual of `roleChain_two`; needed so the canonical
+  -- model satisfies role chains via universal propagation.
+  | roleChain_two_univ : ∀ {r₁ r₂ s} (C : Concept),
+      RAxiom.chain [r₁, r₂] s ∈ R →
+      SatC R O (.univ s C) (.univ r₁ (.univ r₂ C))
   -- Role-axis monotonicity at the SROIQ level (so we can derive
   -- ∃r.A ⊑ ∃r.B from A ⊑ B even when the premise is SROIQ-only).
   | satC_monoExist : ∀ (r : Nat) {C D}, SatC R O C D →
@@ -286,6 +292,12 @@ theorem satC_sound (R : RBox) (O : Ontology) (C D : Concept)
       -- hC : I.eval top x, trivially True.
       -- Goal : I.eval (.hasSelf r) x = I.ext_role r x x.
       exact refl_of_mem hR hMem x
+  | @roleChain_two_univ r₁ r₂ s C hMem =>
+      -- hC : I.eval (univ s C) x = ∀ y, s(x,y) → I.eval C y
+      -- Goal: I.eval (univ r₁ (univ r₂ C)) x
+      --     = ∀ y, r₁(x,y) → ∀ z, r₂(y,z) → I.eval C z
+      intro y hr1xy z hr2yz
+      exact hC z (chain_two_of_mem hR hMem x z ⟨y, hr1xy, hr2yz⟩)
   | satC_monoExist r hCD ihCD =>
       obtain ⟨y, hr, hCy⟩ := hC
       exact ⟨y, hr, ihCD y hCy⟩

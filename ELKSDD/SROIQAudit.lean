@@ -122,5 +122,6 @@ namespace ELKSDD
 #print axioms SROIQ.sroiq_satC_complete_skolFragment_roleInclOnly
 #print axioms SROIQ.skolCanonical_satisfies_refl
 #print axioms SROIQ.sroiq_satC_complete_skolFragment_inclReflOnly
+#print axioms SROIQ.skolCanonical_chain_two_univ
 
 end ELKSDD
