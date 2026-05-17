@@ -533,7 +533,22 @@ theorem skol_eval_univ_iff
 --     genuinely non-Tena-Cucala-handled cases).
 -- ============================================================
 
-/-- The unconditionally-discharged sub-syntax of ALCHOQ. -/
+/-- The unconditionally-discharged sub-syntax of ALCHOQ.
+
+    Admits: full propositional ALC + role-axis (`∃R.C`, `∀R.C`),
+    `hasSelf R`, and the cardinality cases that reduce to the role
+    axis:
+
+    * `≥0 R.C` (= ⊤),
+    * `≥1 R.C` (= ∃R.C; via SatC bidirectionals
+      `atLeast_to_exist` + `exist_to_atLeast1`),
+    * `≤0 R.C` (= ∀R.¬C).
+
+    Excluded: nominals (need nominal-uniqueness in the Skolem
+    domain), and `≥(n+1) R.C` / `≤n R.C` for n ≥ 1 (these need
+    Tena~Cucala-style cardinality-introduction rules in the
+    calculus, where n+1 syntactic Skolem-distinct witnesses force
+    a cardinality bound). -/
 def SkolFragment : Concept → Prop
   | .atom _        => True
   | .top           => True
@@ -545,7 +560,8 @@ def SkolFragment : Concept → Prop
   | .exist _ C     => SkolFragment C
   | .univ _ C      => SkolFragment C
   | .atLeast 0 _ C => SkolFragment C
-  | .atLeast (_+1) _ _ => False
+  | .atLeast 1 _ C => SkolFragment C
+  | .atLeast (_+2) _ _ => False
   | .atMost 0 _ C  => SkolFragment C
   | .atMost (_+1) _ _ => False
   | .hasSelf _     => True
@@ -672,7 +688,31 @@ theorem skol_canonical_eval_iff
           exact type_closure O (carrierType O hCons x) _ _
             (top_mem O _) (SatC.atLeastZero R D)
       | succ m =>
-          exact absurd hC (by simp [SkolFragment])
+          cases m with
+          | zero =>
+              -- The `atLeast 1 R D` case reduces to ∃R.D both semantically
+              -- (via `Interp.eval_atLeast_one_iff_exist`) and syntactically
+              -- (via `SatC.atLeast_to_exist` / `SatC.exist_to_atLeast1`).
+              intro x
+              have ihD := ih hC
+              have hExistIff := skol_eval_exist_iff O hCons R D x ihD
+              have hSem :
+                  (skolCanonical O hCons).eval (.atLeast 1 R D) x ↔
+                  (skolCanonical O hCons).eval (.exist R D) x :=
+                Interp.eval_atLeast_one_iff_exist
+                  (skolCanonical O hCons) R D x
+              rw [hSem, hExistIff]
+              constructor
+              · intro hExD
+                unfold carrierSet at hExD ⊢
+                exact type_closure O (carrierType O hCons x) _ _ hExD
+                  (SatC.exist_to_atLeast1 R D)
+              · intro hAL
+                unfold carrierSet at hAL ⊢
+                exact type_closure O (carrierType O hCons x) _ _ hAL
+                  (SatC.atLeast_to_exist 0 R D)
+          | succ m' =>
+              exact absurd hC (by simp [SkolFragment])
   | atMost n R D ih =>
       intro x
       have hD : SkolFragment D := by
