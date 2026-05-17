@@ -17,6 +17,7 @@ import ELKSDD.SROIQCompleteness
 import ELKSDD.ALCHOIQContext
 import ELKSDD.SROIQSkolem
 import ELKSDD.SROIQCanonical
+import ELKSDD.SROIQSkolemCanonical
 
 namespace ELKSDD
 
@@ -91,5 +92,22 @@ namespace ELKSDD
 #print axioms SROIQ.lindenbaum
 #print axioms SROIQ.c_negD_consistent
 #print axioms SROIQ.type_nonempty_of_consistent
+
+-- ============================================================
+-- SROIQ Skolem canonical model (steps a-d from the rebuild plan).
+-- ============================================================
+#print axioms SROIQ.CanDom.succ_ne_parent
+#print axioms SROIQ.satC_nom_to_conjList_of_noms
+#print axioms SROIQ.nom_consistent_of_cons
+#print axioms SROIQ.successor_consistent
+#print axioms SROIQ.carrierType
+#print axioms SROIQ.carrierSet
+#print axioms SROIQ.succ_carrier_contains_C
+#print axioms SROIQ.succ_carrier_propagates_univ
+#print axioms SROIQ.nomElt_carrier_contains
+#print axioms SROIQ.skolCanonical
+#print axioms SROIQ.skolCanonical_ext_ind
+#print axioms SROIQ.skolCanonical_satisfies_roleIncl
+#print axioms SROIQ.skolCanonical_univ_trans
 
 end ELKSDD

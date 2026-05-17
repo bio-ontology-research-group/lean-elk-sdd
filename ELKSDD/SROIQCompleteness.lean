@@ -128,6 +128,16 @@ inductive SatC (R : RBox) (O : Ontology) : Concept → Concept → Prop where
   | roleTrans_univ : ∀ {r} (C : Concept),
       RAxiom.trans r ∈ R →
       SatC R O (.univ r C) (.univ r (.univ r C))
+  -- Nominal globality: if ``{i} ⊑ ⊥`` is derivable, then so is
+  -- ``⊤ ⊑ ⊥`` (since every model has a witness for nom i).  Needed
+  -- to discharge `nom_consistent_of_cons` at the SROIQ level.
+  | nomGlobal : ∀ {i}, SatC R O (.nom i) .bot → SatC R O .top .bot
+  -- Role-axis monotonicity at the SROIQ level (so we can derive
+  -- ∃r.A ⊑ ∃r.B from A ⊑ B even when the premise is SROIQ-only).
+  | satC_monoExist : ∀ (r : Nat) {C D}, SatC R O C D →
+      SatC R O (.exist r C) (.exist r D)
+  | satC_monoUniv  : ∀ (r : Nat) {C D}, SatC R O C D →
+      SatC R O (.univ  r C) (.univ  r D)
   -- Transitivity of the SatC relation.
   | trans : ∀ {C D E}, SatC R O C D → SatC R O D E → SatC R O C E
 
@@ -261,6 +271,18 @@ theorem satC_sound (R : RBox) (O : Ontology) (C D : Concept)
       -- Goal : I.eval (univ r (univ r C)) x = ∀ y, r x y → ∀ z, r y z → I.eval C z
       intro y hrxy z hryz
       exact hC z (trans_of_mem hR hMem x y z hrxy hryz)
+  | @nomGlobal i _ ih =>
+      -- hC : I.eval top x, trivially True
+      -- ih : ∀ y, I.eval (.nom i) y → False
+      -- Goal : I.eval .bot x = False.
+      -- Apply ih to (I.ext_ind i): eval (nom i) (ext_ind i) is rfl.
+      exact ih (I.ext_ind i) rfl
+  | satC_monoExist r hCD ihCD =>
+      obtain ⟨y, hr, hCy⟩ := hC
+      exact ⟨y, hr, ihCD y hCy⟩
+  | satC_monoUniv r hCD ihCD =>
+      intro y hr
+      exact ihCD y (hC y hr)
   | trans hCD hDE ihCD ihDE =>
       exact ihDE x (ihCD x hC)
 
