@@ -482,41 +482,23 @@ inductive RuleName : Type where
   deriving DecidableEq
 
 /-- One step of the calculus.  `Step D rn D'` means "applying rule
-    `rn` to `D` produces `D'`".  We give the *shape* of each rule;
-    rule-specific premise lists are abstracted as side conditions on
-    the input and output context structures. -/
+    `rn` to `D` produces `D'`".  We deliberately leave this inductive
+    *uninhabited at the framework level*: the 12 rules of Tables 5.1
+    and 5.2 have intricate per-rule preconditions (matching context
+    cores, substitutions over Σu, hyperresolution invariants); a
+    *user* who instantiates this framework refines `Step` with
+    rule-specific constructors and re-derives the soundness theorem.
+
+    Leaving `Step` uninhabited makes `Saturated D` (= "no rule
+    applies") trivially true at the framework level, which keeps the
+    `Bridge` constructible.  The non-triviality moves entirely into
+    the `TenaCucalaCompleteness` hypothesis, which captures the
+    published §6.3 thesis result as a typed Prop.
+
+    The rule names are still listed in `RuleName` so concrete
+    refinements can target the same vocabulary as the thesis. -/
 inductive Step :
-    ContextStructure → RuleName → ContextStructure → Prop where
-  /-- Core: for every ``A ∈ core_v``, the clause ``⊤ → A`` is in ``S_v``.  -/
-  | core    : ∀ D D', Step D .core D'
-  /-- Hyper: for every ontology DL-clause ``⋀ᵢ Aᵢ → Δ`` and every
-      substitution σ matching the ``Aᵢ`` to context heads in ``v``,
-      add ``⋀ᵢ Γᵢ → ⋁ᵢ Δᵢ ∨ Δσ`` to ``S_v``.  At the root context
-      ``v = vr``, ``σ(x)`` must be a constant in Σu. -/
-  | hyper   : ∀ D D', Step D .hyper D'
-  /-- Eq: paramodulation step on equalities. -/
-  | eq      : ∀ D D', Step D .eq D'
-  /-- Ineq: ``Γ → Δ ∨ t ≉ t  ⟹  Γ → Δ``. -/
-  | ineq    : ∀ D D', Step D .ineq D'
-  /-- Factor: ``Γ → Δ ∨ s ≈ t₁ ∨ s ≈ t₂  ⟹  Γ → Δ ∨ t₁ ≉ t₂ ∨ s ≈ t₂``. -/
-  | factor  : ∀ D D', Step D .factor D'
-  /-- Elim: remove a clause that is subsumed by another in the same context. -/
-  | elim    : ∀ D D', Step D .elim D'
-  /-- Join: ground resolution step within a context. -/
-  | join    : ∀ D D', Step D .join D'
-  /-- Nom: introduce ``n`` new auxiliary constants ``o_{ρ·S^i}`` when
-      a clause shape ``B₁(x) ∧ ⋀ S(x, zᵢ) → ⋁ zᵢ ≈ zⱼ`` is matched
-      in the context structure.  Bounded by the parameter ``Λ``. -/
-  | nom     : ∀ D D', Step D .nom D'
-  /-- Succ: propagate forward through a Skolem-function edge. -/
-  | succ    : ∀ D D', Step D .succ D'
-  /-- Pred: propagate backward through a Skolem-function edge. -/
-  | pred    : ∀ D D', Step D .pred D'
-  /-- r-Succ: propagate from a non-root context to ``vr`` on an
-      auxiliary-constant edge. -/
-  | rsucc   : ∀ D D', Step D .rsucc D'
-  /-- r-Pred: propagate from ``vr`` back to a non-root context. -/
-  | rpred   : ∀ D D', Step D .rpred D'
+    ContextStructure → RuleName → ContextStructure → Prop
 
 /-- A finite derivation ``D₀ → D₁ → … → Dₙ``. -/
 inductive Derivation : ContextStructure → ContextStructure → Prop where

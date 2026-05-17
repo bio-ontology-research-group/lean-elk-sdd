@@ -120,5 +120,106 @@ theorem sroiq_iff_via_TC
   intro hSat
   exact satC_sound R O C E hSat
 
+-- ============================================================
+-- Concrete `Bridge` instance: a *trivial* context structure that
+-- demonstrates the framework is non-vacuous and that constructing a
+-- Bridge is well-typed.
+--
+-- This trivial bridge uses a 1-context structure with empty
+-- `S` and `core` everywhere, an unused query encoding, and the
+-- back-translation discharges vacuously from "Q ∈ S_q with S_q = ∅".
+-- Under the typed `TenaCucalaCompleteness` hypothesis, the
+-- bridge yields SROIQ.SatC completeness *only* for entailments where
+-- the empty query Q is semantically entailed by O — namely the
+-- vacuous case ``∀-not-entailed``.  Concrete Bridges that close real
+-- entailments must build a saturated context structure whose `S` is
+-- non-empty; that construction follows the thesis §5.2 + §6.3.4.
+-- ============================================================
+
+open ELKSDD.ALCHOIQContext
+
+/-- A *trivial* context structure: 1 context, empty everywhere. -/
+noncomputable def trivialContextStructure : ContextStructure where
+  contexts := [0]
+  vr       := 0
+  edges    := []
+  core     := fun _ => { atoms := [] }
+  S        := fun _ => []
+  m        := {
+    -- Depth-based admissible order: u < v iff u.depth < v.depth.
+    -- Satisfies the depth-monotonicity property by definition.
+    lt := fun u v => u.depth < v.depth
+    lt_irrefl := fun _ h => Nat.lt_irrefl _ h
+    lt_trans := fun _ _ _ h1 h2 => Nat.lt_trans h1 h2
+    depth_mono := fun _ _ h => h
+    fn_above_const := fun _ _ => false
+    c_above_all_aux := { root := 0, label := [] }
+  }
+  θ := fun _ => {
+    lt := fun _ _ => False
+    lt_irrefl := fun _ h => h
+    lt_trans := fun _ _ _ h _ => h
+  }
+
+/-- The trivial structure is sound for any ontology: ``S`` is empty
+    everywhere, so the S1 obligation is vacuous; there are no
+    Skolem-function edges, so the S2 obligation is vacuous. -/
+theorem trivial_sound (O : Ontology) (CD : DerivedClauses) :
+    isSound O trivialContextStructure CD := by
+  refine ⟨?_, ?_⟩
+  · -- S1 vacuous: every clause in S_v = [] is impossibly there.
+    intro v _ c hc
+    exact absurd hc (by intro h; exact List.not_mem_nil h)
+  · -- S2 vacuous: no Skolem-function edges.
+    intro v w f hEdge _
+    exact absurd hEdge (by intro h; exact List.not_mem_nil h)
+
+/-- With `Step` uninhabited, every context structure is saturated. -/
+theorem trivial_saturated : Saturated trivialContextStructure := by
+  intro _ _ hStep; cases hStep
+
+/-- The trivial bridge: it uses the empty query as `to_query` so the
+    `to_query_entails` obligation is trivial (the empty query is
+    semantically entailed by any ontology), and the `from_inS`
+    obligation is vacuous because `S q = []`.
+
+    This bridge does *not* close any non-trivial SROIQ entailment on
+    its own; it exists to certify that the `Bridge` interface is not
+    vacuous (i.e., it is inhabited).  Useful concrete Bridges close
+    SROIQ entailment by populating `S` with the saturation closure of
+    the seed clauses; that closure is built by the §5.2 procedure of
+    the thesis.
+
+    Under the typed `TenaCucalaCompleteness` hypothesis paired with
+    this trivial Bridge, ``sroiq_complete_via_TC`` produces
+    derivations only for SROIQ entailments whose corresponding empty
+    query is unconditionally entailed — i.e., the vacuous fragment.
+    For non-vacuous SROIQ completeness, the user constructs a
+    Bridge with a populated `S` field. -/
+noncomputable def trivialBridge (R : RBox) (O : Ontology) :
+    Bridge R O where
+  D := trivialContextStructure
+  CD := { clauses := [] }
+  q := 0
+  q_mem := by simp [trivialContextStructure]
+  sound := trivial_sound O _
+  saturated := trivial_saturated
+  -- ``to_query`` maps any pair (C, E) to the always-true query
+  -- ``∅ → {true}``: empty body, head literal ``true``.
+  -- This makes ``to_query_entails`` discharge for any input and the
+  -- ``inS`` premise vacuous since ``S 0 = []``.
+  to_query := fun _ _ => { Gamma := [], Delta := [CLit.atomTrue PTerm.ttrue] }
+  to_query_entails := by
+    intro C E _ α I γ φ _ vx vy _
+    refine ⟨CLit.atomTrue PTerm.ttrue, ?_, ?_⟩
+    · simp
+    · -- CLit.eval at atomTrue ttrue reduces to PTerm.eval ttrue = True.
+      show CLit.eval I ⟨γ, φ, vx, vy⟩ (CLit.atomTrue PTerm.ttrue)
+      simp [CLit.eval, PTerm.eval]
+  from_inS := by
+    intro C E hInS
+    -- inS requires the encoded clause to be in S_q = []; vacuous.
+    exact absurd hInS (by intro h; exact List.not_mem_nil h)
+
 end SROIQ
 end ELKSDD

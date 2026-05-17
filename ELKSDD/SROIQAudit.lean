@@ -141,5 +141,9 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.TenaCucalaCompleteness
 #print axioms SROIQ.sroiq_complete_via_TC
 #print axioms SROIQ.sroiq_iff_via_TC
+#print axioms SROIQ.trivialContextStructure
+#print axioms SROIQ.trivial_sound
+#print axioms SROIQ.trivial_saturated
+#print axioms SROIQ.trivialBridge
 
 end ELKSDD
