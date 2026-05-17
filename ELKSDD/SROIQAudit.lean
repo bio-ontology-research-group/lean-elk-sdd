@@ -151,5 +151,7 @@ namespace ELKSDD
 #print axioms SROIQ.trivialBridge
 #print axioms SROIQ.sroiq_complete_via_CRL
 #print axioms SROIQ.sroiq_iff_via_CRL
+#print axioms SROIQ.sroiq_complete_via_canonical
+#print axioms SROIQ.sroiq_complete_dispatch
 
 end ELKSDD
