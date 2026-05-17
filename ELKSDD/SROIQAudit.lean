@@ -217,6 +217,10 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.emptyContextStructure_saturated
 #print axioms ALCHOIQContext.not_TenaCucalaCompleteness
 #print axioms ALCHOIQContext.TenaCucalaCompleteness_seeded
+#print axioms ALCHOIQContext.seededContextStructure
+#print axioms ALCHOIQContext.seededContextStructure_sound
+#print axioms ALCHOIQContext.seededContextStructure_saturated
+#print axioms ALCHOIQContext.tenaCucalaCompleteness_seeded_holds
 
 -- ============================================================
 -- Populated (non-trivial) Bridge.
