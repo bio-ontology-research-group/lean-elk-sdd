@@ -18,6 +18,7 @@ import ELKSDD.ALCHOIQContext
 import ELKSDD.SROIQSkolem
 import ELKSDD.SROIQCanonical
 import ELKSDD.SROIQSkolemCanonical
+import ELKSDD.SROIQContextBridge
 
 namespace ELKSDD
 
@@ -63,7 +64,8 @@ namespace ELKSDD
 -- ============================================================
 #print axioms ALCHOIQContext.step_sound
 #print axioms ALCHOIQContext.deriv_sound
-#print axioms ALCHOIQContext.completeness
+#print axioms ALCHOIQContext.completeness_compat
+#print axioms ALCHOIQContext.TenaCucalaCompleteness
 
 -- ============================================================
 -- SROIQ Skolem completeness: empty-RBox case (PROVED), and the
@@ -131,5 +133,13 @@ namespace ELKSDD
 #print axioms SROIQ.skolCanonical_chain_n_univ
 #print axioms SROIQ.univChain_propagates
 #print axioms SROIQ.sroiq_satC_complete_skolFragment_inclReflIrreflOnly
+
+-- ============================================================
+-- Tena-Cucala context-structure bridge: full SROIQ completeness
+-- conditional on the published thesis-2 (Tena-Cucala, 2021).
+-- ============================================================
+#print axioms ALCHOIQContext.TenaCucalaCompleteness
+#print axioms SROIQ.sroiq_complete_via_TC
+#print axioms SROIQ.sroiq_iff_via_TC
 
 end ELKSDD
