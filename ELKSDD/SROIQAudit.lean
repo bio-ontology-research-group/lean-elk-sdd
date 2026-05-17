@@ -231,6 +231,18 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.coreSeed_Derivation_coreResult
 
 -- ============================================================
+-- §6.3.2 mechanisation: confluence definitions + elementary lemmas.
+-- ============================================================
+#print axioms ALCHOIQContext.oneStepRewrite
+#print axioms ALCHOIQContext.reflTransRewrite
+#print axioms ALCHOIQContext.ConfluentRewrite
+#print axioms ALCHOIQContext.empty_confluent
+#print axioms ALCHOIQContext.Noetherian
+#print axioms ALCHOIQContext.empty_noetherian
+#print axioms ALCHOIQContext.LocallyConfluent
+#print axioms ALCHOIQContext.empty_locallyConfluent_implies_confluent
+
+-- ============================================================
 -- Populated (non-trivial) Bridge.
 -- ============================================================
 #print axioms SROIQ.reflClause0

@@ -220,14 +220,17 @@ theorem trivial_sound (O : Ontology) (CD : DerivedClauses) :
     intro v w f hEdge _
     exact absurd hEdge (by intro h; exact List.not_mem_nil h)
 
-/-- Saturated wrt the Core rule: trivialContextStructure has empty
-    core, so no Core application fires. -/
+/-- Saturated wrt Core + Elim rules: trivialContextStructure has
+    empty core and empty S, so neither rule applies. -/
 theorem trivial_saturated : Saturated trivialContextStructure := by
   intro _ _ hStep
   cases hStep with
   | viaCore hSC =>
     obtain ⟨_, hA, _⟩ := hSC
     exact absurd hA (List.not_mem_nil)
+  | viaElim hSE =>
+    obtain ⟨_, hCM, _⟩ := hSE
+    exact absurd hCM (List.not_mem_nil)
 
 /-- The trivial bridge: it uses the empty query as `to_query` so the
     `to_query_entails` obligation is trivial (the empty query is
@@ -398,14 +401,39 @@ theorem populated_sound (O : Ontology) (CD : DerivedClauses) :
     intro v w f hEdge _
     exact absurd hEdge (by intro h; exact List.not_mem_nil h)
 
-/-- Saturated wrt the Core rule: populatedContextStructure has
-    empty core, so no Core application fires. -/
+/-- Helper: every context's `S` in the populated structure has at
+    most one element. -/
+theorem populatedContextStructure_S_unique (v : CtxId)
+    (c₁ c₂ : CClause)
+    (h1 : c₁ ∈ populatedContextStructure.S v)
+    (h2 : c₂ ∈ populatedContextStructure.S v) :
+    c₁ = c₂ := by
+  by_cases hv : v = 0
+  · have hSv : populatedContextStructure.S v = [reflClause0] := by
+      rw [hv]; rfl
+    rw [hSv] at h1 h2
+    rcases List.mem_cons.mp h1 with h1' | h1'
+    · rcases List.mem_cons.mp h2 with h2' | h2'
+      · rw [h1', h2']
+      · exact absurd h2' List.not_mem_nil
+    · exact absurd h1' List.not_mem_nil
+  · have hSv : populatedContextStructure.S v = [] := by
+      show (if v = 0 then _ else ([] : List CClause)) = []
+      simp [hv]
+    rw [hSv] at h1
+    exact absurd h1 List.not_mem_nil
+
+/-- Saturated wrt Core + Elim rules: populatedContextStructure has
+    empty core and S has at most one element per context. -/
 theorem populated_saturated : Saturated populatedContextStructure := by
   intro _ _ hStep
   cases hStep with
   | viaCore hSC =>
     obtain ⟨_, hA, _⟩ := hSC
     exact absurd hA (List.not_mem_nil)
+  | viaElim hSE =>
+    obtain ⟨_, hcMem, ⟨c', hc'Mem, hc'Ne, _⟩, _⟩ := hSE
+    exact hc'Ne (populatedContextStructure_S_unique _ _ _ hc'Mem hcMem)
 
 /-- The query corresponding to `reflClause0` viewed as a `QueryClause`. -/
 def reflQuery0 : QueryClause :=
