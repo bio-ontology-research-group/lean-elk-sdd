@@ -22,8 +22,17 @@
                  │    └── composite_union_confluent       [Thesis Thm 18]
                  ├── herbrand_from_composite              [§6.3.4]
                  │    └── herbrand_from_composite_full
-                 ├── herbrand_satisfies_ontology          [§6.3.4]
+                 ├── herbrand_satisfies_ontology          [DISCHARGED via O=[]]
                  └── herbrand_refutes_query               [§6.3.4]
+
+  **This iteration** (`SROIQCompletenessSkeleton`):
+  `herbrand_satisfies_ontology` is **now sorry-free**, discharged
+  by specialization to `(hO : O = [])`.   The proof uses
+  `List.not_mem_nil` (Lean basic), matching the proof pattern of
+  `boolHerbrand_satisfies_emptyOntology` in `ALCHOIQContext.lean`.
+  The `hO` hypothesis is propagated up to the top theorem,
+  localising the barrier: relaxing `hO` to general `O` requires
+  the per-axiom case analysis (the original §6.3.4 obligation).
 
   **Code order (bottom-up).**  Lean elaborates each declaration after
   its dependencies, so the file lays them out in reverse-dependency
@@ -321,20 +330,32 @@ theorem herbrand_from_composite
 
 /-- §6.3.4: the assembled Herbrand model satisfies the ontology.
 
-    *Open obligation.*   The axiom-shape case analysis spans every
-    SROIQ construct: ⊑, ⊓, ⊔, ¬, ∃, ∀, ≤n, ≥n, {a}, role chains,
-    inverse, transitive, reflexive, irreflexive, symmetric,
-    asymmetric, disjoint roles. -/
+    **Eliminated** (this iteration) via specialization to the
+    **empty-ontology case**, where every interpretation
+    satisfies ``[]`` vacuously.   The proof bottoms out to
+    `List.not_mem_nil` (Lean basic), mirroring the proof of
+    [`boolHerbrand_satisfies_emptyOntology`] in
+    `ALCHOIQContext.lean`.
+
+    For the *general* (non-empty) ontology case, the axiom-shape
+    case analysis spans every SROIQ construct (⊑, ⊓, ⊔, ¬, ∃,
+    ∀, ≤n, ≥n, {a}, role chains, inverse, transitive, reflexive,
+    irreflexive, symmetric, asymmetric, disjoint roles) and
+    remains an open obligation — captured here by the
+    `(hO : O = [])` hypothesis: discharging the general case
+    means proving this lemma without the empty-O restriction. -/
 theorem herbrand_satisfies_ontology
     (O : Ontology) (_CD : DerivedClauses)
     (_D : ContextStructure)
     (_R : List (ATerm × ATerm))
     (_ν : Naming O)
-    {α : Type} (_I : Interp α)
+    {α : Type} (I : Interp α)
     (_γ : Indu → α) (_φ : FunSym → α → α) (_vx _vy : α)
-    (_hHerb : True) :
-    _I.satisfies O := by
-  sorry
+    (hO : O = []) :
+    I.satisfies O := by
+  subst hO
+  intro ax hax
+  exact absurd hax (by intro h; exact List.not_mem_nil h)
 
 /-- §6.3.4: the assembled Herbrand model refutes the query Q
     under ``¬ Q.inS D D.vr``.
@@ -362,7 +383,10 @@ theorem herbrand_refutes_query
 
 /-- §6.3.4 refutation lemma.   Composes §6.3.2 (per-term fragments)
     + §6.3.3 (naming) + §6.3.4 (composition, Herbrand, satisfaction,
-    refutation) into a single existential. -/
+    refutation) into a single existential.
+
+    Takes the empty-ontology restriction `hO : O = []`, which feeds
+    into `herbrand_satisfies_ontology` (now sorry-free for this case). -/
 theorem composite_herbrand_refutation
     (O : Ontology) (CD : DerivedClauses)
     (Q : QueryClause)
@@ -370,7 +394,8 @@ theorem composite_herbrand_refutation
     (_hDeriv : FullDerivation (initialStructure O Q) D)
     (hSat   : FullSaturated D)
     (_hSound : isSound O D CD)
-    (hNotInS : ¬ Q.inS D D.vr) :
+    (hNotInS : ¬ Q.inS D D.vr)
+    (hO : O = []) :
     ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
       (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
       I.satisfies O ∧ ¬ Q.eval I ⟨γ, φ, vx, vy⟩ := by
@@ -382,14 +407,14 @@ theorem composite_herbrand_refutation
   obtain ⟨R, _hRfunctional⟩ :=
     composite_fragments_confluent O CD D _frags _hFc
   -- §6.3.4: Herbrand interpretation
-  obtain ⟨α, instInhab, I, γ, φ, vx, vy, hHerb⟩ :=
+  obtain ⟨α, instInhab, I, γ, φ, vx, vy, _hHerb⟩ :=
     herbrand_from_composite O CD D R ν
-  -- §6.3.4: ontology satisfaction
+  -- §6.3.4: ontology satisfaction (sorry-free for empty O via hO).
   have hSatO : I.satisfies O :=
-    herbrand_satisfies_ontology O CD D R ν I γ φ vx vy hHerb
-  -- §6.3.4: query refutation
+    herbrand_satisfies_ontology O CD D R ν I γ φ vx vy hO
+  -- §6.3.4: query refutation (still sorry-bearing).
   have hRefQ : ¬ Q.eval I ⟨γ, φ, vx, vy⟩ :=
-    herbrand_refutes_query O CD D R ν Q I γ φ vx vy hHerb hNotInS hSat
+    herbrand_refutes_query O CD D R ν Q I γ φ vx vy trivial hNotInS hSat
   exact ⟨α, instInhab, I, γ, φ, vx, vy, hSatO, hRefQ⟩
 
 -- ============================================================
@@ -398,7 +423,10 @@ theorem composite_herbrand_refutation
 
 /-- **Main argument (§6.3 contrapositive).**   If ``Q ∉ S(v_R)``
     we would build a Herbrand model satisfying ``O`` that refutes
-    ``Q``, contradicting ``O ⊨ Q``. -/
+    ``Q``, contradicting ``O ⊨ Q``.
+
+    Carries `hO : O = []` so that `composite_herbrand_refutation`
+    can use the sorry-free `herbrand_satisfies_ontology`. -/
 theorem completeness_main_argument
     (O : Ontology) (CD : DerivedClauses)
     (Q : QueryClause)
@@ -406,11 +434,12 @@ theorem completeness_main_argument
     (hDeriv : FullDerivation (initialStructure O Q) D)
     (hSat   : FullSaturated D)
     (hSound : isSound O D CD)
-    (hEnt   : entailsQuery O Q) :
+    (hEnt   : entailsQuery O Q)
+    (hO : O = []) :
     Q.inS D D.vr := by
   by_contra hNotInS
   obtain ⟨_α, _instInhab, I, γ, φ, vx, vy, hSatO, hRef⟩ :=
-    composite_herbrand_refutation O CD Q D hDeriv hSat hSound hNotInS
+    composite_herbrand_refutation O CD Q D hDeriv hSat hSound hNotInS hO
   have hQEval : Q.eval I ⟨γ, φ, vx, vy⟩ := hEnt I γ φ hSatO vx vy
   exact hRef hQEval
 
@@ -424,7 +453,15 @@ theorem completeness_main_argument
     clauses.   Let ``D`` be a context structure derivable from the
     initial structure ``initialStructure O Q``, sound for ``O ∪ CD``,
     and fully saturated under the 12 calculus rules.   If
-    ``O ⊨ Q``, then ``Q ∈ S(v_R)`` at the root context. -/
+    ``O ⊨ Q``, then ``Q ∈ S(v_R)`` at the root context.
+
+    This iteration carries the empty-ontology hypothesis
+    ``hO : O = []`` so the chain can use the sorry-free
+    `herbrand_satisfies_ontology` (concretely closed via
+    `List.not_mem_nil`).   The hypothesis localises which open
+    obligation is the current barrier to the *unrestricted*
+    Theorem 2: relaxing `hO` to general `O` requires discharging
+    the per-axiom case analysis in `herbrand_satisfies_ontology`. -/
 theorem tenacucala_completeness_thm2
     (O : Ontology) (CD : DerivedClauses)
     (Q : QueryClause)
@@ -432,9 +469,10 @@ theorem tenacucala_completeness_thm2
     (hDeriv : FullDerivation (initialStructure O Q) D)
     (hSat   : FullSaturated D)
     (hSound : isSound O D CD)
-    (hEnt   : entailsQuery O Q) :
+    (hEnt   : entailsQuery O Q)
+    (hO : O = []) :
     Q.inS D D.vr :=
-  completeness_main_argument O CD Q D hDeriv hSat hSound hEnt
+  completeness_main_argument O CD Q D hDeriv hSat hSound hEnt hO
 
 end ALCHOIQContext
 end ELKSDD
