@@ -24,5 +24,6 @@ namespace ELKSDD.ALCHOQ
 #print axioms skol_canonical_eval_iff
 #print axioms skol_canonical_satisfies
 #print axioms satC_complete_skolFragment
+#print axioms SatC.atLeast_exForall
 
 end ELKSDD.ALCHOQ

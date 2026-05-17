@@ -130,6 +130,14 @@ inductive SatC (O : Ontology) : Concept → Concept → Prop where
   -- closes the `NomConsistent` meta-hypothesis of the canonical-model
   -- construction.
   | nomGlobal : ∀ i, SatC O (.nom i) .bot → SatC O .top .bot
+  -- Cardinality ex-forall (generalises `exForall` to atLeast):
+  -- `(≥n R.C) ⊓ (∀R.D) ⊑ ≥n R.(C ⊓ D)`.  Sound: the n distinct
+  -- R-C-witnesses each also satisfy D (by universal propagation),
+  -- so they're n distinct R-(C⊓D)-witnesses.  Closes the
+  -- "filler-saturation" step of the Tena-Cucala backward direction
+  -- at positive cardinality.
+  | atLeast_exForall : ∀ n R C D,
+      SatC O (.conj (.atLeast n R C) (.univ R D)) (.atLeast n R (.conj C D))
   -- Transitivity, of course.
   | trans       : ∀ {C D E}, SatC O C D → SatC O D E → SatC O C E
 
@@ -329,6 +337,19 @@ theorem satC_sound (O : Ontology) (C D : Concept) (h : SatC O C D) :
       -- so I.eval .bot _ holds — but I.eval .bot is False.  Contradiction
       -- shows the .top → .bot conclusion (False elim).
       exact (ihNom (I.ext_ind i) rfl).elim
+  | atLeast_exForall n R C D =>
+      -- hC : eval (≥n R.C ⊓ ∀R.D) at x = eval (≥n R.C) at x ∧ eval (∀R.D) at x.
+      -- Want: eval (≥n R.(C ⊓ D)) at x.  The n witnesses for ≥n R.C also
+      -- satisfy D (by ∀R.D), so they're n witnesses for ≥n R.(C ⊓ D).
+      obtain ⟨hAL, hUniv⟩ := hC
+      show Interp.atLeastCard
+            (fun y => I.ext_role R x y ∧ I.eval (.conj C D) y) n
+      apply atLeastCard_filler_mono
+        (P := fun y => I.ext_role R x y ∧ I.eval C y)
+        (Q := fun y => I.ext_role R x y ∧ I.eval (.conj C D) y)
+        ?_ n hAL
+      intro y ⟨hR, hCy⟩
+      exact ⟨hR, hCy, hUniv y hR⟩
   | trans hCD hDE ihCD ihDE => exact ihDE x (ihCD x hC)
 
 -- ============================================================
