@@ -139,6 +139,10 @@ namespace ELKSDD
 -- conditional on the published thesis-2 (Tena-Cucala, 2021).
 -- ============================================================
 #print axioms ALCHOIQContext.TenaCucalaCompleteness
+#print axioms ALCHOIQContext.CompositeRefutationLemma
+#print axioms ALCHOIQContext.tc_from_refutation_lemma
+#print axioms ALCHOIQContext.reducesToNominal
+#print axioms ALCHOIQContext.HerbrandModel.refutesQuery
 #print axioms SROIQ.sroiq_complete_via_TC
 #print axioms SROIQ.sroiq_iff_via_TC
 #print axioms SROIQ.trivialContextStructure
