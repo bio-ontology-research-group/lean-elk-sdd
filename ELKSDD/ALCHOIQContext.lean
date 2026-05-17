@@ -604,6 +604,111 @@ theorem step_core_sound (O : Ontology) (CD : DerivedClauses)
     exact hSound.2 w w' f hEdgeD hwneD I γ φ hIO hICD vx vy hcoreD p hp
 
 -- ============================================================
+-- §5.2 Ineq rule, concretely refined.
+--
+-- Ineq rule (Table 5.1): ``Γ → Δ ∨ t ≉ t  ⟹  Γ → Δ``.
+-- An impossible disjunct (``t ≉ t`` is always False) can be
+-- removed from the head without losing entailment.
+-- ============================================================
+
+/-- ``StepIneq D v c c' t D'`` says: ``D'`` is obtained from ``D`` by
+    applying the Ineq rule at context ``v``, removing the literal
+    ``t ≉ t`` from the head of clause ``c`` (which must be present)
+    to produce ``c'``, where ``c' ∈ S v`` after the step.
+
+    Concretely: ``v ∈ D.contexts``, ``c ∈ D.S v``, the head of ``c``
+    contains ``CLit.aeq (AEq.neqL t t)``, ``c'.head`` is ``c.head``
+    minus that literal, ``c'.body = c.body``, and ``D'`` agrees with
+    ``D`` on every field except ``S`` where ``S v`` gains ``c'``. -/
+def StepIneq (D : ContextStructure) (v : CtxId)
+    (c c' : CClause) (t : ATerm) (D' : ContextStructure) : Prop :=
+  v ∈ D.contexts ∧
+  c ∈ D.S v ∧
+  CLit.aeq (AEq.neqL t t) ∈ c.head ∧
+  c'.body = c.body ∧
+  c'.head = c.head.filter (· ≠ CLit.aeq (AEq.neqL t t)) ∧
+  c' ∉ D.S v ∧
+  D'.contexts = D.contexts ∧
+  D'.vr = D.vr ∧
+  D'.edges = D.edges ∧
+  D'.core = D.core ∧
+  D'.m = D.m ∧
+  D'.θ = D.θ ∧
+  D'.S = fun w => if w = v then c' :: D.S v else D.S w
+
+/-- **Soundness of the Ineq rule.**  Removing a ``t ≉ t`` literal
+    from a clause's head preserves its semantic entailment: under any
+    assignment, ``t.eval = t.eval`` (by reflexivity), so
+    ``AEq.neqL t t`` evaluates to False, contributing nothing to the
+    head's disjunction. -/
+theorem step_ineq_sound (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure) (v : CtxId) (c c' : CClause) (t : ATerm)
+    (hStep : StepIneq D v c c' t D')
+    (hSound : isSound O D CD) :
+    isSound O D' CD := by
+  obtain ⟨hvD, hcInS, hLitIn, hBody, hHead, _hNew, hCtx, hVr, hEdges,
+          hCore, _hM, _hθ, hSeq⟩ := hStep
+  refine ⟨?_, ?_⟩
+  · intro w hw c0 hc α I γ φ hIO hICD vx vy hcoreW
+    have hwD : w ∈ D.contexts := by rw [hCtx] at hw; exact hw
+    have hcoreD : coreSat I ⟨γ, φ, vx, vy⟩ (D.core w) := by
+      have : D.core w = D'.core w := by rw [hCore]
+      rw [this]; exact hcoreW
+    by_cases hwv : w = v
+    · -- w = v: D'.S v = c' :: D.S v.
+      have hSw : D'.S w = c' :: D.S v := by
+        rw [hSeq]; simp [hwv]
+      rw [hSw] at hc
+      simp at hc
+      rcases hc with hcEq | hcOld
+      · -- c0 is the new clause c'.
+        subst hcEq
+        -- c'.body = c.body; c'.head = c.head ∖ {t ≉ t}.
+        -- Use soundness of c (the original).
+        have hwvD : v ∈ D.contexts := hvD
+        have : D.core w = D.core v := by rw [hwv]
+        have hcoreDv : coreSat I ⟨γ, φ, vx, vy⟩ (D.core v) := by
+          rw [← this]; exact hcoreD
+        have hcSound := hSound.1 v hwvD c hcInS I γ φ hIO hICD vx vy hcoreDv
+        -- c.eval: ∀ b ∈ c.body, … → ∃ h ∈ c.head, eval h.
+        intro hbody
+        -- c0.body = c.body; reuse hbody.
+        rw [hBody] at hbody
+        obtain ⟨h, hhIn, hhEval⟩ := hcSound hbody
+        -- If h is the removed literal, it can't actually evaluate True
+        -- (since t = t by reflexivity, neqL t t = (t ≠ t) = False).
+        by_cases hhEq : h = CLit.aeq (AEq.neqL t t)
+        · subst hhEq
+          -- hhEval : eval (aeq (neqL t t))  ↔  t.eval ≠ t.eval — False.
+          have : ¬ AEq.eval I ⟨γ, φ, vx, vy⟩ (AEq.neqL t t) := by
+            intro h; exact h rfl
+          exact absurd hhEval this
+        · -- h ≠ the removed literal: h is in c0.head = c.head ∖ {...}.
+          refine ⟨h, ?_, hhEval⟩
+          rw [hHead]
+          exact List.mem_filter.mpr ⟨hhIn, by simp [hhEq]⟩
+      · -- c0 was already in D.S v.
+        have hwvD : v ∈ D.contexts := hvD
+        have : D.core w = D.core v := by rw [hwv]
+        have hcoreDv : coreSat I ⟨γ, φ, vx, vy⟩ (D.core v) := by
+          rw [← this]; exact hcoreD
+        exact hSound.1 v hwvD c0 hcOld I γ φ hIO hICD vx vy hcoreDv
+    · have : D'.S w = D.S w := by rw [hSeq]; simp [hwv]
+      rw [this] at hc
+      exact hSound.1 w hwD c0 hc I γ φ hIO hICD vx vy hcoreD
+  · intro w w' f hEdge hwne α I γ φ hIO hICD vx vy hcoreW
+    have hEdgeD : D.hasEdge w w' (.fn f) := by
+      unfold ContextStructure.hasEdge at hEdge ⊢; rw [← hEdges]; exact hEdge
+    have hwneD : w ≠ D.vr := by rw [← hVr]; exact hwne
+    have hcoreD : coreSat I ⟨γ, φ, vx, vy⟩ (D.core w) := by
+      have : D.core w = D'.core w := by rw [hCore]
+      rw [this]; exact hcoreW
+    intro p hp
+    have : (D.core w').atoms = (D'.core w').atoms := by rw [hCore]
+    rw [← this] at hp
+    exact hSound.2 w w' f hEdgeD hwneD I γ φ hIO hICD vx vy hcoreD p hp
+
+-- ============================================================
 -- Theorem 1: Soundness  (Tena-Cucala 2019, §6.2)
 -- ============================================================
 

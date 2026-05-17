@@ -146,6 +146,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.coreClause
 #print axioms ALCHOIQContext.StepCore
 #print axioms ALCHOIQContext.step_core_sound
+#print axioms ALCHOIQContext.StepIneq
+#print axioms ALCHOIQContext.step_ineq_sound
 #print axioms SROIQ.sroiq_complete_via_TC
 #print axioms SROIQ.sroiq_iff_via_TC
 #print axioms SROIQ.trivialContextStructure
