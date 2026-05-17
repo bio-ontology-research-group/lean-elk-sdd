@@ -132,6 +132,11 @@ inductive SatC (R : RBox) (O : Ontology) : Concept → Concept → Prop where
   -- ``⊤ ⊑ ⊥`` (since every model has a witness for nom i).  Needed
   -- to discharge `nom_consistent_of_cons` at the SROIQ level.
   | nomGlobal : ∀ {i}, SatC R O (.nom i) .bot → SatC R O .top .bot
+  -- Refl(r) ⟹  ⊤ ⊑ hasSelf r   (every element has an r-self-loop)
+  -- The dual of roleRefl_exist; needed so the canonical model
+  -- satisfies hasSelf for every element when refl r ∈ R.
+  | roleRefl_hasSelf : ∀ {r}, RAxiom.refl r ∈ R →
+      SatC R O .top (.hasSelf r)
   -- Role-axis monotonicity at the SROIQ level (so we can derive
   -- ∃r.A ⊑ ∃r.B from A ⊑ B even when the premise is SROIQ-only).
   | satC_monoExist : ∀ (r : Nat) {C D}, SatC R O C D →
@@ -277,6 +282,10 @@ theorem satC_sound (R : RBox) (O : Ontology) (C D : Concept)
       -- Goal : I.eval .bot x = False.
       -- Apply ih to (I.ext_ind i): eval (nom i) (ext_ind i) is rfl.
       exact ih (I.ext_ind i) rfl
+  | @roleRefl_hasSelf r hMem =>
+      -- hC : I.eval top x, trivially True.
+      -- Goal : I.eval (.hasSelf r) x = I.ext_role r x x.
+      exact refl_of_mem hR hMem x
   | satC_monoExist r hCD ihCD =>
       obtain ⟨y, hr, hCy⟩ := hC
       exact ⟨y, hr, ihCD y hCy⟩

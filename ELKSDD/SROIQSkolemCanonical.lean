@@ -287,6 +287,28 @@ theorem skolCanonical_satisfies_roleIncl
       (Concept.hasSelf r) (Concept.hasSelf s) hSelfR
       (SatC.roleIncl_hasSelf hMem)
 
+/-- **The canonical Skolem model satisfies every reflexive-role RBox
+    axiom.**  Both conjuncts of `ext_role r x x` are discharged
+    via SROIQ-side `type_closure`:
+
+    * Universal-propagation: `roleRefl_univ : univ r D ⊑ D` (when
+      refl r ∈ R) gives `univ r D ∈ x → D ∈ x`.
+    * Self-loop: `roleRefl_hasSelf : ⊤ ⊑ hasSelf r` (when refl r ∈ R)
+      gives `hasSelf r ∈ x` (since `top ∈ x`). -/
+theorem skolCanonical_satisfies_refl
+    (R : RBox) (O : Ontology) (hCons : consistent R O (∅ : Set Concept))
+    (r : Nat) (hMem : RAxiom.refl r ∈ R) :
+    ∀ x : CanDom R O, (skolCanonical R O hCons).ext_role r x x := by
+  intro x
+  refine ⟨?_, ?_⟩
+  · intro D hUniv
+    exact type_closure R O (carrierType R O hCons x)
+      (Concept.univ r D) D hUniv (SatC.roleRefl_univ D hMem)
+  · intro _
+    exact type_closure R O (carrierType R O hCons x)
+      Concept.top (Concept.hasSelf r)
+      (top_mem R O _) (SatC.roleRefl_hasSelf hMem)
+
 -- ============================================================
 -- (c.3) Truth lemma at hasSelf, ∃R.C, ∀R.C.
 -- ============================================================
@@ -772,6 +794,27 @@ theorem sroiq_satC_complete_skolFragment_roleInclOnly
   show ∀ x y, (skolCanonical R O hCons).ext_role r x y →
               (skolCanonical R O hCons).ext_role s x y
   exact skolCanonical_satisfies_roleIncl R O hCons r s hAx
+
+/-- **Corollary**: SROIQ completeness on the SkolFragment when the
+    RBox consists only of role-inclusion + reflexivity axioms. -/
+theorem sroiq_satC_complete_skolFragment_inclReflOnly
+    (R : RBox) (O : Ontology) (C D : Concept)
+    (hOFrag : ALCHOQ.OntologySkolFragment O)
+    (hC : ALCHOQ.SkolFragment C) (hD : ALCHOQ.SkolFragment D)
+    (hRBox : ∀ ax ∈ R,
+      (∃ r s, ax = RAxiom.incl r s) ∨ (∃ r, ax = RAxiom.refl r))
+    (hEnt : Entails R O C D) :
+    SatC R O C D := by
+  apply sroiq_satC_complete_skolFragment R O C D hOFrag hC hD ?_ hEnt
+  intro hCons ax hAx
+  rcases hRBox ax hAx with ⟨r, s, hrep⟩ | ⟨r, hrep⟩
+  · subst hrep
+    show ∀ x y, (skolCanonical R O hCons).ext_role r x y →
+                (skolCanonical R O hCons).ext_role s x y
+    exact skolCanonical_satisfies_roleIncl R O hCons r s hAx
+  · subst hrep
+    show ∀ x, (skolCanonical R O hCons).ext_role r x x
+    exact skolCanonical_satisfies_refl R O hCons r hAx
 
 -- ============================================================
 -- (d.2) Headline: canonical satisfies the universal-propagation
