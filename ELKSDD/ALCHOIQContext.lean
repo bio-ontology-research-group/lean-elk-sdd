@@ -635,6 +635,44 @@ structure MonoExt (D D' : ContextStructure) where
   newClauses  : CtxId → List CClause
   S_subset    : ∀ v c, c ∈ D'.S v → c ∈ D.S v ∨ c ∈ newClauses v
 
+/-- A *monotonic-restriction* between context structures: ``D'``
+    agrees with ``D`` on every field except possibly ``S``, where
+    ``D'.S v ⊆ D.S v``.  Models the Elim rule (clause removal). -/
+structure MonoRestr (D D' : ContextStructure) where
+  contexts_eq : D'.contexts = D.contexts
+  vr_eq       : D'.vr = D.vr
+  edges_eq    : D'.edges = D.edges
+  core_eq     : D'.core = D.core
+  S_subset    : ∀ v c, c ∈ D'.S v → c ∈ D.S v
+
+/-- **Meta-soundness lemma for restrictions**: removing clauses
+    never breaks soundness. -/
+theorem mono_restr_sound
+    (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure) (mr : MonoRestr D D')
+    (hSound : isSound O D CD) :
+    isSound O D' CD := by
+  refine ⟨?_, ?_⟩
+  · intro v hv c hc α I γ φ hIO hICD vx vy hcoreW
+    have hvD : v ∈ D.contexts := by rw [mr.contexts_eq] at hv; exact hv
+    have hcD : c ∈ D.S v := mr.S_subset v c hc
+    have hcoreD : coreSat I ⟨γ, φ, vx, vy⟩ (D.core v) := by
+      have : D.core v = D'.core v := by rw [mr.core_eq]
+      rw [this]; exact hcoreW
+    exact hSound.1 v hvD c hcD I γ φ hIO hICD vx vy hcoreD
+  · intro v w f hEdge hvne α I γ φ hIO hICD vx vy hcoreW
+    have hEdgeD : D.hasEdge v w (.fn f) := by
+      unfold ContextStructure.hasEdge at hEdge ⊢
+      rw [← mr.edges_eq]; exact hEdge
+    have hvneD : v ≠ D.vr := by rw [← mr.vr_eq]; exact hvne
+    have hcoreD : coreSat I ⟨γ, φ, vx, vy⟩ (D.core v) := by
+      have : D.core v = D'.core v := by rw [mr.core_eq]
+      rw [this]; exact hcoreW
+    intro p hp
+    have : (D.core w).atoms = (D'.core w).atoms := by rw [mr.core_eq]
+    rw [← this] at hp
+    exact hSound.2 v w f hEdgeD hvneD I γ φ hIO hICD vx vy hcoreD p hp
+
 /-- **Meta-soundness lemma**: every monotonic-extension preserves
     soundness as long as the new clauses are semantically entailed by
     ``O ∪ CD ∪ core_v`` under the existing isSound hypothesis. -/
@@ -671,6 +709,76 @@ theorem mono_ext_sound
     have : (D.core w).atoms = (D'.core w).atoms := by rw [me.core_eq]
     rw [← this] at hp
     exact hSound.2 v w f hEdgeD hvneD I γ φ hIO hICD vx vy hcoreD p hp
+
+-- ============================================================
+-- §5.2 Elim rule, concretely refined.
+--
+-- Elim rule (Table 5.1): remove a clause c from S_v provided
+-- that another clause c' ∈ S_v subsumes c (every model of c' also
+-- models c).
+--
+-- Soundness is immediate: removing a clause never breaks the
+-- "every clause is entailed" invariant.  Subsumption is the
+-- *completeness* check; we keep it in the precondition for
+-- faithfulness to the thesis. -/
+-- ============================================================
+
+/-- Subsumption of context clauses: ``c'`` subsumes ``c`` iff every
+    body literal of ``c'`` is in the body of ``c`` and every head
+    literal of ``c'`` is in the head of ``c``.  (Stronger
+    body-superset / head-subset relation can be added for the full
+    thesis definition; we use the simplest reading.) -/
+def subsumes (c' c : CClause) : Prop :=
+  (∀ b ∈ c'.body, b ∈ c.body) ∧ (∀ h ∈ c'.head, h ∈ c.head)
+
+/-- ``StepElim D v c D'`` says: ``D'`` is obtained from ``D`` by
+    removing clause ``c`` from ``S v`` because some ``c' ∈ S v``
+    subsumes ``c``. -/
+def StepElim (D : ContextStructure) (v : CtxId) (c : CClause)
+    (D' : ContextStructure) : Prop :=
+  v ∈ D.contexts ∧
+  c ∈ D.S v ∧
+  (∃ c' ∈ D.S v, c' ≠ c ∧ subsumes c' c) ∧
+  D'.contexts = D.contexts ∧
+  D'.vr = D.vr ∧
+  D'.edges = D.edges ∧
+  D'.core = D.core ∧
+  D'.m = D.m ∧
+  D'.θ = D.θ ∧
+  D'.S = fun w => if w = v then (D.S v).filter (· ≠ c) else D.S w
+
+/-- **Soundness of the Elim rule** via the meta-restriction
+    lemma.  Removing any clause never breaks soundness. -/
+theorem step_elim_sound (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure) (v : CtxId) (c : CClause)
+    (hStep : StepElim D v c D')
+    (hSound : isSound O D CD) :
+    isSound O D' CD := by
+  obtain ⟨_hvD, _hcInS, _hSubsume, hCtx, hVr, hEdges, hCore,
+          _hM, _hθ, hSeq⟩ := hStep
+  apply mono_restr_sound O CD D D' ?_ hSound
+  refine {
+    contexts_eq := hCtx
+    vr_eq       := hVr
+    edges_eq    := hEdges
+    core_eq     := hCore
+    S_subset    := ?_
+  }
+  intro w c0 hc
+  rw [hSeq] at hc
+  -- Beta-reduce: hc : c0 ∈ (if w = v then (D.S v).filter (· ≠ c) else D.S w).
+  simp only at hc
+  by_cases hwv : w = v
+  · rw [hwv] at hc
+    have hif : (if v = v then (D.S v).filter (· ≠ c) else D.S v)
+             = (D.S v).filter (· ≠ c) := by simp
+    rw [hif] at hc
+    have := List.mem_filter.mp hc
+    rw [hwv]; exact this.1
+  · have hif : (if w = v then (D.S v).filter (· ≠ c) else D.S w) = D.S w := by
+      simp [hwv]
+    rw [hif] at hc
+    exact hc
 
 -- ============================================================
 -- §5.2 Ineq rule, concretely refined.

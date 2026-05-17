@@ -150,6 +150,11 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.step_ineq_sound
 #print axioms ALCHOIQContext.MonoExt
 #print axioms ALCHOIQContext.mono_ext_sound
+#print axioms ALCHOIQContext.MonoRestr
+#print axioms ALCHOIQContext.mono_restr_sound
+#print axioms ALCHOIQContext.subsumes
+#print axioms ALCHOIQContext.StepElim
+#print axioms ALCHOIQContext.step_elim_sound
 #print axioms SROIQ.sroiq_complete_via_TC
 #print axioms SROIQ.sroiq_iff_via_TC
 #print axioms SROIQ.trivialContextStructure
