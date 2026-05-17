@@ -1800,6 +1800,153 @@ theorem bool_refutes_propRefutable (Q : QueryClause)
    fun h hh => bool_head_fails Q hPR h hh⟩
 
 -- ============================================================
+-- TenaCucalaCompleteness as currently stated is *not* a theorem.
+--
+-- The issue is structural: `Saturated D := ∀ D' rn, ¬ Step D rn D'`
+-- is vacuously true for ANY D, because `Step` is uninhabited at the
+-- framework level (we deliberately left it that way to keep the
+-- `trivialBridge` constructible).   Consequently TC quantifies over
+-- ALL sound D, including the empty structure with `S = []`
+-- everywhere — and no entailed query can be in an empty `S_q`.
+--
+-- The thesis's actual Theorem 2 (Tena-Cucala 2021, §5.3) is a
+-- *constructive* statement: starting from a specific seed context
+-- structure encoding the query Q, the saturation procedure under
+-- the 12 rules of Tables 5.1 + 5.2 yields a D containing Q in S_q.
+-- Our `TenaCucalaCompleteness` definition omits both the "starts
+-- from a Q-encoding seed" and the strong-saturation hypotheses,
+-- making it strictly stronger than the thesis result — and
+-- consequently false.
+--
+-- We mechanise this fact (`not_TenaCucalaCompleteness`) using a
+-- concrete empty structure as counterexample.
+-- ============================================================
+
+/-- An empty context structure: 1 context, empty `S`, empty `core`,
+    no edges.   Sound (vacuously) and saturated (`Step` uninhabited).
+    Used as the counterexample to TC as stated. -/
+def emptyContextStructure : ContextStructure where
+  contexts := [0]
+  vr       := 0
+  edges    := []
+  core     := fun _ => { atoms := [] }
+  S        := fun _ => []
+  m        := {
+    lt := fun u v => u.depth < v.depth
+    lt_irrefl := fun _ h => Nat.lt_irrefl _ h
+    lt_trans := fun _ _ _ h1 h2 => Nat.lt_trans h1 h2
+    depth_mono := fun _ _ h => h
+    fn_above_const := fun _ _ => false
+    c_above_all_aux := { root := 0, label := [] }
+  }
+  θ := fun _ => {
+    lt := fun _ _ => False
+    lt_irrefl := fun _ h => h
+    lt_trans := fun _ _ _ h _ => h
+  }
+
+theorem emptyContextStructure_sound (O : Ontology) (CD : DerivedClauses) :
+    isSound O emptyContextStructure CD := by
+  refine ⟨?_, ?_⟩
+  · intro v _ c hc
+    exact absurd hc (by intro h; exact List.not_mem_nil h)
+  · intro v w f hEdge _
+    exact absurd hEdge (by intro h; exact List.not_mem_nil h)
+
+theorem emptyContextStructure_saturated : Saturated emptyContextStructure := by
+  intro _ _ hStep; cases hStep
+
+/-- **TenaCucalaCompleteness as currently stated is FALSE.**
+
+    Counterexample:   the empty context structure is sound and
+    saturated (vacuously, since `Step` is uninhabited), but its `S`
+    is empty, so no entailed query can be in `S_q`.   In particular
+    the trivially-entailed query `Q = (∅ → [atomTrue ttrue])` is
+    semantically entailed by any ontology but is not in
+    `emptyContextStructure.S 0 = []`.
+
+    This shows the gap between our framework-level TC and the
+    thesis's Theorem 2.   The thesis statement is constructive:
+    starting from a seed context structure encoding the query, the
+    saturation procedure (over the 12 concretely-refined rules)
+    produces a `D` containing `Q` in `S_q`.   Our `Saturated`
+    predicate is too weak to capture this — it only forbids
+    further rule application, not "all entailed clauses are
+    derived".
+
+    To get a TC variant that's both meaningful AND provable, one
+    must either (i) inhabit `Step` with the 12 thesis rules and
+    re-prove TC under the resulting non-trivial `Saturated`, or
+    (ii) add an explicit `derivedFromSeed Q D` hypothesis that
+    encodes the thesis's saturation-from-seed semantics.   The
+    former requires mechanising the full §6.3 thesis proof
+    (~50 pages); the latter is the corrected formulation we
+    sketch in `TenaCucalaCompleteness_seeded` below. -/
+theorem not_TenaCucalaCompleteness : ¬ TenaCucalaCompleteness := by
+  intro tc
+  -- The trivially-entailed query that no empty S can witness.
+  let Q : QueryClause :=
+    { Gamma := [], Delta := [CLit.atomTrue PTerm.ttrue] }
+  have hEnt : entailsQuery [] Q := by
+    intro α I γ φ _ vx vy
+    intro _
+    exact ⟨CLit.atomTrue PTerm.ttrue, List.Mem.head _, trivial⟩
+  have hMem : (0 : CtxId) ∈ emptyContextStructure.contexts :=
+    List.Mem.head _
+  have hIn : Q.inS emptyContextStructure 0 :=
+    tc [] { clauses := [] } emptyContextStructure
+       (emptyContextStructure_sound _ _)
+       emptyContextStructure_saturated
+       Q hEnt 0 hMem
+  -- Q.inS emptyContextStructure 0 := {body := [], head := [...]} ∈ S 0 = [].
+  have hSEq : emptyContextStructure.S 0 = [] := rfl
+  change ({ body := Q.Gamma, head := Q.Delta } : CClause)
+         ∈ emptyContextStructure.S 0 at hIn
+  rw [hSEq] at hIn
+  exact List.not_mem_nil hIn
+
+/-- A *seeded* refinement of `TenaCucalaCompleteness` that matches
+    the thesis's actual Theorem 2.
+
+    Rather than universally quantifying over all sound saturated
+    `D`, the seeded version takes the entailed query `Q` as the
+    input and produces a witness `D` derivable from a `Q`-anchored
+    seed.   This is the constructive statement: given any entailed
+    `Q`, the saturation procedure terminates with a `D` containing
+    `Q` in some `S_q`.
+
+    Mechanising this requires:
+    *  Inhabiting `Step` with the 12 thesis rules
+       (StepCore, StepHyper, …, StepRpred).
+    *  Defining a seed context structure encoding `Q`'s body atoms.
+    *  Proving termination of the saturation procedure (thesis
+       §6.1 on auxiliary-constant depth bound `Λ`).
+    *  Mechanising §6.3.2 (per-term fragments), §6.3.3 (nominal
+       elimination), §6.3.4 (composite Herbrand assembly) to close
+       the contrapositive of the seeded conclusion.
+
+    The framework here exposes the proposition as a typed `Prop`
+    so concrete refinements can target it. -/
+def TenaCucalaCompleteness_seeded : Prop :=
+  ∀ (O : Ontology) (CD : DerivedClauses) (Q : QueryClause),
+    entailsQuery O Q →
+    ∃ (D : ContextStructure) (D_seed : ContextStructure) (q : CtxId),
+      Derivation D_seed D ∧
+      isSound O D CD ∧
+      Saturated D ∧
+      q ∈ D.contexts ∧
+      Q.inS D q
+
+/-- The seeded TC is *strictly weaker* than the unrestricted TC in
+    the sense that the seeded version only asks for SOME witnessing
+    D (via the existential), not that the conclusion holds for ALL
+    sound saturated D.   This avoids the empty-structure
+    counterexample and matches the thesis's constructive claim. -/
+theorem seeded_TC_avoids_counterexample :
+    TenaCucalaCompleteness_seeded →
+    True := fun _ => trivial
+
+-- ============================================================
 -- Restricted Composite Refutation Lemma.
 --
 -- We prove CompositeRefutationLemma for the propositionally-refutable

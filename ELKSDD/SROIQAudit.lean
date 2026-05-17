@@ -207,6 +207,18 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.tenaCucalaCompleteness_emptyO_propRefutable
 
 -- ============================================================
+-- Disproof of TenaCucalaCompleteness as currently stated:
+-- the predicate is too strong because `Saturated` is vacuous
+-- (Step uninhabited).  Mechanised counterexample via the empty
+-- context structure.
+-- ============================================================
+#print axioms ALCHOIQContext.emptyContextStructure
+#print axioms ALCHOIQContext.emptyContextStructure_sound
+#print axioms ALCHOIQContext.emptyContextStructure_saturated
+#print axioms ALCHOIQContext.not_TenaCucalaCompleteness
+#print axioms ALCHOIQContext.TenaCucalaCompleteness_seeded
+
+-- ============================================================
 -- Populated (non-trivial) Bridge.
 -- ============================================================
 #print axioms SROIQ.reflClause0
