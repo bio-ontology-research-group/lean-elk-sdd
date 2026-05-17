@@ -604,6 +604,75 @@ theorem step_core_sound (O : Ontology) (CD : DerivedClauses)
     exact hSound.2 w w' f hEdgeD hwneD I γ φ hIO hICD vx vy hcoreD p hp
 
 -- ============================================================
+-- Meta-soundness: any *monotonic-extension* rule that preserves
+-- semantic entailment of newly-added clauses preserves soundness.
+--
+-- A *monotonic-extension* rule (called "MonoExt" here) sends
+-- ``D`` to ``D'`` with:
+--    * D'.contexts = D.contexts
+--    * D'.vr      = D.vr
+--    * D'.edges   = D.edges
+--    * D'.core    = D.core
+--    * D'.S v ⊆ D.S v ∪ {newly-added clauses for v}
+--
+-- ten of the twelve thesis rules (Core, Hyper, Eq, Ineq, Factor,
+-- Elim, Join, Nom, Succ, Pred — and arguably r-Succ/r-Pred too) fit
+-- this pattern modulo edge addition for Succ/r-Succ.  The lemma
+-- below discharges the common case by reducing rule-specific
+-- soundness to verifying that each newly-added clause is
+-- semantically entailed under the existing core anchor.
+-- ============================================================
+
+/-- A *monotonic-extension* between context structures: ``D'``
+    agrees with ``D`` on every field except possibly ``S``, where
+    ``D'.S v ⊆ D.S v ∪ newClauses v`` for some per-context fresh
+    clause list. -/
+structure MonoExt (D D' : ContextStructure) where
+  contexts_eq : D'.contexts = D.contexts
+  vr_eq       : D'.vr = D.vr
+  edges_eq    : D'.edges = D.edges
+  core_eq     : D'.core = D.core
+  newClauses  : CtxId → List CClause
+  S_subset    : ∀ v c, c ∈ D'.S v → c ∈ D.S v ∨ c ∈ newClauses v
+
+/-- **Meta-soundness lemma**: every monotonic-extension preserves
+    soundness as long as the new clauses are semantically entailed by
+    ``O ∪ CD ∪ core_v`` under the existing isSound hypothesis. -/
+theorem mono_ext_sound
+    (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure)
+    (me : MonoExt D D')
+    (newClauses_entailed :
+      ∀ v c, c ∈ me.newClauses v →
+      ∀ {α : Type} (I : Interp α) (γ : Indu → α) (φ : FunSym → α → α),
+        I.satisfies O → InterpSatisfiesCD I γ φ CD →
+        ∀ vx vy : α, coreSat I ⟨γ, φ, vx, vy⟩ (D.core v) →
+          CClause.eval I ⟨γ, φ, vx, vy⟩ c)
+    (hSound : isSound O D CD) :
+    isSound O D' CD := by
+  refine ⟨?_, ?_⟩
+  · intro v hv c hc α I γ φ hIO hICD vx vy hcoreW
+    have hvD : v ∈ D.contexts := by rw [me.contexts_eq] at hv; exact hv
+    have hcoreD : coreSat I ⟨γ, φ, vx, vy⟩ (D.core v) := by
+      have : D.core v = D'.core v := by rw [me.core_eq]
+      rw [this]; exact hcoreW
+    rcases me.S_subset v c hc with hcOld | hcNew
+    · exact hSound.1 v hvD c hcOld I γ φ hIO hICD vx vy hcoreD
+    · exact newClauses_entailed v c hcNew I γ φ hIO hICD vx vy hcoreD
+  · intro v w f hEdge hvne α I γ φ hIO hICD vx vy hcoreW
+    have hEdgeD : D.hasEdge v w (.fn f) := by
+      unfold ContextStructure.hasEdge at hEdge ⊢
+      rw [← me.edges_eq]; exact hEdge
+    have hvneD : v ≠ D.vr := by rw [← me.vr_eq]; exact hvne
+    have hcoreD : coreSat I ⟨γ, φ, vx, vy⟩ (D.core v) := by
+      have : D.core v = D'.core v := by rw [me.core_eq]
+      rw [this]; exact hcoreW
+    intro p hp
+    have : (D.core w).atoms = (D'.core w).atoms := by rw [me.core_eq]
+    rw [← this] at hp
+    exact hSound.2 v w f hEdgeD hvneD I γ φ hIO hICD vx vy hcoreD p hp
+
+-- ============================================================
 -- §5.2 Ineq rule, concretely refined.
 --
 -- Ineq rule (Table 5.1): ``Γ → Δ ∨ t ≉ t  ⟹  Γ → Δ``.
