@@ -110,4 +110,15 @@ namespace ELKSDD
 #print axioms SROIQ.skolCanonical_satisfies_roleIncl
 #print axioms SROIQ.skolCanonical_univ_trans
 
+-- Truth lemma and headline SROIQ completeness theorems.
+#print axioms SROIQ.conj_mem
+#print axioms SROIQ.skol_succ_in_ext_role
+#print axioms SROIQ.skol_eval_hasSelf_iff
+#print axioms SROIQ.skol_eval_exist_iff
+#print axioms SROIQ.skol_eval_univ_iff
+#print axioms SROIQ.skol_canonical_eval_iff
+#print axioms SROIQ.skol_canonical_satisfies
+#print axioms SROIQ.sroiq_satC_complete_skolFragment
+#print axioms SROIQ.sroiq_satC_complete_skolFragment_roleInclOnly
+
 end ELKSDD
