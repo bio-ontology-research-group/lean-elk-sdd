@@ -481,30 +481,10 @@ inductive RuleName : Type where
   | rpred
   deriving DecidableEq
 
-/-- One step of the calculus.  `Step D rn D'` means "applying rule
-    `rn` to `D` produces `D'`".  We deliberately leave this inductive
-    *uninhabited at the framework level*: the 12 rules of Tables 5.1
-    and 5.2 have intricate per-rule preconditions (matching context
-    cores, substitutions over Σu, hyperresolution invariants); a
-    *user* who instantiates this framework refines `Step` with
-    rule-specific constructors and re-derives the soundness theorem.
-
-    Leaving `Step` uninhabited makes `Saturated D` (= "no rule
-    applies") trivially true at the framework level, which keeps the
-    `Bridge` constructible.  The non-triviality moves entirely into
-    the `TenaCucalaCompleteness` hypothesis, which captures the
-    published §6.3 thesis result as a typed Prop.
-
-    The rule names are still listed in `RuleName` so concrete
-    refinements can target the same vocabulary as the thesis. -/
-inductive Step :
-    ContextStructure → RuleName → ContextStructure → Prop
-
-/-- A finite derivation ``D₀ → D₁ → … → Dₙ``. -/
-inductive Derivation : ContextStructure → ContextStructure → Prop where
-  | refl : ∀ D, Derivation D D
-  | step : ∀ {D D' D''} {rn}, Step D rn D' → Derivation D' D'' →
-           Derivation D D''
+-- One step of the calculus.  `Step D rn D'` means "applying rule
+-- `rn` to `D` produces `D'`".   `Step` and `Derivation` are
+-- declared below, after the per-rule refinements, so the
+-- constructors can reference the rule predicates directly.
 
 -- ============================================================
 -- §5.2 Core rule, concretely refined (illustration of the
@@ -1303,6 +1283,41 @@ theorem step_ineq_sound (O : Ontology) (CD : DerivedClauses)
     exact hSound.2 w w' f hEdgeD hwneD I γ φ hIO hICD vx vy hcoreD p hp
 
 -- ============================================================
+-- Step / Derivation (declared here, after the rule refinements,
+-- so the constructors can carry rule-predicate evidence directly).
+--
+-- We inhabit `Step` with one constructor per *concretely refined*
+-- rule.   The current framework includes `viaCore` for the Core
+-- rule (Table 5.1).   The other 11 rules are likewise mechanised
+-- as separate predicates (StepHyper, StepEq, …, StepRpred) and
+-- can be wired in by analogy when needed.   We deliberately wire
+-- only `viaCore` here because:
+--
+--  * Core's preconditions are *purely syntactic*
+--    (``v ∈ contexts``, ``A ∈ core v``), making `Saturated D` a
+--    real syntactic invariant.
+--  * The other rules' preconditions include *semantic* entailment
+--    side conditions (`StepAddEntailed`), which would collapse
+--    `Saturated D` to a semantic completeness condition — making
+--    `TenaCucalaCompleteness` essentially circular.
+--
+-- This single-constructor `Step` keeps `Saturated D` non-trivial
+-- without trivialising the soundness/completeness chain.
+-- ============================================================
+
+inductive Step : ContextStructure → RuleName → ContextStructure → Prop where
+  /-- The Core rule, lifted: applying Core at context `v` on core
+      atom `A` produces the structure `D'`. -/
+  | viaCore : ∀ {D D' : ContextStructure} {v : CtxId} {A : PTerm},
+      StepCore D v A D' → Step D RuleName.core D'
+
+/-- A finite derivation ``D₀ → D₁ → … → Dₙ``. -/
+inductive Derivation : ContextStructure → ContextStructure → Prop where
+  | refl : ∀ D, Derivation D D
+  | step : ∀ {D D' D''} {rn}, Step D rn D' → Derivation D' D'' →
+           Derivation D D''
+
+-- ============================================================
 -- Theorem 1: Soundness  (Tena-Cucala 2019, §6.2)
 -- ============================================================
 
@@ -1854,7 +1869,13 @@ theorem emptyContextStructure_sound (O : Ontology) (CD : DerivedClauses) :
     exact absurd hEdge (by intro h; exact List.not_mem_nil h)
 
 theorem emptyContextStructure_saturated : Saturated emptyContextStructure := by
-  intro _ _ hStep; cases hStep
+  intro _ _ hStep
+  cases hStep with
+  | viaCore hSC =>
+    -- hSC : StepCore emptyContextStructure v A _.   Its second
+    -- conjunct asserts A ∈ (emptyContextStructure.core v).atoms = [].
+    obtain ⟨_, hA, _⟩ := hSC
+    exact absurd hA (List.not_mem_nil)
 
 /-- **TenaCucalaCompleteness as currently stated is FALSE.**
 
@@ -2027,7 +2048,11 @@ theorem seededContextStructure_sound
     saturated. -/
 theorem seededContextStructure_saturated (Q : QueryClause) :
     Saturated (seededContextStructure Q) := by
-  intro _ _ hStep; cases hStep
+  intro _ _ hStep
+  cases hStep with
+  | viaCore hSC =>
+    obtain ⟨_, hA, _⟩ := hSC
+    exact absurd hA (List.not_mem_nil)
 
 /-- **TenaCucalaCompleteness_seeded is provable** (closed proof,
     axiom-free up to `propext`).
@@ -2067,6 +2092,95 @@ theorem tenaCucalaCompleteness_seeded_holds :
     show ({ body := Q.Gamma, head := Q.Delta } : CClause)
          ∈ [({ body := Q.Gamma, head := Q.Delta } : CClause)]
     exact List.Mem.head _
+
+-- ============================================================
+-- A *real* 1-step Derivation example using the Core rule.
+--
+-- We construct two context structures and a non-trivial chain
+-- `Derivation D_seed D_result` that uses `Step.viaCore` (not just
+-- `Derivation.refl`).   This demonstrates that the inhabited `Step`
+-- supports genuine derivations.
+--
+-- Setup:
+--    D_seed   has 1 context, core_0 = [A], S 0 = [].
+--    D_result has 1 context, core_0 = [A], S 0 = [coreClause A].
+-- The Core rule fires at v = 0 with the core atom A, producing
+-- D_result from D_seed.
+-- ============================================================
+
+/-- A 1-context structure with `A` as the unique core atom and
+    empty `S`.   Used as the seed for a real Core-derivation. -/
+def coreSeedStructure (A : PTerm) : ContextStructure where
+  contexts := [0]
+  vr       := 0
+  edges    := []
+  core     := fun w => if w = 0 then { atoms := [A] } else { atoms := [] }
+  S        := fun _ => []
+  m        := {
+    lt := fun u v => u.depth < v.depth
+    lt_irrefl := fun _ h => Nat.lt_irrefl _ h
+    lt_trans := fun _ _ _ h1 h2 => Nat.lt_trans h1 h2
+    depth_mono := fun _ _ h => h
+    fn_above_const := fun _ _ => false
+    c_above_all_aux := { root := 0, label := [] }
+  }
+  θ := fun _ => {
+    lt := fun _ _ => False
+    lt_irrefl := fun _ h => h
+    lt_trans := fun _ _ _ h _ => h
+  }
+
+/-- The Core-saturated counterpart of `coreSeedStructure`: the
+    Core rule has fired at `(0, A)`, adding `coreClause A` to S 0. -/
+def coreResultStructure (A : PTerm) : ContextStructure where
+  contexts := [0]
+  vr       := 0
+  edges    := []
+  core     := fun w => if w = 0 then { atoms := [A] } else { atoms := [] }
+  S        := fun w => if w = 0 then [coreClause A] else []
+  m        := {
+    lt := fun u v => u.depth < v.depth
+    lt_irrefl := fun _ h => Nat.lt_irrefl _ h
+    lt_trans := fun _ _ _ h1 h2 => Nat.lt_trans h1 h2
+    depth_mono := fun _ _ h => h
+    fn_above_const := fun _ _ => false
+    c_above_all_aux := { root := 0, label := [] }
+  }
+  θ := fun _ => {
+    lt := fun _ _ => False
+    lt_irrefl := fun _ h => h
+    lt_trans := fun _ _ _ h _ => h
+  }
+
+/-- The Core rule fires at `(0, A)`, taking `coreSeedStructure A`
+    to `coreResultStructure A`.   This witnesses `Step.viaCore`. -/
+theorem coreSeed_StepCore_coreResult (A : PTerm) :
+    StepCore (coreSeedStructure A) 0 A (coreResultStructure A) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · show (0 : Nat) ∈ [0]; exact List.Mem.head _
+  · show A ∈ ((coreSeedStructure A).core 0).atoms
+    show A ∈ [A]; exact List.Mem.head _
+  · -- coreClause A ∉ [] = (coreSeedStructure A).S 0.
+    intro h
+    exact List.not_mem_nil h
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · -- S equality.
+    funext w
+    rfl
+
+/-- **Real 1-step Derivation example**: from `coreSeedStructure A`
+    one applies the Core rule (via `Step.viaCore`) to reach
+    `coreResultStructure A`. -/
+theorem coreSeed_Derivation_coreResult (A : PTerm) :
+    Derivation (coreSeedStructure A) (coreResultStructure A) :=
+  Derivation.step
+    (Step.viaCore (coreSeed_StepCore_coreResult A))
+    (Derivation.refl _)
 
 -- ============================================================
 -- Restricted Composite Refutation Lemma.

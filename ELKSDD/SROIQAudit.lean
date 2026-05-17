@@ -223,6 +223,14 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.tenaCucalaCompleteness_seeded_holds
 
 -- ============================================================
+-- Real 1-step Derivation example (Step now inhabited via viaCore).
+-- ============================================================
+#print axioms ALCHOIQContext.coreSeedStructure
+#print axioms ALCHOIQContext.coreResultStructure
+#print axioms ALCHOIQContext.coreSeed_StepCore_coreResult
+#print axioms ALCHOIQContext.coreSeed_Derivation_coreResult
+
+-- ============================================================
 -- Populated (non-trivial) Bridge.
 -- ============================================================
 #print axioms SROIQ.reflClause0

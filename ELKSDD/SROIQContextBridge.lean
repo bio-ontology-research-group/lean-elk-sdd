@@ -220,9 +220,14 @@ theorem trivial_sound (O : Ontology) (CD : DerivedClauses) :
     intro v w f hEdge _
     exact absurd hEdge (by intro h; exact List.not_mem_nil h)
 
-/-- With `Step` uninhabited, every context structure is saturated. -/
+/-- Saturated wrt the Core rule: trivialContextStructure has empty
+    core, so no Core application fires. -/
 theorem trivial_saturated : Saturated trivialContextStructure := by
-  intro _ _ hStep; cases hStep
+  intro _ _ hStep
+  cases hStep with
+  | viaCore hSC =>
+    obtain ⟨_, hA, _⟩ := hSC
+    exact absurd hA (List.not_mem_nil)
 
 /-- The trivial bridge: it uses the empty query as `to_query` so the
     `to_query_entails` obligation is trivial (the empty query is
@@ -393,9 +398,14 @@ theorem populated_sound (O : Ontology) (CD : DerivedClauses) :
     intro v w f hEdge _
     exact absurd hEdge (by intro h; exact List.not_mem_nil h)
 
-/-- The populated structure is saturated (Step uninhabited). -/
+/-- Saturated wrt the Core rule: populatedContextStructure has
+    empty core, so no Core application fires. -/
 theorem populated_saturated : Saturated populatedContextStructure := by
-  intro _ _ hStep; cases hStep
+  intro _ _ hStep
+  cases hStep with
+  | viaCore hSC =>
+    obtain ⟨_, hA, _⟩ := hSC
+    exact absurd hA (List.not_mem_nil)
 
 /-- The query corresponding to `reflClause0` viewed as a `QueryClause`. -/
 def reflQuery0 : QueryClause :=
