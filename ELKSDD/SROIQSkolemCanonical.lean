@@ -340,6 +340,23 @@ theorem skolCanonical_chain_two_univ
   exact hyz C hU2
 
 -- ============================================================
+-- (d.3) k-ary chain universal-propagation predicate
+--       (definition; lemmas appear after `conj_mem`).
+-- ============================================================
+
+/-- `chainUnivProp rs x y`: a chain `r₁ ⋯ rₖ` is realised by
+    step-wise univ-propagation between consecutive canonical-domain
+    elements. -/
+def chainUnivProp (R : RBox) (O : Ontology)
+    (hCons : consistent R O (∅ : Set Concept)) :
+    List Nat → CanDom R O → CanDom R O → Prop
+  | [], x, y => x = y
+  | r :: rs, x, y => ∃ z,
+      (∀ D, Concept.univ r D ∈ carrierSet R O hCons x →
+            D ∈ carrierSet R O hCons z) ∧
+      chainUnivProp R O hCons rs z y
+
+-- ============================================================
 -- (c.3) Truth lemma at hasSelf, ∃R.C, ∀R.C.
 -- ============================================================
 
@@ -388,6 +405,136 @@ theorem conj_mem (R : RBox) (O : Ontology) (t : Type_ R O) (C D : Concept)
         · exact SatC.trans (satC_andL R O _ _) (satC_andR R O _ _)
         · exact satC_andR R O _ _
       exact SatC.trans hCD (SatC.trans hDist (SatC.satC_orE hLeft hRight))
+
+-- ============================================================
+-- (d.3a) hasSelf is rejected by carriers under irrefl / asym.
+--        This yields the canonical model satisfying these axioms.
+-- ============================================================
+
+/-- Under `irrefl r ∈ R`, the carrier of every canonical-domain
+    element rejects `hasSelf r`: type_closure with
+    `SatC.roleIrrefl_hasSelf` would otherwise force ⊥ in the
+    carrier. -/
+theorem irrefl_hasSelf_not_mem
+    (R : RBox) (O : Ontology) (hCons : consistent R O (∅ : Set Concept))
+    (r : Nat) (hMem : RAxiom.irrefl r ∈ R) (x : CanDom R O) :
+    Concept.hasSelf r ∉ carrierSet R O hCons x := by
+  intro hSelf
+  apply bot_not_mem R O (carrierType R O hCons x)
+  exact type_closure R O (carrierType R O hCons x)
+    (Concept.hasSelf r) Concept.bot hSelf
+    (SatC.roleIrrefl_hasSelf hMem)
+
+/-- Under `asym r ∈ R`, the carrier of every canonical-domain element
+    rejects `hasSelf r` (asym ⇒ irrefl at concept level). -/
+theorem asym_hasSelf_not_mem
+    (R : RBox) (O : Ontology) (hCons : consistent R O (∅ : Set Concept))
+    (r : Nat) (hMem : RAxiom.asym r ∈ R) (x : CanDom R O) :
+    Concept.hasSelf r ∉ carrierSet R O hCons x := by
+  intro hSelf
+  apply bot_not_mem R O (carrierType R O hCons x)
+  exact type_closure R O (carrierType R O hCons x)
+    (Concept.hasSelf r) Concept.bot hSelf
+    (SatC.roleAsym_hasSelf hMem)
+
+/-- **The canonical Skolem model satisfies every irreflexive-role
+    RBox axiom.**
+
+    `irrefl r` asserts `∀ x, ¬ ext_role r x x`.  In the canonical
+    model `ext_role r x x` requires the second conjunct
+    `hasSelf r ∈ x.carrier`, which is impossible by
+    `irrefl_hasSelf_not_mem`. -/
+theorem skolCanonical_satisfies_irrefl
+    (R : RBox) (O : Ontology) (hCons : consistent R O (∅ : Set Concept))
+    (r : Nat) (hMem : RAxiom.irrefl r ∈ R) :
+    ∀ x : CanDom R O, ¬ (skolCanonical R O hCons).ext_role r x x := by
+  intro x ⟨_, hSelf⟩
+  exact irrefl_hasSelf_not_mem R O hCons r hMem x (hSelf rfl)
+
+/-- **The canonical Skolem model satisfies every asymmetric-role RBox
+    axiom at self-loop pairs.**
+
+    Asym says `∀ x y, r(x,y) → ¬ r(y,x)`.  At `x = y` this reduces to
+    irrefl, which we satisfy fully via `asym_hasSelf_not_mem`.
+
+    For `x ≠ y`, asym is *not* automatically satisfied by this
+    canonical-model construction; the corresponding RBox-shape
+    corollary therefore parameterises over a per-RBox witness.  The
+    self-loop case is satisfied unconditionally. -/
+theorem skolCanonical_satisfies_asym_self
+    (R : RBox) (O : Ontology) (hCons : consistent R O (∅ : Set Concept))
+    (r : Nat) (hMem : RAxiom.asym r ∈ R) :
+    ∀ x : CanDom R O, ¬ (skolCanonical R O hCons).ext_role r x x := by
+  intro x ⟨_, hSelf⟩
+  exact asym_hasSelf_not_mem R O hCons r hMem x (hSelf rfl)
+
+/-- **The canonical Skolem model satisfies the self-loop case of
+    every disjoint-role RBox axiom.**
+
+    Disj r s says `∀ x y, ¬(r(x,y) ∧ s(x,y))`.  At `x = y` this
+    reduces to a hasSelf conflict, which we satisfy fully via
+    `SatC.roleDisj_hasSelf`. -/
+theorem skolCanonical_satisfies_disj_self
+    (R : RBox) (O : Ontology) (hCons : consistent R O (∅ : Set Concept))
+    (r s : Nat) (hMem : RAxiom.disj r s ∈ R) :
+    ∀ x : CanDom R O,
+      ¬ ((skolCanonical R O hCons).ext_role r x x ∧
+         (skolCanonical R O hCons).ext_role s x x) := by
+  intro x ⟨⟨_, hSelfR⟩, ⟨_, hSelfS⟩⟩
+  have hR : Concept.hasSelf r ∈ carrierSet R O hCons x := hSelfR rfl
+  have hS : Concept.hasSelf s ∈ carrierSet R O hCons x := hSelfS rfl
+  have hConj : Concept.conj (.hasSelf r) (.hasSelf s) ∈
+                  carrierSet R O hCons x := by
+    unfold carrierSet at hR hS ⊢
+    exact conj_mem R O (carrierType R O hCons x) _ _ hR hS
+  apply bot_not_mem R O (carrierType R O hCons x)
+  exact type_closure R O (carrierType R O hCons x)
+    _ Concept.bot hConj
+    (SatC.roleDisj_hasSelf hMem)
+
+-- ============================================================
+-- (d.3b) k-ary chain universal-propagation (lemma).
+-- ============================================================
+
+/-- Propagation of `univChain rs D` along a `chainUnivProp` chain.
+    Independent of the RBox axiom; used by the canonical-satisfaction
+    lemma `skolCanonical_chain_n_univ`. -/
+theorem univChain_propagates
+    (R : RBox) (O : Ontology) (hCons : consistent R O (∅ : Set Concept))
+    (rs : List Nat) (D : Concept) :
+    ∀ (x y : CanDom R O), chainUnivProp R O hCons rs x y →
+      univChain rs D ∈ carrierSet R O hCons x →
+      D ∈ carrierSet R O hCons y := by
+  induction rs with
+  | nil =>
+      intro x y hxy hUC
+      have : x = y := hxy
+      subst this; exact hUC
+  | cons r rs' ih =>
+      intro x y hCh hUC
+      obtain ⟨z, hstep, hrest⟩ := hCh
+      have hUCx : Concept.univ r (univChain rs' D) ∈ carrierSet R O hCons x :=
+        hUC
+      have hUCz : univChain rs' D ∈ carrierSet R O hCons z :=
+        hstep (univChain rs' D) hUCx
+      exact ih z y hrest hUCz
+
+/-- The k-ary chain universal-propagation half: given
+    `RAxiom.chain rs s ∈ R`, if a chain `rs` of step-wise
+    univ-propagations connects `x` to `y` in the canonical model,
+    then the univ-propagation along `s` from `x` to `y` holds. -/
+theorem skolCanonical_chain_n_univ
+    (R : RBox) (O : Ontology) (hCons : consistent R O (∅ : Set Concept))
+    (rs : List Nat) (s : Nat) (hMem : RAxiom.chain rs s ∈ R)
+    (x y : CanDom R O) (hCh : chainUnivProp R O hCons rs x y) :
+    ∀ D, Concept.univ s D ∈ carrierSet R O hCons x →
+         D ∈ carrierSet R O hCons y := by
+  intro D hUnivS
+  have hUC : univChain rs D ∈ carrierSet R O hCons x :=
+    type_closure R O (carrierType R O hCons x)
+      (Concept.univ s D) (univChain rs D)
+      hUnivS (SatC.roleChain_n_univ D hMem)
+  exact univChain_propagates R O hCons rs D x y hCh hUC
 
 /-- ``∃r.C ∈ carrier x → skolCanonical's ext_role r x (succ x r C k)``.
 
@@ -845,6 +992,36 @@ theorem sroiq_satC_complete_skolFragment_inclReflOnly
   · subst hrep
     show ∀ x, (skolCanonical R O hCons).ext_role r x x
     exact skolCanonical_satisfies_refl R O hCons r hAx
+
+/-- **Corollary**: SROIQ completeness on the SkolFragment when the
+    RBox consists of role-inclusion + reflexivity + irreflexivity
+    axioms.  All three role-axis classes are satisfied unconditionally
+    by the canonical model:
+    * `incl`: `skolCanonical_satisfies_roleIncl`
+    * `refl`: `skolCanonical_satisfies_refl`
+    * `irrefl`: `skolCanonical_satisfies_irrefl` -/
+theorem sroiq_satC_complete_skolFragment_inclReflIrreflOnly
+    (R : RBox) (O : Ontology) (C D : Concept)
+    (hOFrag : ALCHOQ.OntologySkolFragment O)
+    (hC : ALCHOQ.SkolFragment C) (hD : ALCHOQ.SkolFragment D)
+    (hRBox : ∀ ax ∈ R,
+      (∃ r s, ax = RAxiom.incl r s) ∨ (∃ r, ax = RAxiom.refl r) ∨
+      (∃ r, ax = RAxiom.irrefl r))
+    (hEnt : Entails R O C D) :
+    SatC R O C D := by
+  apply sroiq_satC_complete_skolFragment R O C D hOFrag hC hD ?_ hEnt
+  intro hCons ax hAx
+  rcases hRBox ax hAx with ⟨r, s, hrep⟩ | ⟨r, hrep⟩ | ⟨r, hrep⟩
+  · subst hrep
+    show ∀ x y, (skolCanonical R O hCons).ext_role r x y →
+                (skolCanonical R O hCons).ext_role s x y
+    exact skolCanonical_satisfies_roleIncl R O hCons r s hAx
+  · subst hrep
+    show ∀ x, (skolCanonical R O hCons).ext_role r x x
+    exact skolCanonical_satisfies_refl R O hCons r hAx
+  · subst hrep
+    show ∀ x, ¬ (skolCanonical R O hCons).ext_role r x x
+    exact skolCanonical_satisfies_irrefl R O hCons r hAx
 
 -- ============================================================
 -- (d.2) Headline: canonical satisfies the universal-propagation

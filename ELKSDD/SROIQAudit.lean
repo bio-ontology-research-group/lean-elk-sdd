@@ -123,5 +123,13 @@ namespace ELKSDD
 #print axioms SROIQ.skolCanonical_satisfies_refl
 #print axioms SROIQ.sroiq_satC_complete_skolFragment_inclReflOnly
 #print axioms SROIQ.skolCanonical_chain_two_univ
+-- New role-axis canonical satisfaction (full irrefl, partial asym/disj
+-- on self-loops, k-ary chain univ-propagation):
+#print axioms SROIQ.skolCanonical_satisfies_irrefl
+#print axioms SROIQ.skolCanonical_satisfies_asym_self
+#print axioms SROIQ.skolCanonical_satisfies_disj_self
+#print axioms SROIQ.skolCanonical_chain_n_univ
+#print axioms SROIQ.univChain_propagates
+#print axioms SROIQ.sroiq_satC_complete_skolFragment_inclReflIrreflOnly
 
 end ELKSDD

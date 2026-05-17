@@ -48,6 +48,13 @@ def existChain : List Nat → Concept → Concept
   | [],       C => C
   | r :: rs,  C => .exist r (existChain rs C)
 
+/-- Concept-level encoding of an iterated universal along a role
+    chain: for a chain ``r₁ · r₂ · … · rₖ`` and filler ``C``, this is
+    ``∀r₁. (∀r₂. … (∀rₖ. C))``.  Empty chain ↦ ``C`` (degenerate). -/
+def univChain : List Nat → Concept → Concept
+  | [],       C => C
+  | r :: rs,  C => .univ r (univChain rs C)
+
 -- ============================================================
 -- 1. SROIQ entailment: must respect both ontology and RBox.
 -- ============================================================
@@ -143,6 +150,30 @@ inductive SatC (R : RBox) (O : Ontology) : Concept → Concept → Prop where
   | roleChain_two_univ : ∀ {r₁ r₂ s} (C : Concept),
       RAxiom.chain [r₁, r₂] s ∈ R →
       SatC R O (.univ s C) (.univ r₁ (.univ r₂ C))
+  -- General k-ary chain universal-dual:
+  --   r₁ ∘ ⋯ ∘ rₖ ⊑ s  ⟹  ∀s.C ⊑ ∀r₁.∀r₂.…∀rₖ.C
+  | roleChain_n_univ : ∀ {rs s} (C : Concept),
+      RAxiom.chain rs s ∈ R →
+      SatC R O (.univ s C) (univChain rs C)
+  -- Irrefl(r) ⟹  hasSelf r ⊑ ⊥
+  -- An r-self-loop concept-level witness contradicts irreflexivity.
+  -- This is the strongest concept-level consequence of irrefl r;
+  -- it makes the canonical-model carrier always reject hasSelf r,
+  -- which forces ext_role r x x to fail (second conjunct).
+  | roleIrrefl_hasSelf : ∀ {r}, RAxiom.irrefl r ∈ R →
+      SatC R O (.hasSelf r) .bot
+  -- Asym(r) ⟹  hasSelf r ⊑ ⊥
+  -- Asymmetry implies irreflexivity at every individual, so a
+  -- concept-level r-self-loop is impossible (apply asym at x = y).
+  | roleAsym_hasSelf : ∀ {r}, RAxiom.asym r ∈ R →
+      SatC R O (.hasSelf r) .bot
+  -- Disj(r, s) ⟹  hasSelf r ⊓ hasSelf s ⊑ ⊥
+  -- A single element with both r-self and s-self loops would
+  -- contradict role disjointness.  (Concept-level consequence;
+  -- for x ≠ y disjointness, the canonical-model construction
+  -- needs more machinery and is left as a parameterised hypothesis.)
+  | roleDisj_hasSelf : ∀ {r s}, RAxiom.disj r s ∈ R →
+      SatC R O (.conj (.hasSelf r) (.hasSelf s)) .bot
   -- Role-axis monotonicity at the SROIQ level (so we can derive
   -- ∃r.A ⊑ ∃r.B from A ⊑ B even when the premise is SROIQ-only).
   | satC_monoExist : ∀ (r : Nat) {C D}, SatC R O C D →
@@ -199,6 +230,37 @@ private theorem existChain_eval_iff
       · rintro ⟨y, ⟨z, hxz, hzy_chain⟩, hCy⟩
         refine ⟨z, hxz, ?_⟩
         exact (ih (x := z)).mpr ⟨y, hzy_chain, hCy⟩
+
+/-- ``univChain rs C`` evaluated at ``x`` says: for every chain-end
+    ``y`` reachable along ``rs`` from ``x``, ``C`` holds at ``y``. -/
+private theorem univChain_eval_iff
+    {α} (I : Interp α) (rs : List Nat) (C : Concept) (x : α) :
+    I.eval (univChain rs C) x ↔
+      ∀ y, holdsAlong I rs x y → I.eval C y := by
+  induction rs generalizing x with
+  | nil =>
+      refine ⟨fun h y hxy => ?_, fun h => h x rfl⟩
+      cases hxy; exact h
+  | cons r rs ih =>
+      constructor
+      · intro h y hch
+        obtain ⟨z, hxz, hzy⟩ := hch
+        exact (ih (x := z)).mp (h z hxz) y hzy
+      · intro h z hxz
+        apply (ih (x := z)).mpr
+        intro y hzy
+        exact h y ⟨z, hxz, hzy⟩
+
+private theorem chain_n_of_mem {α} {I : Interp α} {R : RBox}
+    {rs : List Nat} {s : Nat}
+    (hR : R.eval I) (hMem : RAxiom.chain rs s ∈ R) :
+    ∀ x y, holdsAlong I rs x y → I.ext_role s x y :=
+  hR _ hMem
+
+private theorem asym_of_mem {α} {I : Interp α} {R : RBox} {r : Nat}
+    (hR : R.eval I) (hMem : RAxiom.asym r ∈ R) :
+    ∀ x y, I.ext_role r x y → ¬ I.ext_role r y x :=
+  hR _ hMem
 
 private theorem trans_of_mem {α} {I : Interp α} {R : RBox} {r : Nat}
     (hR : R.eval I) (hMem : RAxiom.trans r ∈ R) :
@@ -298,6 +360,24 @@ theorem satC_sound (R : RBox) (O : Ontology) (C D : Concept)
       --     = ∀ y, r₁(x,y) → ∀ z, r₂(y,z) → I.eval C z
       intro y hr1xy z hr2yz
       exact hC z (chain_two_of_mem hR hMem x z ⟨y, hr1xy, hr2yz⟩)
+  | @roleChain_n_univ rs s C hMem =>
+      -- hC : I.eval (univ s C) x = ∀ y, s(x,y) → I.eval C y
+      -- Goal: I.eval (univChain rs C) x
+      --     = ∀ y, holdsAlong I rs x y → I.eval C y
+      apply (univChain_eval_iff I rs C x).mpr
+      intro y hch
+      exact hC y (chain_n_of_mem hR hMem x y hch)
+  | @roleIrrefl_hasSelf r hMem =>
+      -- hC : I.eval (.hasSelf r) x = I.ext_role r x x.
+      -- Goal : I.eval .bot x = False.
+      exact (hR _ hMem) x hC
+  | @roleAsym_hasSelf r hMem =>
+      -- hC : I.ext_role r x x.  Asym r gives r(x,x) → ¬r(x,x).
+      exact asym_of_mem hR hMem x x hC hC
+  | @roleDisj_hasSelf r s hMem =>
+      obtain ⟨hr, hs⟩ := hC
+      -- hr : I.ext_role r x x; hs : I.ext_role s x x.
+      exact disj_of_mem hR hMem x x ⟨hr, hs⟩
   | satC_monoExist r hCD ihCD =>
       obtain ⟨y, hr, hCy⟩ := hC
       exact ⟨y, hr, ihCD y hCy⟩
