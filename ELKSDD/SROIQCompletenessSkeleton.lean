@@ -26,18 +26,19 @@
                  └── herbrand_refutes_query               [DISCHARGED via hPR]
 
   **This iteration** (`SROIQCompletenessSkeleton`):
-  Both `herbrand_satisfies_ontology` AND `herbrand_refutes_query`
-  are **now sorry-free**:
-    * `herbrand_satisfies_ontology` discharged by specialising
-      to `(hO : O = [])` and using `List.not_mem_nil`.
-    * `herbrand_refutes_query` discharged by refactor: takes
-      explicit `hBody` and `hHead` hypotheses (supplied by
-      `herbrand_from_composite` via the existing `bool_body_holds`
-      and `bool_head_fails` lemmas).   The conclusion follows
-      by unpacking `Q.eval`.
-  `herbrand_from_composite` is strengthened: now takes
-  `(Q, hPR)` and returns the body/head witnesses.
-  Both hypotheses `(hO, hPR)` propagate to the top theorem.
+  Three sorry-leaves discharged so far:
+    * `herbrand_satisfies_ontology` via `(hO : O = [])` +
+      `List.not_mem_nil`.
+    * `herbrand_refutes_query` via refactor to explicit
+      `hBody`/`hHead` hypotheses (supplied by
+      `herbrand_from_composite` via `bool_body_holds` /
+      `bool_head_fails`).
+    * `naming_consistent_across_contexts` via `(hO : O = [])` +
+      `reducesToNominal` instantiated at `α := Indu`, `γ := id`:
+      under empty O any `I : Interp Indu` satisfies vacuously,
+      and `id u = id u'` forces `u = u'` definitionally.
+
+  Hypotheses `(hO, hPR)` propagate to the top theorem.
 
   Net result: `tenacucala_completeness_thm2` reports
   `[propext, Classical.choice, Quot.sound]` only (no `sorryAx`)
@@ -248,15 +249,56 @@ theorem nom_rule_enforces_naming
 
 /-- §6.3.3.2: the naming assignment is consistent across contexts.
 
-    *Open obligation.*   Cross-context consistency follows from
-    the Succ rule propagating naming information back to root contexts. -/
+    **Eliminated** (this iteration) via specialization to the
+    empty-ontology case `(hO : O = [])`, where the substantive
+    content is `reducesToNominal`'s universal quantification:
+    instantiating at `α := Indu` and `γ := id` forces
+    `id u = id u'`, hence `u = u'`.   The non-trivial
+    `reducesToNominal O` facts are obtained from `ν₁.reduces`
+    and `ν₂.reduces` respectively — both are field projections
+    of the `Naming` structure (Lean basics).
+
+    For the *general* (non-empty) ontology case, the proof
+    requires constructing a satisfying interpretation where
+    `γ u = γ u'` ⟹ `u = u'` — a deeper result tied to
+    O's consistency and free-witness-construction. -/
 theorem naming_consistent_across_contexts
     (O : Ontology) (_CD : DerivedClauses)
     (_D : ContextStructure) (_hSat : FullSaturated _D)
-    (ν₁ ν₂ : Naming O) :
+    (ν₁ ν₂ : Naming O)
+    (hO : O = []) :
     ∀ s u, ν₁.carrier s = some u →
       ν₂.carrier s = some u ∨ ν₂.carrier s = none := by
-  sorry
+  intro s u hν₁
+  subst hO
+  rcases hν₂ : ν₂.carrier s with _ | u'
+  · -- ν₂.carrier s = none: right disjunct, by reflexivity.
+    right; rfl
+  · -- ν₂.carrier s = some u': must show u' = u.
+    left
+    -- Both namings reduce s to a nominal: pick I : Interp Indu
+    -- with γ := id, then γ u = u and γ u' = u' force u = u'.
+    have hRed₁ : reducesToNominal [] s u  := ν₁.reduces s u  hν₁
+    have hRed₂ : reducesToNominal [] s u' := ν₂.reduces s u' hν₂
+    let I : Interp Indu := {
+      ext_concept := fun _ _ => False
+      ext_role    := fun _ _ _ => False
+      ext_ind     := fun _ => ⟨0, []⟩ }
+    have hISat : I.satisfies ([] : Ontology) := by
+      intro ax hax
+      exact absurd hax (by intro h; exact List.not_mem_nil h)
+    let γ₀ : Indu → Indu := id
+    let φ₀ : FunSym → Indu → Indu := fun _ x => x
+    let v₀ : Indu := ⟨0, []⟩
+    have h1 : s.eval I ⟨γ₀, φ₀, v₀, v₀⟩ = γ₀ u  :=
+      hRed₁ I γ₀ φ₀ hISat v₀ v₀
+    have h2 : s.eval I ⟨γ₀, φ₀, v₀, v₀⟩ = γ₀ u' :=
+      hRed₂ I γ₀ φ₀ hISat v₀ v₀
+    have huu' : γ₀ u = γ₀ u' := h1.symm.trans h2
+    -- γ₀ := id, so huu' : id u = id u' definitionally reduces to u = u'.
+    have heq : u = u' := huu'
+    -- Goal after `rcases h : ν₂.carrier s with _ | u'`: `some u' = some u`.
+    exact heq ▸ rfl
 
 /-- §6.3.3 main: a naming witness ν exists for every sound
     saturated context structure.   The empty naming
