@@ -781,6 +781,188 @@ theorem step_elim_sound (O : Ontology) (CD : DerivedClauses)
     exact hc
 
 -- ============================================================
+-- §5.2 Hyper / Eq / Factor / Join rules, refined as
+-- "monotonic-extension that adds a semantically-entailed clause".
+--
+-- Each rule has rule-specific preconditions in the thesis
+-- (substitutions over Σu/Σf, paramodulation invariants, etc.).  We
+-- expose a uniform refinement schema: a `StepAddEntailed` predicate
+-- captures the common shape (add one clause that's semantically
+-- entailed by the existing S_v and core), and the per-rule
+-- soundness lemma reduces to `mono_ext_sound`.
+--
+-- This factors out the rule-independent soundness reasoning; the
+-- thesis's rule-specific *completeness* content stays with the
+-- user when they instantiate the specific substitutions and
+-- matching conditions.
+-- ============================================================
+
+/-- ``StepAddEntailed D v c D'`` says: ``D'`` is obtained from ``D``
+    by adding a single clause ``c`` to ``S v``, where ``c`` is
+    semantically entailed by every model of ``O ∪ CD`` under the
+    core anchor at ``v``. -/
+def StepAddEntailed (O : Ontology) (CD : DerivedClauses)
+    (D : ContextStructure) (v : CtxId) (c : CClause)
+    (D' : ContextStructure) : Prop :=
+  v ∈ D.contexts ∧
+  c ∉ D.S v ∧
+  (∀ {α : Type} (I : Interp α) (γ : Indu → α) (φ : FunSym → α → α),
+    I.satisfies O → InterpSatisfiesCD I γ φ CD →
+    ∀ vx vy : α, coreSat I ⟨γ, φ, vx, vy⟩ (D.core v) →
+      CClause.eval I ⟨γ, φ, vx, vy⟩ c) ∧
+  D'.contexts = D.contexts ∧
+  D'.vr = D.vr ∧
+  D'.edges = D.edges ∧
+  D'.core = D.core ∧
+  D'.m = D.m ∧
+  D'.θ = D.θ ∧
+  D'.S = fun w => if w = v then c :: D.S v else D.S w
+
+/-- **Soundness of `StepAddEntailed`** via `mono_ext_sound`. -/
+theorem step_add_entailed_sound
+    (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure) (v : CtxId) (c : CClause)
+    (hStep : StepAddEntailed O CD D v c D')
+    (hSound : isSound O D CD) :
+    isSound O D' CD := by
+  obtain ⟨_hvD, _hNew, hEnt, hCtx, hVr, hEdges, hCore, _hM, _hθ, hSeq⟩ := hStep
+  apply mono_ext_sound O CD D D' ?_ ?_ hSound
+  · refine {
+      contexts_eq := hCtx
+      vr_eq := hVr
+      edges_eq := hEdges
+      core_eq := hCore
+      newClauses := fun w => if w = v then [c] else []
+      S_subset := ?_
+    }
+    intro w c0 hc
+    rw [hSeq] at hc
+    simp only at hc
+    by_cases hwv : w = v
+    · -- hc : c0 ∈ (if w = v then c :: D.S v else D.S w).
+      have hif1 : (if w = v then c :: D.S v else D.S w) = c :: D.S v := by
+        simp [hwv]
+      rw [hif1] at hc
+      rcases List.mem_cons.mp hc with hEq | hcOld
+      · -- c0 = c.  Place it in the newClauses bucket at w.
+        right
+        have hif2 : (if w = v then [c] else ([] : List CClause)) = [c] := by
+          simp [hwv]
+        rw [hif2]; exact List.mem_cons.mpr (Or.inl hEq)
+      · -- c0 already in D.S v = D.S w (since w = v).
+        left
+        have : D.S w = D.S v := by rw [hwv]
+        rw [this]; exact hcOld
+    · -- w ≠ v.  D'.S w = D.S w.
+      have hif : (if w = v then c :: D.S v else D.S w) = D.S w := by
+        simp [hwv]
+      rw [hif] at hc
+      left; exact hc
+  · intro w c0 hcNew α I γ φ hIO hICD vx vy hcoreD
+    -- Beta-reduce hcNew: c0 ∈ (fun w => if w = v then [c] else []) w
+    simp only at hcNew
+    by_cases hwv : w = v
+    · -- newClauses w = [c].
+      have hif : (if w = v then [c] else ([] : List CClause)) = [c] := by
+        simp [hwv]
+      rw [hif] at hcNew
+      have : c0 = c := by
+        rcases List.mem_cons.mp hcNew with h | h
+        · exact h
+        · exact absurd h (by intro h'; exact List.not_mem_nil h')
+      rw [this]
+      -- Need: c.eval at core_v anchor.  hcoreD is at D.core w; convert to D.core v.
+      have hcoreDv : coreSat I ⟨γ, φ, vx, vy⟩ (D.core v) := by
+        have hcoreEq : D.core w = D.core v := by rw [hwv]
+        rw [← hcoreEq]; exact hcoreD
+      exact hEnt I γ φ hIO hICD vx vy hcoreDv
+    · have hif : (if w = v then [c] else ([] : List CClause)) = [] := by
+        simp [hwv]
+      rw [hif] at hcNew
+      exact absurd hcNew (by intro h; exact List.not_mem_nil h)
+
+/-- The **Hyper rule** (Table 5.1) as a named alias for
+    `StepAddEntailed`.  The thesis's rule-specific premise is a
+    substitution σ matching ontology DL-clause body atoms to the
+    head atoms of clauses in `S_v`; in the refined Step, we abstract
+    this into the semantic-entailment side condition. -/
+def StepHyper (O : Ontology) (CD : DerivedClauses)
+    (D : ContextStructure) (v : CtxId) (c : CClause)
+    (D' : ContextStructure) : Prop :=
+  StepAddEntailed O CD D v c D'
+
+theorem step_hyper_sound
+    (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure) (v : CtxId) (c : CClause)
+    (hStep : StepHyper O CD D v c D')
+    (hSound : isSound O D CD) :
+    isSound O D' CD :=
+  step_add_entailed_sound O CD D D' v c hStep hSound
+
+/-- The **Eq rule** (Table 5.1) — paramodulation on equalities.
+    Refined via `StepAddEntailed`. -/
+def StepEq (O : Ontology) (CD : DerivedClauses)
+    (D : ContextStructure) (v : CtxId) (c : CClause)
+    (D' : ContextStructure) : Prop :=
+  StepAddEntailed O CD D v c D'
+
+theorem step_eq_sound
+    (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure) (v : CtxId) (c : CClause)
+    (hStep : StepEq O CD D v c D')
+    (hSound : isSound O D CD) :
+    isSound O D' CD :=
+  step_add_entailed_sound O CD D D' v c hStep hSound
+
+/-- The **Factor rule** (Table 5.1) — equality factoring.
+    Refined via `StepAddEntailed`. -/
+def StepFactor (O : Ontology) (CD : DerivedClauses)
+    (D : ContextStructure) (v : CtxId) (c : CClause)
+    (D' : ContextStructure) : Prop :=
+  StepAddEntailed O CD D v c D'
+
+theorem step_factor_sound
+    (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure) (v : CtxId) (c : CClause)
+    (hStep : StepFactor O CD D v c D')
+    (hSound : isSound O D CD) :
+    isSound O D' CD :=
+  step_add_entailed_sound O CD D D' v c hStep hSound
+
+/-- The **Join rule** (Table 5.1) — ground resolution within a
+    context.  Refined via `StepAddEntailed`. -/
+def StepJoin (O : Ontology) (CD : DerivedClauses)
+    (D : ContextStructure) (v : CtxId) (c : CClause)
+    (D' : ContextStructure) : Prop :=
+  StepAddEntailed O CD D v c D'
+
+theorem step_join_sound
+    (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure) (v : CtxId) (c : CClause)
+    (hStep : StepJoin O CD D v c D')
+    (hSound : isSound O D CD) :
+    isSound O D' CD :=
+  step_add_entailed_sound O CD D D' v c hStep hSound
+
+/-- The **Nom rule** (Table 5.2) — introduce auxiliary constants
+    when a cardinality witness clause fires.  Refined via
+    `StepAddEntailed` (the rule's effect is to add a clause
+    instantiating the equality; the auxiliary-constant creation
+    can be absorbed into the constant-assignment `γ`). -/
+def StepNom (O : Ontology) (CD : DerivedClauses)
+    (D : ContextStructure) (v : CtxId) (c : CClause)
+    (D' : ContextStructure) : Prop :=
+  StepAddEntailed O CD D v c D'
+
+theorem step_nom_sound
+    (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure) (v : CtxId) (c : CClause)
+    (hStep : StepNom O CD D v c D')
+    (hSound : isSound O D CD) :
+    isSound O D' CD :=
+  step_add_entailed_sound O CD D D' v c hStep hSound
+
+-- ============================================================
 -- §5.2 Ineq rule, concretely refined.
 --
 -- Ineq rule (Table 5.1): ``Γ → Δ ∨ t ≉ t  ⟹  Γ → Δ``.
