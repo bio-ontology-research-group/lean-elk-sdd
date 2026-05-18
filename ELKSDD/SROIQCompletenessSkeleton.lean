@@ -5480,14 +5480,16 @@ def TreeFalseLHS : ALCHOQ.Concept → Prop
     the tree Herbrand is `True` at every node.  Dual to
     `TreeFalseLHS`: disj-with-True is True; conj is True iff both
     sides are.   `atLeast 0 _ _` is structurally `top`; `univ R D`
-    is True iff the filler is True at every successor (i.e.,
-    structurally True). -/
+    is True iff the filler is True at every successor; `atMost _ _ C`
+    is True if the filler is structurally False (so the constrained
+    set is empty for any cardinality bound). -/
 def TreeTrueRHS : ALCHOQ.Concept → Prop
   | .top                       => True
   | .atLeast 0 _ _             => True
   | .conj D₁ D₂                => TreeTrueRHS D₁ ∧ TreeTrueRHS D₂
   | .disj D₁ D₂                => TreeTrueRHS D₁ ∨ TreeTrueRHS D₂
   | .univ _ D                  => TreeTrueRHS D
+  | .atMost _ _ C              => TreeFalseLHS C
   | _                          => False
 
 /-- Atoms forced at a `succ _ ax _` node by **universal-restriction
@@ -6319,7 +6321,13 @@ theorem treeTrueRHS_eval_true (O : Ontology) (Q : QueryClause)
           show Interp.atLeastCard _ 0
           trivial
       | succ _ => exact absurd hD (by intro h; exact h)
-  | atMost _ _ _ _ => exact absurd hD (by intro h; exact h)
+  | atMost n _ C _ =>
+      intro p hAL
+      -- hD : TreeTrueRHS (atMost n _ C) = TreeFalseLHS C
+      -- hAL : atLeastCard (fun y => ext_role R p y ∧ eval C y) (n+1)
+      --     unfolds to ∃ y, (ext_role R p y ∧ eval C y) ∧ atLeastCard _ n
+      obtain ⟨y, ⟨_hR, hCy⟩, _⟩ := hAL
+      exact treeFalseLHS_eval_false O Q C hD y hCy
   | hasSelf _ => exact absurd hD (by intro h; exact h)
 
 /-- An axiom whose LHS is `TreeFalseLHS` is satisfied at every node
