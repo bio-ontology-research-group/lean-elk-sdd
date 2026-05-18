@@ -653,4 +653,17 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.canonicalSeedELConjFromOntology
 #print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology
 
+-- ============================================================
+-- EL + VACUOUS SROIQ AXIOM SHAPES: extends IsELConjOnly with
+-- Herbrand-vacuous shapes (∃R.A on LHS, ∀R.B / ⊤ on RHS).
+-- No new closure clauses needed; only Herbrand satisfaction
+-- proof is extended.
+-- ============================================================
+#print axioms ALCHOIQContext.IsELOrVacuousOnly
+#print axioms ALCHOIQContext.isELConjOnly_imp_isELOrVacuousOnly
+#print axioms ALCHOIQContext.canonicalSeedELConj_sound_anyO
+#print axioms ALCHOIQContext.herbrandPropertyAtomConjDisj_ELOrVacuous
+#print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_ELOrVacuous
+#print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology_vacuous
+
 end ELKSDD

@@ -4371,5 +4371,338 @@ theorem isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology
       (canonicalSeedELConjFromOntology O) :=
   isCanonicalSeedAtomConjDisj_ELConj (ontologyConceptSig O) O hO
 
+-- ============================================================
+-- §FINAL-VACUOUS.  Free extension by "Herbrand-vacuous" axiom
+-- shapes — those whose LHS evaluates to False, or whose RHS
+-- evaluates to True, under the empty-role Unit-Herbrand model.
+--
+-- These axioms require NO seed modification: the existing
+-- `canonicalSeedELConj` already serves.  Only the Herbrand
+-- satisfaction proof is extended to handle the additional shapes.
+--
+-- Specifically:
+--   * `(∃R.A, atom B)`     — LHS always False (no R-successors).
+--   * `(atom A, ∀R.B)`     — RHS always True (no R-successors).
+--   * `(atom A, ⊤)`        — RHS always True.
+-- ============================================================
+
+/-- **EL fragment + Herbrand-vacuous axiom shapes.**  Strict
+    extension of `IsELConjOnly`. -/
+def IsELOrVacuousOnly (O : Ontology) : Prop :=
+  ∀ ax ∈ O,
+    (∃ A B : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B)) ∨
+    (∃ A : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot)) ∨
+    (∃ A₁ A₂ B : Nat,
+       ax = (ALCHOQ.Concept.conj
+              (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+             ALCHOQ.Concept.atom B)) ∨
+    (∃ R A B : Nat,
+       ax = (ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom A),
+             ALCHOQ.Concept.atom B)) ∨
+    (∃ A R B : Nat,
+       ax = (ALCHOQ.Concept.atom A,
+             ALCHOQ.Concept.univ R (ALCHOQ.Concept.atom B))) ∨
+    (∃ A : Nat,
+       ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.top))
+
+/-- `IsELConjOnly` is a special case of `IsELOrVacuousOnly`. -/
+theorem isELConjOnly_imp_isELOrVacuousOnly
+    (O : Ontology) (hO : IsELConjOnly O) :
+    IsELOrVacuousOnly O := by
+  intro ax hax
+  rcases hO ax hax with h | h | h
+  · exact Or.inl h
+  · exact Or.inr (Or.inl h)
+  · exact Or.inr (Or.inr (Or.inl h))
+
+/-- Soundness of `canonicalSeedELConj` for arbitrary `O` (no
+    EL-shape hypothesis): the closures depend only on `O` and
+    `sig`, not on axiom shapes, and only atom-atom axioms
+    contribute via `ontologyToClauses`. -/
+theorem canonicalSeedELConj_sound_anyO
+    (sig : List Nat) (O : Ontology) :
+    ∃ CD : DerivedClauses, isSound O (canonicalSeedELConj sig O) CD := by
+  classical
+  refine ⟨{ clauses := [] }, ?_, ?_⟩
+  · intro v hv c hc α I γ φ hIO _ vx vy _
+    have hv0 : v = 0 := by
+      rcases List.mem_cons.mp hv with h | h
+      · exact h
+      · exact absurd h List.not_mem_nil
+    subst hv0
+    have hS0 : (canonicalSeedELConj sig O).S 0 =
+               ontologyToClauses O ++ sig.map reflexiveClause
+               ++ elClosureClauses sig O ++ elBotClosureClauses sig O := by
+      show (if (0 : CtxId) = 0 then
+              ontologyToClauses O ++ sig.map reflexiveClause
+              ++ elClosureClauses sig O ++ elBotClosureClauses sig O
+            else []) = _
+      simp
+    rw [hS0] at hc
+    rcases List.mem_append.mp hc with hMain | hBotC
+    · rcases List.mem_append.mp hMain with hL2 | hELC
+      · rcases List.mem_append.mp hL2 with hAx | hReflex
+        · obtain ⟨A, B, hAxO, hCEq⟩ := mem_ontologyToClauses O c hAx
+          rw [hCEq]
+          exact atomAtom_clause_sound I γ φ A B vx vy (hIO _ hAxO)
+        · rcases List.mem_map.mp hReflex with ⟨A, _hA, hCEq⟩
+          rw [← hCEq]
+          exact reflexiveClause_sound I γ φ A vx vy
+      · have hELUnfold :
+            elClosureClauses sig O =
+            sig.sublists.flatMap (fun L =>
+              sig.filterMap (fun B =>
+                if ConceptDerivableEL O (fun X => X ∈ L) B then
+                  some (multiBodyAtomClause L B)
+                else none)) := rfl
+        rw [hELUnfold] at hELC
+        rcases List.mem_flatMap.mp hELC with ⟨L, _hL, hInner⟩
+        rcases List.mem_filterMap.mp hInner with ⟨B, _hB, hCEq⟩
+        by_cases h : ConceptDerivableEL O (fun X => X ∈ L) B
+        · have hSimp :
+              (if ConceptDerivableEL O (fun X => X ∈ L) B then
+                some (multiBodyAtomClause L B) else none) =
+              some (multiBodyAtomClause L B) := if_pos h
+          rw [hSimp] at hCEq
+          have : c = multiBodyAtomClause L B := (Option.some.inj hCEq).symm
+          rw [this]
+          exact multiBodyAtomClause_sound I γ φ O hIO L B h vx vy
+        · have hSimp :
+              (if ConceptDerivableEL O (fun X => X ∈ L) B then
+                some (multiBodyAtomClause L B) else none) = none := if_neg h
+          rw [hSimp] at hCEq
+          exact absurd hCEq (by intro h'; cases h')
+    · have hBotUnfold :
+          elBotClosureClauses sig O =
+          sig.sublists.filterMap (fun L =>
+            if ∃ A : Nat, ConceptDerivableEL O (fun X => X ∈ L) A ∧
+                           (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O then
+              some (multiBodyBotClause L)
+            else none) := rfl
+      rw [hBotUnfold] at hBotC
+      rcases List.mem_filterMap.mp hBotC with ⟨L, _hL, hCEq⟩
+      by_cases h : ∃ A : Nat, ConceptDerivableEL O (fun X => X ∈ L) A ∧
+                              (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O
+      · have hSimp :
+            (if ∃ A : Nat, ConceptDerivableEL O (fun X => X ∈ L) A ∧
+                            (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O then
+              some (multiBodyBotClause L) else none) =
+            some (multiBodyBotClause L) := if_pos h
+        rw [hSimp] at hCEq
+        have : c = multiBodyBotClause L := (Option.some.inj hCEq).symm
+        rw [this]
+        exact multiBodyBotClause_sound I γ φ O hIO L h vx vy
+      · have hSimp :
+            (if ∃ A : Nat, ConceptDerivableEL O (fun X => X ∈ L) A ∧
+                            (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O then
+              some (multiBodyBotClause L) else none) = none := if_neg h
+        rw [hSimp] at hCEq
+        exact absurd hCEq (by intro h'; cases h')
+  · intro v w f hEdge _
+    unfold ContextStructure.hasEdge at hEdge
+    exact absurd hEdge List.not_mem_nil
+
+/-- **HerbrandPropertyAtomConjDisj for EL + vacuous shapes.** -/
+theorem herbrandPropertyAtomConjDisj_ELOrVacuous
+    (sig : List Nat) (O : Ontology) (hO : IsELOrVacuousOnly O) :
+    HerbrandPropertyAtomConjDisj sig O (canonicalSeedELConj sig O) := by
+  classical
+  intro D hDeriv _hSat Q hQsig hQCD hNoSub
+  obtain ⟨hBodyShape, hHeadShape⟩ := hQCD
+  have hNoSubSeed :
+      ∀ c ∈ (canonicalSeedELConj sig O).S
+              (canonicalSeedELConj sig O).vr,
+        ¬ subsumes c {body := Q.Gamma, head := Q.Delta} := by
+    intro c hc hSub
+    have hSubInv : SubsumerInvariant Q (canonicalSeedELConj sig O) :=
+      ⟨canonicalSeedELConj_vr_in_contexts sig O, c, hc, hSub⟩
+    have hSubInvD := fullDeriv_preserves_SubsumerInvariant hDeriv Q hSubInv
+    obtain ⟨_, c', hc'In, hc'Sub⟩ := hSubInvD
+    exact hNoSub c' hc'In hc'Sub
+  have hBodyAtomsInGamma : ∀ A : Nat, queryBodyAtomConcepts Q A →
+      BLit.atomTrue (PTerm.atom A ATerm.x) ∈ Q.Gamma := by
+    intro A hA
+    obtain ⟨t, ht⟩ := hA
+    have ht_eq : t = ATerm.x :=
+      atomConjDisj_bodyTerm_is_x Q hBodyShape A t ht
+    subst ht_eq; exact ht
+  have hHeadNotDerivable_aux :
+      ∀ B t, CLit.atomTrue (PTerm.atom B t) ∈ Q.Delta →
+        ¬ ConceptDerivableEL O (queryBodyAtomConcepts Q) B := by
+    intro B t hMem hDer
+    have ht_eq : t = ATerm.x :=
+      atomConjDisj_headTerm_is_x Q hHeadShape B t hMem
+    subst ht_eq
+    have hB_sig : B ∈ sig := hQsig.2 B ATerm.x hMem
+    obtain ⟨S, hSinit, hSDer⟩ :=
+      conceptDerivableEL_multi_witness O _ hDer
+    have hS_sub_sig : ∀ A, A ∈ S → A ∈ sig := by
+      intro A hA
+      have hAinit := hSinit A hA
+      obtain ⟨tA, hAmem⟩ := hAinit
+      have htA_eq : tA = ATerm.x :=
+        atomConjDisj_bodyTerm_is_x Q hBodyShape A tA hAmem
+      subst htA_eq
+      exact hQsig.1 A ATerm.x hAmem
+    set L := sig.filter (fun X => decide (X ∈ S)) with hLdef
+    have hLsig : L ∈ sig.sublists := filter_mem_sublists sig (· ∈ S)
+    have hL_eq_S : ∀ A, A ∈ L ↔ A ∈ S := by
+      intro A
+      rw [hLdef]
+      rw [mem_filter_iff sig (· ∈ S)]
+      constructor
+      · exact fun ⟨_, h⟩ => h
+      · intro h; exact ⟨hS_sub_sig A h, h⟩
+    have hDerL : ConceptDerivableEL O (fun X => X ∈ L) B := by
+      apply conceptDerivableEL_mono O (fun X => X ∈ S) (fun X => X ∈ L)
+        _ hSDer
+      intro X hXS
+      exact (hL_eq_S X).mpr hXS
+    have hClauseIn :
+        multiBodyAtomClause L B ∈ (canonicalSeedELConj sig O).S
+                                   (canonicalSeedELConj sig O).vr :=
+      canonicalSeedELConj_subsumes_elDerivable sig O L hLsig B hB_sig hDerL
+    have hSubs :
+        subsumes (multiBodyAtomClause L B)
+                 { body := Q.Gamma, head := Q.Delta } := by
+      refine ⟨?_, ?_⟩
+      · intro b hb
+        rcases List.mem_map.mp hb with ⟨A, hA, rfl⟩
+        have hAinS : A ∈ S := (hL_eq_S A).mp hA
+        have hAinit := hSinit A hAinS
+        exact hBodyAtomsInGamma A hAinit
+      · intro hLit hLitMem
+        rcases List.mem_singleton.mp hLitMem with rfl
+        exact hMem
+    exact hNoSubSeed _ hClauseIn hSubs
+  have hNoBotInBody :
+      ∀ (S : List Nat) (A : Nat),
+        (∀ X, X ∈ S → queryBodyAtomConcepts Q X) →
+        ConceptDerivableEL O (fun X => X ∈ S) A →
+        (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O →
+        False := by
+    intro S A hSinit hSDer hABot
+    have hS_sub_sig : ∀ X, X ∈ S → X ∈ sig := by
+      intro X hX
+      have hXinit := hSinit X hX
+      obtain ⟨tX, hXmem⟩ := hXinit
+      have htX_eq : tX = ATerm.x :=
+        atomConjDisj_bodyTerm_is_x Q hBodyShape X tX hXmem
+      subst htX_eq
+      exact hQsig.1 X ATerm.x hXmem
+    set L := sig.filter (fun X => decide (X ∈ S)) with hLdef
+    have hLsig : L ∈ sig.sublists := filter_mem_sublists sig (· ∈ S)
+    have hL_eq_S : ∀ X, X ∈ L ↔ X ∈ S := by
+      intro X
+      rw [hLdef]
+      rw [mem_filter_iff sig (· ∈ S)]
+      constructor
+      · exact fun ⟨_, h⟩ => h
+      · intro h; exact ⟨hS_sub_sig X h, h⟩
+    have hDerL : ConceptDerivableEL O (fun X => X ∈ L) A := by
+      apply conceptDerivableEL_mono O (fun X => X ∈ S) (fun X => X ∈ L)
+        _ hSDer
+      intro X hXS
+      exact (hL_eq_S X).mpr hXS
+    have hBotL : ∃ A' : Nat,
+        ConceptDerivableEL O (fun X => X ∈ L) A' ∧
+        (ALCHOQ.Concept.atom A', ALCHOQ.Concept.bot) ∈ O :=
+      ⟨A, hDerL, hABot⟩
+    have hClauseIn :
+        multiBodyBotClause L ∈ (canonicalSeedELConj sig O).S
+                                (canonicalSeedELConj sig O).vr :=
+      canonicalSeedELConj_subsumes_elBot sig O L hLsig hBotL
+    have hSubs :
+        subsumes (multiBodyBotClause L)
+                 { body := Q.Gamma, head := Q.Delta } := by
+      refine ⟨?_, ?_⟩
+      · intro b hb
+        rcases List.mem_map.mp hb with ⟨X, hX, rfl⟩
+        have hXinS : X ∈ S := (hL_eq_S X).mp hX
+        have hXinit := hSinit X hXinS
+        exact hBodyAtomsInGamma X hXinit
+      · intro hLit hLitMem
+        exact absurd hLitMem List.not_mem_nil
+    exact hNoSubSeed _ hClauseIn hSubs
+  refine ⟨Unit, ⟨()⟩, elHerbrandInterp O Q, atomicAssign.γ,
+          atomicAssign.φ, atomicAssign.vx, atomicAssign.vy, ?_, ?_⟩
+  · -- Herbrand satisfies all six axiom shapes.
+    intro ax hax
+    rcases hO ax hax with hAA | hAB | hCJ | hEx | hUn | hTop
+    · -- atom-atom
+      obtain ⟨A, B, rfl⟩ := hAA
+      intro x hxA
+      show ConceptDerivableEL O (queryBodyAtomConcepts Q) B
+      have hA : ConceptDerivableEL O (queryBodyAtomConcepts Q) A := hxA
+      exact ConceptDerivableEL.step_atom hA hax
+    · -- atom-bot
+      obtain ⟨A, rfl⟩ := hAB
+      intro x hxA
+      have hDerA : ConceptDerivableEL O (queryBodyAtomConcepts Q) A := hxA
+      obtain ⟨S, hSinit, hSDer⟩ :=
+        conceptDerivableEL_multi_witness O _ hDerA
+      exact hNoBotInBody S A hSinit hSDer hax
+    · -- conj-atom
+      obtain ⟨A₁, A₂, B, rfl⟩ := hCJ
+      intro x hx
+      obtain ⟨hA1, hA2⟩ := hx
+      exact ConceptDerivableEL.step_conj hA1 hA2 hax
+    · -- (∃R.A, atom B): LHS always False under empty role.
+      obtain ⟨R, A, B, rfl⟩ := hEx
+      intro x hx
+      -- hx : I.eval (∃R.atom A) x = ∃ y, ext_role R x y ∧ ext_concept A y
+      -- ext_role = False in elHerbrandInterp.
+      obtain ⟨y, hRxy, _⟩ := hx
+      exact absurd hRxy (by intro h; exact h)
+    · -- (atom A, ∀R.B): RHS always True under empty role.
+      obtain ⟨A, R, B, rfl⟩ := hUn
+      intro x _
+      -- Goal: I.eval (∀R.atom B) x = ∀ y, ext_role R x y → ext_concept B y
+      intro y hRxy
+      -- hRxy : ext_role R x y = False
+      exact absurd hRxy (by intro h; exact h)
+    · -- (atom A, ⊤): RHS always True.
+      obtain ⟨A, rfl⟩ := hTop
+      intro x _
+      -- Goal: I.eval top x = True
+      trivial
+  · intro hQeval
+    have hNoRoleBody : ∀ S t₁ t₂, BLit.atomTrue (PTerm.role S t₁ t₂) ∉ Q.Gamma := by
+      intro S t₁ t₂ hMem
+      obtain ⟨A, hEq⟩ := hBodyShape _ hMem
+      exact (by cases hEq)
+    have hNoTtrueHead : CLit.atomTrue PTerm.ttrue ∉ Q.Delta := by
+      intro hMem
+      obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+      exact (by cases hEq)
+    have hNoEqLHead : ∀ s₁ s₂, CLit.aeq (AEq.eqL s₁ s₂) ∉ Q.Delta := by
+      intro s₁ s₂ hMem
+      obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+      exact (by cases hEq)
+    have hNoRoleHead : ∀ S t₁ t₂, CLit.atomTrue (PTerm.role S t₁ t₂) ∉ Q.Delta := by
+      intro S t₁ t₂ hMem
+      obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+      exact (by cases hEq)
+    have hBody := elHerbrandInterp_body_holds O Q hNoRoleBody
+    have hHead := elHerbrandInterp_head_fails O Q hNoTtrueHead
+      hNoEqLHead hNoRoleHead hHeadNotDerivable_aux
+    obtain ⟨hh, hMem, hEval⟩ := hQeval hBody
+    exact hHead hh hMem hEval
+
+/-- **THE EL+VACUOUS THEOREM.** -/
+theorem isCanonicalSeedAtomConjDisj_ELOrVacuous
+    (sig : List Nat) (O : Ontology) (hO : IsELOrVacuousOnly O) :
+    IsCanonicalSeedAtomConjDisj sig O (canonicalSeedELConj sig O) :=
+  ⟨canonicalSeedELConj_vr_in_contexts sig O,
+   canonicalSeedELConj_sound_anyO sig O,
+   herbrandPropertyAtomConjDisj_ELOrVacuous sig O hO⟩
+
+/-- Total function version (EL + vacuous shapes). -/
+theorem isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology_vacuous
+    (O : Ontology) (hO : IsELOrVacuousOnly O) :
+    IsCanonicalSeedAtomConjDisj (ontologyConceptSig O) O
+      (canonicalSeedELConjFromOntology O) :=
+  isCanonicalSeedAtomConjDisj_ELOrVacuous (ontologyConceptSig O) O hO
+
 end ALCHOIQContext
 end ELKSDD
