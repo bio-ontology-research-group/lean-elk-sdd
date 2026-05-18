@@ -10291,6 +10291,41 @@ theorem exampleAtomChain_in_unifiedSlice_bothFamiliesRBox :
     exampleAtomChain_sliceEligible
     exampleBothFamiliesRBox_compatBoth
 
+/-- **HEADLINE STATUS THEOREM.**   Single statement bundling the
+    current unconditional-progress markers for the SROIQ
+    saturation completeness chain.   Each conjunct is a
+    foundation-only-discharged claim; together they document the
+    state of the §6.3.4 work.
+
+    (1) The named restricted-SC over the unified slice and
+        AtomConjDisj queries is *unconditionally* discharged.
+    (2)–(5) Four concrete worked-example pairs admit the partial
+        IsCanonicalSeed bundle hypothesis-free in the slice
+        predicate (the per-query AtomConjDisj/signature
+        restrictions inside conjunct (iii) are inherent to the
+        Theorem-2-style statement at the current state).
+
+    The remaining content — the universal `SaturationCompleteness`
+    over arbitrary SROIQ ontologies and arbitrary queries — is
+    explicitly named via `UnconditionalSCExtensionGap` and
+    decomposed via `universalSC_decomposed`. -/
+theorem unconditional_partial_status :
+    -- (1) Named restricted SC is unconditional.
+    SaturationCompletenessAtomConjDisjUnifiedSlice ∧
+    -- (2) Empty ontology with empty RBox.
+    InUnifiedSlice ([] : Ontology) ([] : SROIQ.RBox) ∧
+    -- (3) Atom-chain example with empty RBox.
+    InUnifiedSlice exampleAtomChain ([] : SROIQ.RBox) ∧
+    -- (4) ELConj example with empty RBox.
+    InUnifiedSlice exampleELConj ([] : SROIQ.RBox) ∧
+    -- (5) Vacuous-shape example with empty RBox.
+    InUnifiedSlice exampleVacuous ([] : SROIQ.RBox) :=
+  ⟨saturationCompletenessAtomConjDisjUnifiedSlice_holds,
+   inUnifiedSlice_nil_nil,
+   exampleAtomChain_in_unifiedSlice_emptyRBox,
+   exampleELConj_in_unifiedSlice_emptyRBox,
+   exampleVacuous_in_unifiedSlice_emptyRBox⟩
+
 /-- **Partial-IsCanonicalSeed** for `exampleAtomChain` paired with
     `exampleBothFamiliesRBox` — exercising the dual-branch slice
     constructor and the both-families RBox machinery. -/

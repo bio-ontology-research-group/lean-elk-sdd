@@ -1140,6 +1140,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.exampleAtomChain_sliceEligible
 #print axioms ALCHOIQContext.exampleAtomChain_in_unifiedSlice_bothFamiliesRBox
 #print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOfFull_partial_exampleAtomChain_bothFamiliesRBox
+-- §HEADLINE STATUS THEOREM
+#print axioms ALCHOIQContext.unconditional_partial_status
 -- §NAMED RESTRICTED SC + UNCONDITIONAL DISCHARGE
 #print axioms ALCHOIQContext.SaturationCompletenessAtomConjDisjUnifiedSlice
 #print axioms ALCHOIQContext.saturationCompletenessAtomConjDisjUnifiedSlice_holds
