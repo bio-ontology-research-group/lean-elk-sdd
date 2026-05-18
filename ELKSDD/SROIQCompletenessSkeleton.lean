@@ -3174,5 +3174,129 @@ theorem isCanonicalSeedAtomConjDisj_atomic
    canonicalSeedOverClosed_sound sig O hO,
    herbrandPropertyAtomConjDisj_atomic sig O hO⟩
 
+-- ============================================================
+-- §FINAL-TOTAL.  Removing the external signature parameter:
+-- extract the concept-symbol signature directly from `O`,
+-- yielding a *total* function `Ontology → ContextStructure`.
+--
+-- This eliminates the only "caller-supplied" parameter from the
+-- canonical seed construction.  The remaining obstacles to the
+-- literal §6.3.4 goal are:
+--
+--   (a) `IsAtomicSubsumptionOnly O` — requires concept
+--       normalisation for non-atomic axioms (Tena-Cucala §5.2).
+--   (b) `AtomConjDisjQuery` — requires extending the Herbrand
+--       model with role / AEq / compound-head reasoning.
+--   (c) `QueryReferencesSignature O.conceptSig Q` — *structurally*
+--       irreducible over unbounded `Nat`: the formal negative
+--       result `not_isCanonicalSeed_canonicalSeedOf_empty` shows
+--       that no finite seed can subsume every tautology
+--       `{A(x)} → {A(x)}` for arbitrary `A : Nat`.
+--
+-- Obstacle (c) is foundational.  Obstacles (a) and (b) are
+-- structural extensions that this scaffolding now exposes
+-- cleanly.
+-- ============================================================
+
+/-- **Concept-symbol extraction** from a concept term. -/
+def conceptSymbols : ALCHOQ.Concept → List Nat
+  | .atom A => [A]
+  | .top => []
+  | .bot => []
+  | .nom _ => []
+  | .neg c => conceptSymbols c
+  | .conj c d => conceptSymbols c ++ conceptSymbols d
+  | .disj c d => conceptSymbols c ++ conceptSymbols d
+  | .exist _ c => conceptSymbols c
+  | .univ _ c => conceptSymbols c
+  | .atLeast _ _ c => conceptSymbols c
+  | .atMost _ _ c => conceptSymbols c
+  | .hasSelf _ => []
+
+/-- **Concept-symbol signature of an ontology**: the union of
+    concept symbols appearing in any axiom of `O`.  Returns a list
+    (with possible duplicates); membership is the only property
+    used downstream. -/
+def ontologyConceptSig (O : Ontology) : List Nat :=
+  O.flatMap (fun ax => conceptSymbols ax.1 ++ conceptSymbols ax.2)
+
+/-- **For atom-atom axioms, `ontologyConceptSig` collects exactly the
+    body and head concept symbols.** -/
+theorem ontologyConceptSig_mem_of_atomAtom
+    (O : Ontology) (A B : Nat)
+    (hAx : (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) ∈ O) :
+    A ∈ ontologyConceptSig O ∧ B ∈ ontologyConceptSig O := by
+  refine ⟨?_, ?_⟩
+  · apply List.mem_flatMap.mpr
+    refine ⟨_, hAx, ?_⟩
+    apply List.mem_append.mpr; left
+    show A ∈ conceptSymbols (ALCHOQ.Concept.atom A)
+    exact List.mem_singleton.mpr rfl
+  · apply List.mem_flatMap.mpr
+    refine ⟨_, hAx, ?_⟩
+    apply List.mem_append.mpr; right
+    show B ∈ conceptSymbols (ALCHOQ.Concept.atom B)
+    exact List.mem_singleton.mpr rfl
+
+/-- **THE TOTAL CANONICAL-SEED FUNCTION.**  Maps every ontology `O`
+    to the closure-extended canonical seed over `O`'s own intrinsic
+    concept signature.   No caller-supplied parameter. -/
+noncomputable def canonicalSeedFromOntology (O : Ontology) :
+    ContextStructure :=
+  canonicalSeedOverClosed (ontologyConceptSig O) O
+
+/-- Equational unfolding of `canonicalSeedFromOntology`. -/
+theorem canonicalSeedFromOntology_eq (O : Ontology) :
+    canonicalSeedFromOntology O =
+      canonicalSeedOverClosed (ontologyConceptSig O) O := rfl
+
+/-- `vr ∈ contexts` for the total canonical seed. -/
+theorem canonicalSeedFromOntology_vr_in_contexts (O : Ontology) :
+    (canonicalSeedFromOntology O).vr ∈ (canonicalSeedFromOntology O).contexts :=
+  canonicalSeedOverClosed_vr_in_contexts (ontologyConceptSig O) O
+
+/-- Soundness of the total canonical seed (atom-atom O). -/
+theorem canonicalSeedFromOntology_sound
+    (O : Ontology) (hO : IsAtomicSubsumptionOnly O) :
+    ∃ CD : DerivedClauses, isSound O (canonicalSeedFromOntology O) CD :=
+  canonicalSeedOverClosed_sound (ontologyConceptSig O) O hO
+
+/-- **THE CLOSEST-TO-LITERAL-GOAL THEOREM (atom-atom O).**  For every
+    atom-atom-subsumption ontology `O`, the *total* function
+    `canonicalSeedFromOntology` produces a canonical seed in the
+    `IsCanonicalSeedAtomConjDisj` sense over `O`'s intrinsic signature.
+
+    This is the strongest unconditional result available without
+    concept normalisation: the `sig` parameter has been internalised
+    to `ontologyConceptSig O`, leaving only the atom-atom-O hypothesis. -/
+theorem isCanonicalSeedAtomConjDisj_canonicalSeedFromOntology
+    (O : Ontology) (hO : IsAtomicSubsumptionOnly O) :
+    IsCanonicalSeedAtomConjDisj (ontologyConceptSig O) O
+      (canonicalSeedFromOntology O) :=
+  isCanonicalSeedAtomConjDisj_atomic (ontologyConceptSig O) O hO
+
+/-- **Atom-atom-axiom symbols are in-signature.**  Convenience
+    corollary used to verify that queries built from concepts
+    actually appearing in `O`'s axioms are in `ontologyConceptSig O`. -/
+theorem in_ontologyConceptSig_of_atomAxiom_lhs
+    (O : Ontology) (A : Nat) (X : ALCHOQ.Concept)
+    (hAx : (ALCHOQ.Concept.atom A, X) ∈ O) :
+    A ∈ ontologyConceptSig O := by
+  apply List.mem_flatMap.mpr
+  refine ⟨_, hAx, ?_⟩
+  apply List.mem_append.mpr; left
+  show A ∈ conceptSymbols (ALCHOQ.Concept.atom A)
+  exact List.mem_singleton.mpr rfl
+
+theorem in_ontologyConceptSig_of_atomAxiom_rhs
+    (O : Ontology) (A : Nat) (X : ALCHOQ.Concept)
+    (hAx : (X, ALCHOQ.Concept.atom A) ∈ O) :
+    A ∈ ontologyConceptSig O := by
+  apply List.mem_flatMap.mpr
+  refine ⟨_, hAx, ?_⟩
+  apply List.mem_append.mpr; right
+  show A ∈ conceptSymbols (ALCHOQ.Concept.atom A)
+  exact List.mem_singleton.mpr rfl
+
 end ALCHOIQContext
 end ELKSDD

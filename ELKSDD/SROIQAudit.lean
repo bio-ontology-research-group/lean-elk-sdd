@@ -578,4 +578,19 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.herbrandPropertyAtomConjDisj_atomic
 #print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_atomic
 
+-- ============================================================
+-- TOTAL FUNCTION: canonicalSeedFromOntology : Ontology → CS.
+-- The `sig` parameter is internalised to `ontologyConceptSig O`.
+-- ============================================================
+#print axioms ALCHOIQContext.conceptSymbols
+#print axioms ALCHOIQContext.ontologyConceptSig
+#print axioms ALCHOIQContext.ontologyConceptSig_mem_of_atomAtom
+#print axioms ALCHOIQContext.canonicalSeedFromOntology
+#print axioms ALCHOIQContext.canonicalSeedFromOntology_eq
+#print axioms ALCHOIQContext.canonicalSeedFromOntology_vr_in_contexts
+#print axioms ALCHOIQContext.canonicalSeedFromOntology_sound
+#print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_canonicalSeedFromOntology
+#print axioms ALCHOIQContext.in_ontologyConceptSig_of_atomAxiom_lhs
+#print axioms ALCHOIQContext.in_ontologyConceptSig_of_atomAxiom_rhs
+
 end ELKSDD
