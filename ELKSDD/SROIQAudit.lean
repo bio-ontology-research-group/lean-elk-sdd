@@ -846,6 +846,17 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_top_conjOfAtoms
 
 -- ============================================================
+-- §TREE: conj-LHS and disj-LHS n-ary conjOfAtoms axioms.   Two
+-- new EL constructors (`step_conj_conjmember`,
+-- `step_disj_conjmember_L/R`) together with their tree-Herbrand
+-- helpers extend conjOfAtoms RHS coverage to non-top LHS shapes.
+-- ============================================================
+#print axioms ALCHOIQContext.isConjOfAtoms_eval_helper_tree_conj
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_conj_conjOfAtoms
+#print axioms ALCHOIQContext.isConjOfAtoms_eval_helper_tree_disj
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_disj_conjOfAtoms
+
+-- ============================================================
 -- §TREE SATISFIES O composition.   Single satisfaction theorem
 -- assembled by dispatching per-axiom to the tree-Herbrand lemmas.
 -- ============================================================

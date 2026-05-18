@@ -3852,6 +3852,25 @@ inductive ConceptDerivableEL (O : Ontology) (initial : Nat → Prop) : Nat → P
       (ALCHOQ.Concept.top, C) ∈ O →
       ConjMember C B →
       ConceptDerivableEL O initial B
+  | step_conj_conjmember {A₁ A₂ B : Nat} {C : ALCHOQ.Concept} :
+      ConceptDerivableEL O initial A₁ →
+      ConceptDerivableEL O initial A₂ →
+      (ALCHOQ.Concept.conj
+        (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂), C) ∈ O →
+      ConjMember C B →
+      ConceptDerivableEL O initial B
+  | step_disj_conjmember_L {A₁ A₂ B : Nat} {C : ALCHOQ.Concept} :
+      ConceptDerivableEL O initial A₁ →
+      (ALCHOQ.Concept.disj
+        (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂), C) ∈ O →
+      ConjMember C B →
+      ConceptDerivableEL O initial B
+  | step_disj_conjmember_R {A₁ A₂ B : Nat} {C : ALCHOQ.Concept} :
+      ConceptDerivableEL O initial A₂ →
+      (ALCHOQ.Concept.disj
+        (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂), C) ∈ O →
+      ConjMember C B →
+      ConceptDerivableEL O initial B
 
 /-- Every `ConceptDerivable` derivation is a `ConceptDerivableEL`
     derivation. -/
@@ -3903,6 +3922,12 @@ theorem conceptDerivableEL_mono
     exact ConceptDerivableEL.step_atom_conjmember ih hAx hM
   | @step_top_conjmember B' C' hAx hM =>
     exact ConceptDerivableEL.step_top_conjmember hAx hM
+  | @step_conj_conjmember A₁ A₂ B' C' _ _ hAx hM ih1 ih2 =>
+    exact ConceptDerivableEL.step_conj_conjmember ih1 ih2 hAx hM
+  | @step_disj_conjmember_L A₁ A₂ B' C' _ hAx hM ih =>
+    exact ConceptDerivableEL.step_disj_conjmember_L ih hAx hM
+  | @step_disj_conjmember_R A₁ A₂ B' C' _ hAx hM ih =>
+    exact ConceptDerivableEL.step_disj_conjmember_R ih hAx hM
 
 /-- **Multi-source witness lemma.**  Every `ConceptDerivableEL`
     derivation of `B` from `initial` factors through a finite
@@ -4010,6 +4035,25 @@ theorem conceptDerivableEL_multi_witness
   | @step_top_conjmember B' C' hAx hM =>
     exact ⟨[], fun _ h => (List.not_mem_nil h).elim,
            ConceptDerivableEL.step_top_conjmember hAx hM⟩
+  | @step_conj_conjmember A₁ A₂ B' C' _ _ hAx hM ih1 ih2 =>
+    obtain ⟨S₁, hS₁init, hS₁Der⟩ := ih1
+    obtain ⟨S₂, hS₂init, hS₂Der⟩ := ih2
+    refine ⟨S₁ ++ S₂, ?_, ?_⟩
+    · intro A hA
+      rcases List.mem_append.mp hA with h | h
+      · exact hS₁init A h
+      · exact hS₂init A h
+    · have hS₁Der' : ConceptDerivableEL O (fun X => X ∈ S₁ ++ S₂) A₁ :=
+        conceptDerivableEL_mono O _ _ (fun X h => List.mem_append.mpr (Or.inl h)) hS₁Der
+      have hS₂Der' : ConceptDerivableEL O (fun X => X ∈ S₁ ++ S₂) A₂ :=
+        conceptDerivableEL_mono O _ _ (fun X h => List.mem_append.mpr (Or.inr h)) hS₂Der
+      exact ConceptDerivableEL.step_conj_conjmember hS₁Der' hS₂Der' hAx hM
+  | @step_disj_conjmember_L A₁ A₂ B' C' _ hAx hM ih =>
+    obtain ⟨S, hSinit, hSDer⟩ := ih
+    exact ⟨S, hSinit, ConceptDerivableEL.step_disj_conjmember_L hSDer hAx hM⟩
+  | @step_disj_conjmember_R A₁ A₂ B' C' _ hAx hM ih =>
+    obtain ⟨S, hSinit, hSDer⟩ := ih
+    exact ⟨S, hSinit, ConceptDerivableEL.step_disj_conjmember_R hSDer hAx hM⟩
 
 /-- **EL-aware semantic transport lemma**: a model `I` satisfying
     `O` and the initial atoms also satisfies any
@@ -4104,6 +4148,18 @@ theorem conceptDerivableEL_eval_transport
     have hAxEval := hIO _ hAx
     -- hAxEval : ∀ x, I.eval top x → I.eval C' x
     have hCeval : I.eval C' vx := hAxEval vx trivial
+    exact ConjMember.eval_proj I hM vx hCeval
+  | @step_conj_conjmember A₁ A₂ B' C' _ _ hAx hM ih1 ih2 =>
+    have hAxEval := hIO _ hAx
+    have hCeval : I.eval C' vx := hAxEval vx ⟨ih1, ih2⟩
+    exact ConjMember.eval_proj I hM vx hCeval
+  | @step_disj_conjmember_L A₁ A₂ B' C' _ hAx hM ih =>
+    have hAxEval := hIO _ hAx
+    have hCeval : I.eval C' vx := hAxEval vx (Or.inl ih)
+    exact ConjMember.eval_proj I hM vx hCeval
+  | @step_disj_conjmember_R A₁ A₂ B' C' _ hAx hM ih =>
+    have hAxEval := hIO _ hAx
+    have hCeval : I.eval C' vx := hAxEval vx (Or.inr ih)
     exact ConjMember.eval_proj I hM vx hCeval
 
 /-- **The EL fragment predicate**: atom-atom, atom-bot, and
@@ -5676,6 +5732,90 @@ theorem elHerbrandInterpTree_sat_top_conjOfAtoms
   intro p _
   exact isConjOfAtoms_eval_helper_tree_top O Q hAx hC (fun _ hM => hM) p
 
+/-- Conj-LHS analogue: uses `step_conj_conjmember`.   The LHS
+    requires both `A₁` and `A₂` to be derivable. -/
+theorem isConjOfAtoms_eval_helper_tree_conj
+    (O : Ontology) (Q : QueryClause)
+    {Cwhole : ALCHOQ.Concept} {A₁ A₂ : Nat}
+    (hAx : (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂), Cwhole) ∈ O) :
+    ∀ {C : ALCHOQ.Concept}, IsConjOfAtoms C →
+      (∀ B, ConjMember C B → ConjMember Cwhole B) →
+      ∀ (p : HerbrandTree O),
+        ConceptDerivableEL O (treeNodeInitialAtoms Q p) A₁ →
+        ConceptDerivableEL O (treeNodeInitialAtoms Q p) A₂ →
+        (elHerbrandInterpTree O Q).eval C p := by
+  intro C hC
+  induction hC with
+  | @atom B =>
+      intro hSub p hA₁ hA₂
+      have hMW : ConjMember Cwhole B := hSub B ConjMember.atom_self
+      show ConceptDerivableEL O (treeNodeInitialAtoms Q p) B
+      exact ConceptDerivableEL.step_conj_conjmember hA₁ hA₂ hAx hMW
+  | @conj C₁ C₂ _ _ ih₁ ih₂ =>
+      intro hSub p hA₁ hA₂
+      have hSub₁ : ∀ B, ConjMember C₁ B → ConjMember Cwhole B :=
+        fun B hM₁ => hSub B (ConjMember.left hM₁)
+      have hSub₂ : ∀ B, ConjMember C₂ B → ConjMember Cwhole B :=
+        fun B hM₂ => hSub B (ConjMember.right hM₂)
+      exact ⟨ih₁ hSub₁ p hA₁ hA₂, ih₂ hSub₂ p hA₁ hA₂⟩
+
+/-- `(conj A₁ A₂, C) ∈ O` with `IsConjOfAtoms C`: subsumes
+    `_sat_conj_atom` and `_sat_conj_conj`. -/
+theorem elHerbrandInterpTree_sat_conj_conjOfAtoms
+    (O : Ontology) (Q : QueryClause)
+    (A₁ A₂ : Nat) (C : ALCHOQ.Concept) (hC : IsConjOfAtoms C)
+    (hAx : (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂), C) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂)) p →
+      (elHerbrandInterpTree O Q).eval C p := by
+  intro p ⟨hA₁, hA₂⟩
+  exact isConjOfAtoms_eval_helper_tree_conj O Q hAx hC
+    (fun _ hM => hM) p hA₁ hA₂
+
+/-- Disj-LHS analogue: uses `step_disj_conjmember_{L,R}`.
+    Splits on which disjunct's atom is derivable. -/
+theorem isConjOfAtoms_eval_helper_tree_disj
+    (O : Ontology) (Q : QueryClause)
+    {Cwhole : ALCHOQ.Concept} {A₁ A₂ : Nat}
+    (hAx : (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂), Cwhole) ∈ O) :
+    ∀ {C : ALCHOQ.Concept}, IsConjOfAtoms C →
+      (∀ B, ConjMember C B → ConjMember Cwhole B) →
+      ∀ (p : HerbrandTree O),
+        (ConceptDerivableEL O (treeNodeInitialAtoms Q p) A₁ ∨
+         ConceptDerivableEL O (treeNodeInitialAtoms Q p) A₂) →
+        (elHerbrandInterpTree O Q).eval C p := by
+  intro C hC
+  induction hC with
+  | @atom B =>
+      intro hSub p hOr
+      have hMW : ConjMember Cwhole B := hSub B ConjMember.atom_self
+      show ConceptDerivableEL O (treeNodeInitialAtoms Q p) B
+      rcases hOr with hA₁ | hA₂
+      · exact ConceptDerivableEL.step_disj_conjmember_L hA₁ hAx hMW
+      · exact ConceptDerivableEL.step_disj_conjmember_R hA₂ hAx hMW
+  | @conj C₁ C₂ _ _ ih₁ ih₂ =>
+      intro hSub p hOr
+      have hSub₁ : ∀ B, ConjMember C₁ B → ConjMember Cwhole B :=
+        fun B hM₁ => hSub B (ConjMember.left hM₁)
+      have hSub₂ : ∀ B, ConjMember C₂ B → ConjMember Cwhole B :=
+        fun B hM₂ => hSub B (ConjMember.right hM₂)
+      exact ⟨ih₁ hSub₁ p hOr, ih₂ hSub₂ p hOr⟩
+
+/-- `(disj A₁ A₂, C) ∈ O` with `IsConjOfAtoms C`: subsumes
+    `_sat_disj_atom` and `_sat_disj_conj`. -/
+theorem elHerbrandInterpTree_sat_disj_conjOfAtoms
+    (O : Ontology) (Q : QueryClause)
+    (A₁ A₂ : Nat) (C : ALCHOQ.Concept) (hC : IsConjOfAtoms C)
+    (hAx : (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂), C) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂)) p →
+      (elHerbrandInterpTree O Q).eval C p := by
+  intro p hOr
+  exact isConjOfAtoms_eval_helper_tree_disj O Q hAx hC
+    (fun _ hM => hM) p hOr
+
 /-- **Tree-Herbrand root-satisfaction for `(top, ∃R.(atom B))` axioms.**
     Structurally identical to `_sat_atom_exist_atom`: the LHS `top`
     is vacuously satisfied at every node, and the `succ` constructor
@@ -5822,6 +5962,10 @@ def IsTreeFriendlyAxiom (ax : ALCHOQ.Axiom) : Prop :=
      ax = (ALCHOQ.Concept.atom A, C) ∧ IsConjOfAtoms C) ∨
   (∃ C : ALCHOQ.Concept,
      ax = (ALCHOQ.Concept.top, C) ∧ IsConjOfAtoms C) ∨
+  (∃ A₁ A₂ : Nat, ∃ C : ALCHOQ.Concept,
+     ax = (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂), C) ∧ IsConjOfAtoms C) ∨
+  (∃ A₁ A₂ : Nat, ∃ C : ALCHOQ.Concept,
+     ax = (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂), C) ∧ IsConjOfAtoms C) ∨
   (∃ A R B : Nat,
      ax = (ALCHOQ.Concept.atom A,
            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B))) ∨
@@ -5852,7 +5996,7 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     (elHerbrandInterpTree O Q).satisfies O := by
   intro ax hax
   intro p hLHS
-  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hTopCM | hExLHS | hTopEx | hCJEx | hDJEx | hBotLHS | hTopRHS
+  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hTopCM | hCJCM | hDJCM | hExLHS | hTopEx | hCJEx | hDJEx | hBotLHS | hTopRHS
   · obtain ⟨A, B, rfl⟩ := hAA
     exact elHerbrandInterpTree_sat_atom_atom O Q A B hax p hLHS
   · obtain ⟨A₁, A₂, B, rfl⟩ := hCJ
@@ -5873,6 +6017,10 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     exact elHerbrandInterpTree_sat_atom_conjOfAtoms O Q A C hC hax p hLHS
   · obtain ⟨C, rfl, hC⟩ := hTopCM
     exact elHerbrandInterpTree_sat_top_conjOfAtoms O Q C hC hax p hLHS
+  · obtain ⟨A₁, A₂, C, rfl, hC⟩ := hCJCM
+    exact elHerbrandInterpTree_sat_conj_conjOfAtoms O Q A₁ A₂ C hC hax p hLHS
+  · obtain ⟨A₁, A₂, C, rfl, hC⟩ := hDJCM
+    exact elHerbrandInterpTree_sat_disj_conjOfAtoms O Q A₁ A₂ C hC hax p hLHS
   · obtain ⟨A, R, B, rfl⟩ := hExLHS
     exact elHerbrandInterpTree_sat_atom_exist_atom O Q A R B hax p hLHS
   · obtain ⟨R, B, rfl⟩ := hTopEx
