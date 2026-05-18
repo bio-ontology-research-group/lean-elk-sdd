@@ -9036,6 +9036,91 @@ theorem inUnifiedSlice_of_isELConjOnly_emptyRBox
     InUnifiedSlice O ([] : SROIQ.RBox) :=
   inUnifiedSlice_of_isELConjOnly O [] hO emptyRBox_compatible
 
+/-- **Concrete `InUnifiedSlice` instance** for any
+    `IsELOrAllVacuousOnly` ontology paired with any
+    empty-roles-compatible RBox.   This is the *maximal* fragment
+    of the empty-roles family — no further embedding is needed. -/
+theorem inUnifiedSlice_of_isELOrAllVacuousOnly
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : IsELOrAllVacuousOnly O)
+    (hRBox : RBoxCompatibleWithEmptyRoles rbox) :
+    InUnifiedSlice O rbox :=
+  inUnifiedSlice_of_emptyRoleFamily O rbox hO hRBox
+
+/-- **Concrete `InUnifiedSlice` instance** for any
+    `IsELOrAllVacuousOnly` ontology with the empty RBox. -/
+theorem inUnifiedSlice_of_isELOrAllVacuousOnly_emptyRBox
+    (O : Ontology) (hO : IsELOrAllVacuousOnly O) :
+    InUnifiedSlice O ([] : SROIQ.RBox) :=
+  inUnifiedSlice_of_isELOrAllVacuousOnly O [] hO emptyRBox_compatible
+
+/-- **Concrete `InUnifiedSlice` instance** for any
+    `IsELOrUniversalRoleVacuousOnly` ontology paired with any
+    universal-roles-compatible RBox.   The maximal fragment of
+    the universal-role family. -/
+theorem inUnifiedSlice_of_isELOrUniversalRoleVacuousOnly
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : IsELOrUniversalRoleVacuousOnly O)
+    (hRBox : RBoxCompatibleWithUniversalRoles rbox) :
+    InUnifiedSlice O rbox :=
+  inUnifiedSlice_of_universalRoleFamily O rbox hO hRBox
+
+/-- **Concrete `InUnifiedSlice` instance** for any
+    `IsELOrUniversalRoleVacuousOnly` ontology with the empty
+    RBox (compatible with both empty and universal roles). -/
+theorem inUnifiedSlice_of_isELOrUniversalRoleVacuousOnly_emptyRBox
+    (O : Ontology) (hO : IsELOrUniversalRoleVacuousOnly O) :
+    InUnifiedSlice O ([] : SROIQ.RBox) :=
+  inUnifiedSlice_of_isELOrUniversalRoleVacuousOnly O [] hO
+    emptyRBox_compatibleUniversal
+
+/-- **Maximal-fragment Theorem-2 instance** in the empty-roles family:
+    any `IsELOrAllVacuousOnly` ontology with any empty-roles-compatible
+    RBox.   This is the strongest Theorem-2 statement we deliver
+    without the §6.3.4 saturation-completeness obligation. -/
+theorem theorem2_canonicalSeedOfFull_isELOrAllVacuousOnly
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : IsELOrAllVacuousOnly O)
+    (hRBox : RBoxCompatibleWithEmptyRoles rbox)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull O) D)
+    (hSat : FullSaturated D)
+    (hEntail : ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+              (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+              I.satisfies O → SROIQ.RBox.eval I rbox →
+              Q.eval I ⟨γ, φ, vx, vy⟩) :
+    ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  theorem2_canonicalSeedOfFull_unifiedSlice O rbox
+    (inUnifiedSlice_of_isELOrAllVacuousOnly O rbox hO hRBox)
+    Q hQsig hQAtom D hDeriv hSat hEntail
+
+/-- **Maximal-fragment Theorem-2 instance** in the universal-role family:
+    any `IsELOrUniversalRoleVacuousOnly` ontology with any
+    universal-roles-compatible RBox.   Complements
+    `theorem2_canonicalSeedOfFull_isELOrAllVacuousOnly` on the
+    other branch of the unified slice. -/
+theorem theorem2_canonicalSeedOfFull_isELOrUniversalRoleVacuousOnly
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : IsELOrUniversalRoleVacuousOnly O)
+    (hRBox : RBoxCompatibleWithUniversalRoles rbox)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull O) D)
+    (hSat : FullSaturated D)
+    (hEntail : ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+              (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+              I.satisfies O → SROIQ.RBox.eval I rbox →
+              Q.eval I ⟨γ, φ, vx, vy⟩) :
+    ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  theorem2_canonicalSeedOfFull_unifiedSlice O rbox
+    (inUnifiedSlice_of_isELOrUniversalRoleVacuousOnly O rbox hO hRBox)
+    Q hQsig hQAtom D hDeriv hSat hEntail
+
 /-- **`IsELOrVacuousOnly` ontologies embed into `IsELOrAllVacuousOnly`.**
     Wrapper around the existing `isELOrVacuousOnly_imp_isELOrAllVacuousOnly`
     placed alongside the family of slice-embedding constructors. -/
