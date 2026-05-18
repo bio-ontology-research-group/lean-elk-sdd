@@ -1086,6 +1086,16 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.rAxiomCompatibleWithUniversalRoles_sym
 #print axioms ALCHOIQContext.rAxiomCompatibleWithUniversalRoles_refl
 #print axioms ALCHOIQContext.rAxiomCompatibleWithUniversalRoles_inv
+-- §ONTOLOGY-SHAPE CONS-BUILDERS
+#print axioms ALCHOIQContext.isAtomicSubsumptionOnly_nil
+#print axioms ALCHOIQContext.isAtomicSubsumptionOnly_cons
+#print axioms ALCHOIQContext.isAtomicOrBotOnly_nil
+#print axioms ALCHOIQContext.isAtomicOrBotOnly_cons_atom
+#print axioms ALCHOIQContext.isAtomicOrBotOnly_cons_bot
+#print axioms ALCHOIQContext.isELConjOnly_nil
+#print axioms ALCHOIQContext.isELConjOnly_cons_atom
+#print axioms ALCHOIQContext.isELConjOnly_cons_bot
+#print axioms ALCHOIQContext.isELConjOnly_cons_conjAtom
 -- §CONCRETE NON-TRIVIAL WORKED EXAMPLE: atom-atom chain + trans+incl RBox
 #print axioms ALCHOIQContext.exampleAtomChain_isAtomicSubsumptionOnly
 #print axioms ALCHOIQContext.exampleTransInclRBox_compat

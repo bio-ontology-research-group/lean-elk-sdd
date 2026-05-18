@@ -9331,6 +9331,89 @@ theorem isCanonicalSeed_canonicalSeedOfFull_partial_nil_nil :
   isCanonicalSeed_canonicalSeedOfFull_partial [] [] inUnifiedSlice_nil_nil
 
 -- ============================================================
+-- §ONTOLOGY-SHAPE CONS-BUILDERS.   Cons-style builders for every
+-- slice-eligible ontology predicate, matching the RBox-compat
+-- cons-builders above.   Together they give a complete modular
+-- construction pattern.
+-- ============================================================
+
+theorem isAtomicSubsumptionOnly_nil :
+    IsAtomicSubsumptionOnly ([] : Ontology) := by
+  intro ax hax
+  exact absurd hax List.not_mem_nil
+
+theorem isAtomicSubsumptionOnly_cons
+    {A B : Nat} {O : Ontology}
+    (hTail : IsAtomicSubsumptionOnly O) :
+    IsAtomicSubsumptionOnly
+      ((ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact ⟨A, B, rfl⟩
+  · exact hTail ax hMem
+
+theorem isAtomicOrBotOnly_nil :
+    IsAtomicOrBotOnly ([] : Ontology) := by
+  intro ax hax
+  exact absurd hax List.not_mem_nil
+
+theorem isAtomicOrBotOnly_cons_atom
+    {A B : Nat} {O : Ontology}
+    (hTail : IsAtomicOrBotOnly O) :
+    IsAtomicOrBotOnly
+      ((ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inl ⟨A, B, rfl⟩
+  · exact hTail ax hMem
+
+theorem isAtomicOrBotOnly_cons_bot
+    {A : Nat} {O : Ontology}
+    (hTail : IsAtomicOrBotOnly O) :
+    IsAtomicOrBotOnly
+      ((ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr ⟨A, rfl⟩
+  · exact hTail ax hMem
+
+theorem isELConjOnly_nil :
+    IsELConjOnly ([] : Ontology) := by
+  intro ax hax
+  exact absurd hax List.not_mem_nil
+
+theorem isELConjOnly_cons_atom
+    {A B : Nat} {O : Ontology}
+    (hTail : IsELConjOnly O) :
+    IsELConjOnly
+      ((ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inl ⟨A, B, rfl⟩
+  · exact hTail ax hMem
+
+theorem isELConjOnly_cons_bot
+    {A : Nat} {O : Ontology}
+    (hTail : IsELConjOnly O) :
+    IsELConjOnly
+      ((ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr (Or.inl ⟨A, rfl⟩)
+  · exact hTail ax hMem
+
+theorem isELConjOnly_cons_conjAtom
+    {A₁ A₂ B : Nat} {O : Ontology}
+    (hTail : IsELConjOnly O) :
+    IsELConjOnly
+      ((ALCHOQ.Concept.conj (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+        ALCHOQ.Concept.atom B) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr (Or.inr ⟨A₁, A₂, B, rfl⟩)
+  · exact hTail ax hMem
+
+-- ============================================================
 -- §CONCRETE NON-TRIVIAL WORKED EXAMPLES.   To show the slice
 -- machinery composes on real input, we exhibit explicit
 -- ontology/RBox pairs assembled via the constructors above and
