@@ -891,6 +891,16 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_top_univ_conjOfAtoms
 
 -- ============================================================
+-- §TREE: universal-RHS for TreeTrueRHS LHS shapes.   Generalises
+-- universalPropagatedAtoms to fire for any axiom (lhs, ∀R.filler)
+-- where `lhs` is structurally True at every tree node — not just
+-- `top` literally.   Examples: `(conj top top, ∀R.B)`,
+-- `(disj top arbitrary, ∀R.conjOfAtoms)`.
+-- ============================================================
+#print axioms ALCHOIQContext.isConjOfAtoms_univ_eval_helper_tree_treeTrueRHS
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_treeTrueRHS_univ_conjOfAtoms
+
+-- ============================================================
 -- §TREE SATISFIES O composition.   Single satisfaction theorem
 -- assembled by dispatching per-axiom to the tree-Herbrand lemmas.
 -- ============================================================
