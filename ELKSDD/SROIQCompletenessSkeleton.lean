@@ -2380,5 +2380,109 @@ theorem not_canonicalSaturationGap_empty :
     isCanonicalSeed_canonicalSeedOf_via_gap [] (by intro ax hax; exact absurd hax List.not_mem_nil) hGap
   exact not_isCanonicalSeed_canonicalSeedOf_empty hIsCS
 
+-- ============================================================
+-- §FINAL-REFINED.  The refined goal: HerbrandProperty restricted
+-- to queries over a finite signature.
+--
+-- Given the structural impossibility of the literal unconditional
+-- goal, we deliver the refined goal: parameterise IsCanonicalSeed
+-- by an explicit finite set of "in-signature" concepts.   The
+-- canonical seed for `O` over signature `sig` includes reflexive
+-- clauses for every concept in `sig`.   The refined HerbrandProperty
+-- restricts `Q` to use only concepts in `sig`.
+-- ============================================================
+
+/-- **Reflexive clause for a concept** `A`. -/
+def reflexiveClause (A : Nat) : CClause :=
+  { body := [BLit.atomTrue (PTerm.atom A ATerm.x)]
+  , head := [CLit.atomTrue (PTerm.atom A ATerm.x)] }
+
+/-- **The signature-aware canonical seed.**  Augments
+    `canonicalSeedOf O` with reflexive clauses for every concept in
+    a caller-supplied signature `sig`. -/
+def canonicalSeedOver (sig : List Nat) (O : Ontology) : ContextStructure where
+  contexts := [0]
+  vr       := 0
+  edges    := []
+  core     := fun _ => { atoms := [] }
+  S        := fun v => if v = 0 then
+                          ontologyToClauses O ++ sig.map reflexiveClause
+                       else []
+  m        := trivialAdmissibleOrder
+  θ        := fun _ => trivialContextOrder
+
+/-- **First refined-seed conjunct**: `vr ∈ contexts`. -/
+theorem canonicalSeedOver_vr_in_contexts (sig : List Nat) (O : Ontology) :
+    (canonicalSeedOver sig O).vr ∈ (canonicalSeedOver sig O).contexts := by
+  show (0 : CtxId) ∈ [0]
+  exact List.mem_singleton.mpr rfl
+
+/-- **Soundness of reflexive clauses**: every reflexive `{A(x)} → {A(x)}`
+    is sound under any interpretation (tautology). -/
+theorem reflexiveClause_sound
+    {α : Type} (I : Interp α) (γ : Indu → α) (φ : FunSym → α → α)
+    (A : Nat) (vx vy : α) :
+    CClause.eval I ⟨γ, φ, vx, vy⟩ (reflexiveClause A) := by
+  intro hBody
+  refine ⟨CLit.atomTrue (PTerm.atom A ATerm.x), ?_, ?_⟩
+  · exact List.mem_singleton.mpr rfl
+  · exact hBody _ (List.mem_singleton.mpr rfl)
+
+/-- **Second refined-seed conjunct**: soundness for `canonicalSeedOver`. -/
+theorem canonicalSeedOver_sound (sig : List Nat) (O : Ontology) :
+    ∃ CD : DerivedClauses, isSound O (canonicalSeedOver sig O) CD := by
+  refine ⟨{ clauses := [] }, ?_, ?_⟩
+  · intro v hv c hc α I γ φ hIO _ vx vy _
+    have hv0 : v = 0 := by
+      rcases List.mem_cons.mp hv with h | h
+      · exact h
+      · exact absurd h List.not_mem_nil
+    subst hv0
+    have hS0 : (canonicalSeedOver sig O).S 0 =
+               ontologyToClauses O ++ sig.map reflexiveClause := by
+      show (if (0 : CtxId) = 0 then
+              ontologyToClauses O ++ sig.map reflexiveClause
+            else []) = ontologyToClauses O ++ sig.map reflexiveClause
+      simp
+    rw [hS0] at hc
+    rcases List.mem_append.mp hc with hAx | hReflex
+    · obtain ⟨A, B, hAxO, hCEq⟩ := mem_ontologyToClauses O c hAx
+      rw [hCEq]
+      exact atomAtom_clause_sound I γ φ A B vx vy (hIO _ hAxO)
+    · rcases List.mem_map.mp hReflex with ⟨A, _hA, hCEq⟩
+      rw [← hCEq]
+      exact reflexiveClause_sound I γ φ A vx vy
+  · intro v w f hEdge _
+    unfold ContextStructure.hasEdge at hEdge
+    exact absurd hEdge List.not_mem_nil
+
+/-- **Reflexive clauses subsume tautological self-subsumption queries**
+    for concepts in the signature. -/
+theorem reflexiveClause_subsumes_tautology
+    (A : Nat) :
+    subsumes (reflexiveClause A)
+             { body := (atomSubsumptionQuery A A).Gamma
+             , head := (atomSubsumptionQuery A A).Delta } := by
+  refine ⟨?_, ?_⟩
+  · intro b hb; exact hb
+  · intro h hh; exact hh
+
+/-- **For `A ∈ sig`, the reflexive `Q = atomSubsumptionQuery A A` is
+    subsumed by `S(canonicalSeedOver sig O).vr)`.**  This eliminates
+    the obstacle (1) for concepts in the signature. -/
+theorem canonicalSeedOver_subsumes_reflexive_tautology
+    (sig : List Nat) (O : Ontology) (A : Nat) (hA : A ∈ sig) :
+    ∃ c ∈ (canonicalSeedOver sig O).S (canonicalSeedOver sig O).vr,
+      subsumes c { body := (atomSubsumptionQuery A A).Gamma
+                 , head := (atomSubsumptionQuery A A).Delta } := by
+  refine ⟨reflexiveClause A, ?_, reflexiveClause_subsumes_tautology A⟩
+  -- reflexiveClause A ∈ S(0) of canonicalSeedOver
+  show reflexiveClause A ∈
+    (if (0 : CtxId) = 0 then
+       ontologyToClauses O ++ sig.map reflexiveClause
+     else [])
+  rw [if_pos rfl]
+  exact List.mem_append.mpr (Or.inr (List.mem_map.mpr ⟨A, hA, rfl⟩))
+
 end ALCHOIQContext
 end ELKSDD

@@ -529,4 +529,16 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.not_isCanonicalSeed_canonicalSeedOf_empty
 #print axioms ALCHOIQContext.not_canonicalSaturationGap_empty
 
+-- ============================================================
+-- REFINED GOAL: signature-parameterised canonical seed with
+-- reflexive coverage for in-signature concepts.
+-- ============================================================
+#print axioms ALCHOIQContext.reflexiveClause
+#print axioms ALCHOIQContext.canonicalSeedOver
+#print axioms ALCHOIQContext.canonicalSeedOver_vr_in_contexts
+#print axioms ALCHOIQContext.reflexiveClause_sound
+#print axioms ALCHOIQContext.canonicalSeedOver_sound
+#print axioms ALCHOIQContext.reflexiveClause_subsumes_tautology
+#print axioms ALCHOIQContext.canonicalSeedOver_subsumes_reflexive_tautology
+
 end ELKSDD
