@@ -8969,6 +8969,52 @@ theorem theorem2_canonicalSeedOfFull_nil_nil
   theorem2_canonicalSeedOfFull_unifiedSlice [] [] inUnifiedSlice_nil_nil
     Q hQsig hQAtom D hDeriv hSat hEntail
 
+/-- **Atom-atom-only ontologies embed into `IsELOrAllVacuousOnly`.**
+    The atom-atom subsumption shape `(atom A, atom B)` is the first
+    EL-substantive disjunct of `IsELOrAllVacuousOnly`. -/
+theorem isELOrAllVacuousOnly_of_isAtomicSubsumptionOnly
+    (O : Ontology) (hO : IsAtomicSubsumptionOnly O) :
+    IsELOrAllVacuousOnly O := by
+  intro ax hax
+  obtain ⟨A, B, hEq⟩ := hO ax hax
+  exact Or.inl ⟨A, B, hEq⟩
+
+/-- **Concrete `InUnifiedSlice` instance** for any atom-atom-only
+    ontology paired with any empty-roles-compatible RBox. -/
+theorem inUnifiedSlice_of_isAtomicSubsumptionOnly
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : IsAtomicSubsumptionOnly O)
+    (hRBox : RBoxCompatibleWithEmptyRoles rbox) :
+    InUnifiedSlice O rbox :=
+  inUnifiedSlice_of_emptyRoleFamily O rbox
+    (isELOrAllVacuousOnly_of_isAtomicSubsumptionOnly O hO) hRBox
+
+/-- **Concrete `InUnifiedSlice` instance** for any atom-atom-only
+    ontology paired with the empty RBox. -/
+theorem inUnifiedSlice_of_isAtomicSubsumptionOnly_emptyRBox
+    (O : Ontology) (hO : IsAtomicSubsumptionOnly O) :
+    InUnifiedSlice O ([] : SROIQ.RBox) :=
+  inUnifiedSlice_of_isAtomicSubsumptionOnly O [] hO emptyRBox_compatible
+
+/-- **Fully unconditional `theorem2_canonicalSeedOfFull` instance**
+    for any atom-atom-only ontology with the empty RBox. -/
+theorem theorem2_canonicalSeedOfFull_atomicSubsumptionOnly_emptyRBox
+    (O : Ontology) (hO : IsAtomicSubsumptionOnly O)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull O) D)
+    (hSat : FullSaturated D)
+    (hEntail : ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+              (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+              I.satisfies O → SROIQ.RBox.eval I ([] : SROIQ.RBox) →
+              Q.eval I ⟨γ, φ, vx, vy⟩) :
+    ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  theorem2_canonicalSeedOfFull_unifiedSlice O []
+    (inUnifiedSlice_of_isAtomicSubsumptionOnly_emptyRBox O hO)
+    Q hQsig hQAtom D hDeriv hSat hEntail
+
 /-- **Fully unconditional `isCanonicalSeed_canonicalSeedOfFull_partial`
     instance** for the empty ontology and the empty RBox.   The
     three conjuncts hold without any slice or query restriction on

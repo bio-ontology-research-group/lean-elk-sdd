@@ -1048,5 +1048,9 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.inUnifiedSlice_nil_nil
 #print axioms ALCHOIQContext.theorem2_canonicalSeedOfFull_nil_nil
 #print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOfFull_partial_nil_nil
+#print axioms ALCHOIQContext.isELOrAllVacuousOnly_of_isAtomicSubsumptionOnly
+#print axioms ALCHOIQContext.inUnifiedSlice_of_isAtomicSubsumptionOnly
+#print axioms ALCHOIQContext.inUnifiedSlice_of_isAtomicSubsumptionOnly_emptyRBox
+#print axioms ALCHOIQContext.theorem2_canonicalSeedOfFull_atomicSubsumptionOnly_emptyRBox
 
 end ELKSDD
