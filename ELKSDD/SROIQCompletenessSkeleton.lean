@@ -1045,6 +1045,250 @@ theorem isCanonicalSeed_atomicSubsumption
   ⟨hVr, hSound, herbrandProperty_atomicSubsumption O hO D_seed hInvariant⟩
 
 -- ============================================================
+-- §3 Item #3 — Propositional saturation invariant.
+--
+-- Captures the §5.2 thesis claim: a saturated S(v_R) of an
+-- atom-atom ontology contains a subsumer for every atom-atom
+-- consequence.  This is the substantive invariant that links
+-- the syntactic saturation to the semantic refutability.
+--
+-- Deliverables:
+--   * `atomAtomSubsumptionClause A B` — canonical atom-atom clause
+--     `{atomTrue (atom A x)} → {atomTrue (atom B x)}`
+--   * `PropSaturationInvariantAtomic O D` — invariant statement
+--   * `propSatInvAtomic_preserved_by_fullStep` — preservation
+--   * `propSatInvAtomic_preserved_by_fullDeriv` — derivation lift
+--   * `atomicRefutable_from_propSaturationInvariant` — the
+--     `unsubsumed → refutable` implication for atom-atom queries.
+-- ============================================================
+
+/-- The canonical atom-atom subsumption clause for `(A, B)`:
+    body `{atomTrue (atom A x)}`, head `{atomTrue (atom B x)}`. -/
+def atomAtomSubsumptionClause (A B : Nat) : CClause :=
+  { body := [BLit.atomTrue (PTerm.atom A ATerm.x)]
+  , head := [CLit.atomTrue (PTerm.atom B ATerm.x)] }
+
+/-- The **propositional saturation invariant** for atom-atom
+    ontologies: `D.vr ∈ D.contexts` and every `ConceptDerivable`
+    consequence at the initial set `{A}` is witnessed by some
+    clause in `S(D.vr)` subsuming the canonical atom-atom
+    subsumption clause. -/
+def PropSaturationInvariantAtomic (O : Ontology) (D : ContextStructure) : Prop :=
+  D.vr ∈ D.contexts ∧
+  ∀ A B : Nat, ConceptDerivable O (fun X => X = A) B →
+    ∃ c ∈ D.S D.vr, subsumes c (atomAtomSubsumptionClause A B)
+
+/-- **Preservation under one FullStep.**  Every rule either adds or
+    removes clauses; adds preserve subsumer-existence directly, and
+    Elim's removal is compensated by the subsuming clause (which
+    stays) plus transitivity of `subsumes`.  The `D.vr ∈ D.contexts`
+    conjunct is preserved because every rule extends `contexts`. -/
+theorem propSatInvAtomic_preserved_by_fullStep
+    (O : Ontology) {D D' : ContextStructure} {rn : RuleName}
+    (hStep : FullStep D rn D')
+    (hInv : PropSaturationInvariantAtomic O D) :
+    PropSaturationInvariantAtomic O D' := by
+  obtain ⟨hVrIn, hWit⟩ := hInv
+  refine ⟨?_, ?_⟩
+  · -- vr ∈ contexts preservation.
+    cases hStep with
+    | viaCore hRule =>
+      obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, _⟩ := hRule
+      rw [hVr, hCtx]; exact hVrIn
+    | viaElim hRule =>
+      obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, _⟩ := hRule
+      rw [hVr, hCtx]; exact hVrIn
+    | viaIneq hRule =>
+      obtain ⟨_, _, _, _, _, _, hCtx, hVr, _, _, _, _, _⟩ := hRule
+      rw [hVr, hCtx]; exact hVrIn
+    | viaHyper hRule =>
+      obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, _⟩ := hRule.1.1
+      rw [hVr, hCtx]; exact hVrIn
+    | viaEq hRule =>
+      obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, _⟩ := hRule.1.1
+      rw [hVr, hCtx]; exact hVrIn
+    | viaFactor hRule =>
+      obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, _⟩ := hRule.1.1
+      rw [hVr, hCtx]; exact hVrIn
+    | viaJoin hRule =>
+      obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, _⟩ := hRule.1.1
+      rw [hVr, hCtx]; exact hVrIn
+    | viaNom hRule =>
+      obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, _⟩ := hRule.1.1
+      rw [hVr, hCtx]; exact hVrIn
+    | viaSucc hRule =>
+      obtain ⟨_, _, _, _, _, _, hCtx, hVr, _, _, _, _, _⟩ := hRule
+      rw [hVr, hCtx]; exact List.mem_cons.mpr (Or.inr hVrIn)
+    | viaPred hRule =>
+      obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, _⟩ := hRule.1.1
+      rw [hVr, hCtx]; exact hVrIn
+    | viaRsucc hRule =>
+      obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, _⟩ := hRule
+      rw [hVr, hCtx]; exact hVrIn
+    | viaRpred hRule =>
+      obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, _⟩ := hRule.1.1
+      rw [hVr, hCtx]; exact hVrIn
+  · intro A B hDer
+    obtain ⟨c_w, hc_wIn, hc_wSub⟩ := hWit A B hDer
+    cases hStep with
+    | viaCore hRule =>
+      obtain ⟨_, _, _, _, hVr, _, _, _, _, hSeq⟩ := hRule
+      refine ⟨c_w, ?_, hc_wSub⟩
+      rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+    | viaElim hRule =>
+      obtain ⟨_, _, hElimSub, _, hVr, _, _, _, _, hSeq⟩ := hRule
+      rw [hVr] at *
+      exact mem_S_after_filter_at_v hSeq hElimSub hc_wIn hc_wSub
+    | viaIneq hRule =>
+      obtain ⟨_, _, _, _, _, _, _, hVr, _, _, _, _, hSeq⟩ := hRule
+      refine ⟨c_w, ?_, hc_wSub⟩
+      rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+    | viaHyper hRule =>
+      obtain ⟨_, _, _, _, hVr, _, _, _, _, hSeq⟩ := hRule.1.1
+      refine ⟨c_w, ?_, hc_wSub⟩
+      rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+    | viaEq hRule =>
+      obtain ⟨_, _, _, _, hVr, _, _, _, _, hSeq⟩ := hRule.1.1
+      refine ⟨c_w, ?_, hc_wSub⟩
+      rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+    | viaFactor hRule =>
+      obtain ⟨_, _, _, _, hVr, _, _, _, _, hSeq⟩ := hRule.1.1
+      refine ⟨c_w, ?_, hc_wSub⟩
+      rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+    | viaJoin hRule =>
+      obtain ⟨_, _, _, _, hVr, _, _, _, _, hSeq⟩ := hRule.1.1
+      refine ⟨c_w, ?_, hc_wSub⟩
+      rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+    | viaNom hRule =>
+      obtain ⟨_, _, _, _, hVr, _, _, _, _, hSeq⟩ := hRule.1.1
+      refine ⟨c_w, ?_, hc_wSub⟩
+      rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+    | viaSucc hRule =>
+      obtain ⟨_, _, hWFresh, _, _, _, _, hVr, _, _, hSeq, _, _⟩ := hRule
+      refine ⟨c_w, ?_, hc_wSub⟩
+      rw [hVr]; exact mem_S_after_add_at_new hSeq hWFresh hVrIn hc_wIn
+    | viaPred hRule =>
+      obtain ⟨_, _, _, _, hVr, _, _, _, _, hSeq⟩ := hRule.1.1
+      refine ⟨c_w, ?_, hc_wSub⟩
+      rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+    | viaRsucc hRule =>
+      obtain ⟨_, _, _, _, hVr, _, hSeq, _, _, _⟩ := hRule
+      refine ⟨c_w, ?_, hc_wSub⟩
+      rw [hVr]; exact mem_S_after_prepend_root hSeq hc_wIn
+    | viaRpred hRule =>
+      obtain ⟨_, _, _, _, hVr, _, _, _, _, hSeq⟩ := hRule.1.1
+      refine ⟨c_w, ?_, hc_wSub⟩
+      rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
+
+/-- **Preservation under finite derivation.** -/
+theorem propSatInvAtomic_preserved_by_fullDeriv
+    (O : Ontology) {D D' : ContextStructure} (hDeriv : FullDerivation D D')
+    (hInv : PropSaturationInvariantAtomic O D) :
+    PropSaturationInvariantAtomic O D' := by
+  induction hDeriv with
+  | refl _ => exact hInv
+  | step hStep _ ih =>
+    exact ih (propSatInvAtomic_preserved_by_fullStep O hStep hInv)
+
+/-- **The seed-level invariant** for atom-atom ontologies: an
+    `O`-seed at `D_seed` whose `S(vr)` contains the canonical atom-atom
+    subsumption clauses for every direct ontology axiom satisfies the
+    base case `ConceptDerivable.base` of the invariant.  The
+    `step` cases require closing under `Join` saturation, which is
+    the substantive work of item #5. -/
+def AtomAtomBaseSeed (O : Ontology) (D_seed : ContextStructure) : Prop :=
+  D_seed.vr ∈ D_seed.contexts ∧
+  ∀ A B : Nat,
+    (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) ∈ O →
+    ∃ c ∈ D_seed.S D_seed.vr, subsumes c (atomAtomSubsumptionClause A B)
+
+/-- **The `unsubsumed → refutable` implication** for atom-atom
+    subsumption queries.  This is the contrapositive of the
+    propositional saturation invariant restricted to the atom-atom
+    query slice.
+
+    Given the invariant `PropSaturationInvariantAtomic O D` and a
+    query `Q` whose body is `[atomTrue (atom A x)]` and head is
+    `[atomTrue (atom B x)]`, if no clause in `S(D.vr)` subsumes
+    `{Q.Gamma, Q.Delta}`, then `B` is not `ConceptDerivable` from
+    `{A}` — which is the `headNotDerivable` field of `AtomicRefutable`. -/
+theorem atomicRefutable_from_propSaturationInvariant
+    (O : Ontology) (D : ContextStructure)
+    (hInv : PropSaturationInvariantAtomic O D)
+    (Q : QueryClause)
+    (A B : Nat)
+    (hQA : Q.Gamma = [BLit.atomTrue (PTerm.atom A ATerm.x)])
+    (hQB : Q.Delta = [CLit.atomTrue (PTerm.atom B ATerm.x)])
+    (hNoSub : ∀ c ∈ D.S D.vr,
+      ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) :
+    ¬ ConceptDerivable O (fun X => X = A) B := by
+  intro hDer
+  obtain ⟨c, hcIn, hcSub⟩ := hInv.2 A B hDer
+  have hQeq : ({ body := Q.Gamma, head := Q.Delta } : CClause) =
+              atomAtomSubsumptionClause A B := by
+    rw [hQA, hQB]; rfl
+  exact hNoSub c hcIn (hQeq ▸ hcSub)
+
+/-- **`ConceptDerivable` is monotonic in the initial set.** -/
+theorem conceptDerivable_mono
+    (O : Ontology) {init₁ init₂ : Nat → Prop}
+    (hSub : ∀ X, init₁ X → init₂ X)
+    {B : Nat} (hDer : ConceptDerivable O init₁ B) :
+    ConceptDerivable O init₂ B := by
+  induction hDer with
+  | base h => exact ConceptDerivable.base (hSub _ h)
+  | step _ hAx ih => exact ConceptDerivable.step ih hAx
+
+/-- **Bridging lemma**: for a query whose body is exactly
+    `[atomTrue (atom A x)]`, `queryBodyAtomConcepts Q` is equivalent
+    to `(fun X => X = A)`.  Used to lift the invariant's
+    `(fun X => X = A)` form to `headNotDerivable`'s
+    `queryBodyAtomConcepts` form. -/
+theorem queryBodyAtomConcepts_singleton
+    (Q : QueryClause) (A : Nat)
+    (hQA : Q.Gamma = [BLit.atomTrue (PTerm.atom A ATerm.x)])
+    (X : Nat) :
+    queryBodyAtomConcepts Q X ↔ X = A := by
+  unfold queryBodyAtomConcepts
+  rw [hQA]
+  constructor
+  · rintro ⟨t, ht⟩
+    rcases List.mem_singleton.mp ht with heq
+    -- heq : BLit.atomTrue (PTerm.atom X t) = BLit.atomTrue (PTerm.atom A ATerm.x)
+    cases heq; rfl
+  · rintro rfl
+    exact ⟨ATerm.x, List.mem_singleton.mpr rfl⟩
+
+/-- **`headNotDerivable` field of `AtomicRefutable` from the
+    propositional saturation invariant.**  Specialised to the
+    atom-atom subsumption query slice. -/
+theorem headNotDerivable_from_propSaturationInvariant
+    (O : Ontology) (D : ContextStructure)
+    (hInv : PropSaturationInvariantAtomic O D)
+    (Q : QueryClause)
+    (A B : Nat)
+    (hQA : Q.Gamma = [BLit.atomTrue (PTerm.atom A ATerm.x)])
+    (hQB : Q.Delta = [CLit.atomTrue (PTerm.atom B ATerm.x)])
+    (hNoSub : ∀ c ∈ D.S D.vr,
+      ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) :
+    ∀ B' t, CLit.atomTrue (PTerm.atom B' t) ∈ Q.Delta →
+      ¬ ConceptDerivable O (queryBodyAtomConcepts Q) B' := by
+  intro B' t hMem hDer
+  -- hMem : CLit.atomTrue (atom B' t) ∈ Q.Delta = [atomTrue (atom B x)]
+  rw [hQB] at hMem
+  rcases List.mem_singleton.mp hMem with heq
+  -- heq : CLit.atomTrue (atom B' t) = CLit.atomTrue (atom B x)
+  cases heq
+  -- Now B' = B and t = ATerm.x.
+  -- Convert hDer's initial set from queryBodyAtomConcepts Q to (fun X => X = A).
+  have hMono : ConceptDerivable O (fun X => X = A) B :=
+    conceptDerivable_mono (O := O) (init₁ := queryBodyAtomConcepts Q)
+      (init₂ := fun X => X = A)
+      (fun X hX => (queryBodyAtomConcepts_singleton Q A hQA X).mp hX)
+      hDer
+  exact atomicRefutable_from_propSaturationInvariant O D hInv Q A B hQA hQB hNoSub hMono
+
+-- ============================================================
 -- §0.2 Reachability demonstrator for the refined 12-rule calculus.
 --
 -- With the thesis-faithful refinements of Hyper/Eq/Factor/Join/Nom

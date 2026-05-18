@@ -384,4 +384,20 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.step_add_entailed_nonredundant_sound
 #print axioms ALCHOIQContext.fullSaturated_emptyContextStructure
 
+-- ============================================================
+-- Item #3: Propositional saturation invariant for atom-atom
+-- ontologies — `PropSaturationInvariantAtomic` with preservation
+-- under `FullStep` / `FullDerivation` and the
+-- `unsubsumed → ¬ConceptDerivable` implication.
+-- ============================================================
+#print axioms ALCHOIQContext.atomAtomSubsumptionClause
+#print axioms ALCHOIQContext.PropSaturationInvariantAtomic
+#print axioms ALCHOIQContext.propSatInvAtomic_preserved_by_fullStep
+#print axioms ALCHOIQContext.propSatInvAtomic_preserved_by_fullDeriv
+#print axioms ALCHOIQContext.AtomAtomBaseSeed
+#print axioms ALCHOIQContext.atomicRefutable_from_propSaturationInvariant
+#print axioms ALCHOIQContext.conceptDerivable_mono
+#print axioms ALCHOIQContext.queryBodyAtomConcepts_singleton
+#print axioms ALCHOIQContext.headNotDerivable_from_propSaturationInvariant
+
 end ELKSDD
