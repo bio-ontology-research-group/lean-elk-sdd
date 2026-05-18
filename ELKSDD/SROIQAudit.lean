@@ -882,6 +882,15 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_treeTrueRHS
 
 -- ============================================================
+-- §TREE: universal-RHS conj-of-atoms filler.   Generalises
+-- universalPropagatedAtoms via ConjMember so a single (top,
+-- ∀R.filler) axiom propagates *every* leaf-atom of `filler` to
+-- successors carrying role R.   Subsumes single-atom filler.
+-- ============================================================
+#print axioms ALCHOIQContext.isConjOfAtoms_univ_eval_helper_tree
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_top_univ_conjOfAtoms
+
+-- ============================================================
 -- §TREE SATISFIES O composition.   Single satisfaction theorem
 -- assembled by dispatching per-axiom to the tree-Herbrand lemmas.
 -- ============================================================
