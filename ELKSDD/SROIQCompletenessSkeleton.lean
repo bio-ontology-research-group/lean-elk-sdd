@@ -8900,5 +8900,98 @@ theorem saturationCompleteness_partial_unifiedSlice
   theorem2_unified_two_slices O rbox hSlice Q hQsig hQAtom D hDeriv hSat
     hEntRBox
 
+-- ============================================================
+-- §CONCRETE WITNESSES FOR `InUnifiedSlice`.
+--
+-- The unified slice predicate is a disjunction of two paired
+-- predicates over `(O, rbox)`.   Concrete ontology/RBox pairs that
+-- live in this slice can therefore be witnessed by exhibiting the
+-- two component proofs.   The empty ontology with the empty RBox
+-- is the prime concrete example; we also factor out a constructor
+-- that takes only the EL-or-all-vacuous predicate and an empty
+-- RBox.   These give fully unconditional instances of the unified
+-- Theorem-2-style statements.
+-- ============================================================
+
+/-- **`IsELOrAllVacuousOnly` holds vacuously of the empty ontology.** -/
+theorem isELOrAllVacuousOnly_nil :
+    IsELOrAllVacuousOnly ([] : Ontology) := by
+  intro ax hax
+  exact absurd hax List.not_mem_nil
+
+/-- **Constructor for `InUnifiedSlice`** from the empty-roles family:
+    any EL-or-all-vacuous ontology paired with any RBox compatible
+    with empty roles lives in the unified slice. -/
+theorem inUnifiedSlice_of_emptyRoleFamily
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : IsELOrAllVacuousOnly O)
+    (hRBox : RBoxCompatibleWithEmptyRoles rbox) :
+    InUnifiedSlice O rbox :=
+  Or.inl ⟨hO, hRBox⟩
+
+/-- **Constructor for `InUnifiedSlice`** from the universal-role
+    family: any EL-or-universal-role-vacuous ontology paired with
+    any RBox compatible with universal roles lives in the unified
+    slice. -/
+theorem inUnifiedSlice_of_universalRoleFamily
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : IsELOrUniversalRoleVacuousOnly O)
+    (hRBox : RBoxCompatibleWithUniversalRoles rbox) :
+    InUnifiedSlice O rbox :=
+  Or.inr ⟨hO, hRBox⟩
+
+/-- **Concrete instance**: the empty ontology with the empty RBox
+    is in the unified slice.   Pure corollary of
+    `isELOrAllVacuousOnly_nil` + `emptyRBox_compatible`. -/
+theorem inUnifiedSlice_nil_nil :
+    InUnifiedSlice ([] : Ontology) ([] : SROIQ.RBox) :=
+  inUnifiedSlice_of_emptyRoleFamily [] [] isELOrAllVacuousOnly_nil
+    emptyRBox_compatible
+
+/-- **Fully unconditional `theorem2_canonicalSeedOfFull` instance**
+    for the empty ontology and the empty RBox.   All hypotheses of
+    the general `theorem2_canonicalSeedOfFull_unifiedSlice` are
+    discharged for this concrete pair, except the per-query
+    signature/shape/entailment hypotheses which are inherent to
+    Theorem 2 itself. -/
+theorem theorem2_canonicalSeedOfFull_nil_nil
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig []) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull []) D)
+    (hSat : FullSaturated D)
+    (hEntail : ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+              (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+              I.satisfies [] → SROIQ.RBox.eval I ([] : SROIQ.RBox) →
+              Q.eval I ⟨γ, φ, vx, vy⟩) :
+    ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  theorem2_canonicalSeedOfFull_unifiedSlice [] [] inUnifiedSlice_nil_nil
+    Q hQsig hQAtom D hDeriv hSat hEntail
+
+/-- **Fully unconditional `isCanonicalSeed_canonicalSeedOfFull_partial`
+    instance** for the empty ontology and the empty RBox.   The
+    three conjuncts hold without any slice or query restriction on
+    `O` or `rbox` themselves (the AtomConjDisj + signature
+    restrictions remain per-query inside conjunct (iii)). -/
+theorem isCanonicalSeed_canonicalSeedOfFull_partial_nil_nil :
+    -- Conjunct (i) — unconditional.
+    (canonicalSeedOfFull []).vr ∈ (canonicalSeedOfFull []).contexts ∧
+    -- Conjunct (ii) — unconditional.
+    (∃ CD : DerivedClauses, isSound [] (canonicalSeedOfFull []) CD) ∧
+    -- Conjunct (iii) — unified-slice form, instantiated at `[], []`.
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull []) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig []) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies [] ∧ SROIQ.RBox.eval I ([] : SROIQ.RBox) ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  isCanonicalSeed_canonicalSeedOfFull_partial [] [] inUnifiedSlice_nil_nil
+
 end ALCHOIQContext
 end ELKSDD

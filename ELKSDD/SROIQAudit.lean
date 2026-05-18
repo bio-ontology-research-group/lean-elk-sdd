@@ -1036,4 +1036,17 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isConjOfAtomsOrTop_univ_eval_helper_tree_treeTrueRHS
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_treeTrueRHS_univ_conjOfAtomsOrTop
 
+-- ============================================================
+-- §CONCRETE WITNESSES FOR `InUnifiedSlice`.
+-- Empty-ontology / empty-RBox instance of the unified Theorem 2
+-- and partial IsCanonicalSeed statements, fully unconditional in
+-- the ontology+RBox parameters.
+-- ============================================================
+#print axioms ALCHOIQContext.isELOrAllVacuousOnly_nil
+#print axioms ALCHOIQContext.inUnifiedSlice_of_emptyRoleFamily
+#print axioms ALCHOIQContext.inUnifiedSlice_of_universalRoleFamily
+#print axioms ALCHOIQContext.inUnifiedSlice_nil_nil
+#print axioms ALCHOIQContext.theorem2_canonicalSeedOfFull_nil_nil
+#print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOfFull_partial_nil_nil
+
 end ELKSDD
