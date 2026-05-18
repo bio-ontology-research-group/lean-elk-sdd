@@ -9036,6 +9036,54 @@ theorem inUnifiedSlice_of_isELConjOnly_emptyRBox
     InUnifiedSlice O ([] : SROIQ.RBox) :=
   inUnifiedSlice_of_isELConjOnly O [] hO emptyRBox_compatible
 
+/-- **`IsELOrVacuousOnly` ontologies embed into `IsELOrAllVacuousOnly`.**
+    Wrapper around the existing `isELOrVacuousOnly_imp_isELOrAllVacuousOnly`
+    placed alongside the family of slice-embedding constructors. -/
+theorem isELOrAllVacuousOnly_of_isELOrVacuousOnly
+    (O : Ontology) (hO : IsELOrVacuousOnly O) :
+    IsELOrAllVacuousOnly O :=
+  isELOrVacuousOnly_imp_isELOrAllVacuousOnly O hO
+
+/-- **Concrete `InUnifiedSlice` instance** for any EL-or-vacuous-only
+    ontology paired with any empty-roles-compatible RBox.   This
+    fragment includes atom-atom, atom-bot, conj-atom, exist-atom-atom,
+    atom-univ-atom, and atom-top shapes. -/
+theorem inUnifiedSlice_of_isELOrVacuousOnly
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : IsELOrVacuousOnly O)
+    (hRBox : RBoxCompatibleWithEmptyRoles rbox) :
+    InUnifiedSlice O rbox :=
+  inUnifiedSlice_of_emptyRoleFamily O rbox
+    (isELOrAllVacuousOnly_of_isELOrVacuousOnly O hO) hRBox
+
+/-- **Concrete `InUnifiedSlice` instance** for any EL-or-vacuous-only
+    ontology paired with the empty RBox. -/
+theorem inUnifiedSlice_of_isELOrVacuousOnly_emptyRBox
+    (O : Ontology) (hO : IsELOrVacuousOnly O) :
+    InUnifiedSlice O ([] : SROIQ.RBox) :=
+  inUnifiedSlice_of_isELOrVacuousOnly O [] hO emptyRBox_compatible
+
+/-- **Fully unconditional `theorem2_canonicalSeedOfFull` instance**
+    for any EL-or-vacuous-only ontology with the empty RBox.
+    Strictly larger than `IsELConjOnly`: includes exist-atom-atom,
+    atom-univ-atom, and atom-top axioms in addition. -/
+theorem theorem2_canonicalSeedOfFull_isELOrVacuousOnly_emptyRBox
+    (O : Ontology) (hO : IsELOrVacuousOnly O)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull O) D)
+    (hSat : FullSaturated D)
+    (hEntail : ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+              (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+              I.satisfies O → SROIQ.RBox.eval I ([] : SROIQ.RBox) →
+              Q.eval I ⟨γ, φ, vx, vy⟩) :
+    ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  theorem2_canonicalSeedOfFull_unifiedSlice O []
+    (inUnifiedSlice_of_isELOrVacuousOnly_emptyRBox O hO)
+    Q hQsig hQAtom D hDeriv hSat hEntail
+
 /-- **Fully unconditional `theorem2_canonicalSeedOfFull` instance**
     for any EL-conj-only ontology with the empty RBox.   Strictly
     larger than the atom-atom-only fragment: includes

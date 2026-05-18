@@ -1059,5 +1059,9 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.inUnifiedSlice_of_isELConjOnly
 #print axioms ALCHOIQContext.inUnifiedSlice_of_isELConjOnly_emptyRBox
 #print axioms ALCHOIQContext.theorem2_canonicalSeedOfFull_isELConjOnly_emptyRBox
+#print axioms ALCHOIQContext.isELOrAllVacuousOnly_of_isELOrVacuousOnly
+#print axioms ALCHOIQContext.inUnifiedSlice_of_isELOrVacuousOnly
+#print axioms ALCHOIQContext.inUnifiedSlice_of_isELOrVacuousOnly_emptyRBox
+#print axioms ALCHOIQContext.theorem2_canonicalSeedOfFull_isELOrVacuousOnly_emptyRBox
 
 end ELKSDD
