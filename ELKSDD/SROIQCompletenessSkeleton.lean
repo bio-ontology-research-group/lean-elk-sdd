@@ -5433,6 +5433,147 @@ theorem elHerbrandInterpTree_sat_atom_exist_atom
     rfl
 
 -- ============================================================
+-- §TREE HERBRAND: EL-SUBSTANTIVE AXIOM SATISFACTION
+--
+-- The tree Herbrand satisfies *every* EL-substantive axiom at
+-- *every* tree node, because each node's concept extension is a
+-- `ConceptDerivableEL` closure that respects O's atom-level
+-- entailments uniformly.   These lemmas mirror the corresponding
+-- branches of `elHerbrandInterp_satisfies_O_aux_full` but now
+-- hold at the full tree domain.
+-- ============================================================
+
+/-- `(atom A, atom B) ∈ O`: B follows by `step_atom`. -/
+theorem elHerbrandInterpTree_sat_atom_atom
+    (O : Ontology) (Q : QueryClause)
+    (A B : Nat)
+    (hAx : (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval (ALCHOQ.Concept.atom A) p →
+      (elHerbrandInterpTree O Q).eval (ALCHOQ.Concept.atom B) p := by
+  intro p hA
+  show ConceptDerivableEL O (treeNodeInitialAtoms Q p) B
+  exact ConceptDerivableEL.step_atom hA hAx
+
+/-- `(conj (atom A₁) (atom A₂), atom B) ∈ O`: by `step_conj`. -/
+theorem elHerbrandInterpTree_sat_conj_atom
+    (O : Ontology) (Q : QueryClause)
+    (A₁ A₂ B : Nat)
+    (hAx : (ALCHOQ.Concept.conj (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+            ALCHOQ.Concept.atom B) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂)) p →
+      (elHerbrandInterpTree O Q).eval (ALCHOQ.Concept.atom B) p := by
+  intro p ⟨hA1, hA2⟩
+  show ConceptDerivableEL O (treeNodeInitialAtoms Q p) B
+  exact ConceptDerivableEL.step_conj hA1 hA2 hAx
+
+/-- `(atom A, conj (atom B) (atom C)) ∈ O`: by `step_conj_RHS_*`. -/
+theorem elHerbrandInterpTree_sat_atom_conj
+    (O : Ontology) (Q : QueryClause)
+    (A B C : Nat)
+    (hAx : (ALCHOQ.Concept.atom A,
+            ALCHOQ.Concept.conj (.atom B) (.atom C)) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval (ALCHOQ.Concept.atom A) p →
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.conj (.atom B) (.atom C)) p := by
+  intro p hA
+  refine ⟨?_, ?_⟩
+  · show ConceptDerivableEL O (treeNodeInitialAtoms Q p) B
+    exact ConceptDerivableEL.step_conj_RHS_left hA hAx
+  · show ConceptDerivableEL O (treeNodeInitialAtoms Q p) C
+    exact ConceptDerivableEL.step_conj_RHS_right hA hAx
+
+/-- `(disj (atom A₁) (atom A₂), atom B) ∈ O`: by `step_disj_LHS_*`. -/
+theorem elHerbrandInterpTree_sat_disj_atom
+    (O : Ontology) (Q : QueryClause)
+    (A₁ A₂ B : Nat)
+    (hAx : (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂),
+            ALCHOQ.Concept.atom B) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂)) p →
+      (elHerbrandInterpTree O Q).eval (ALCHOQ.Concept.atom B) p := by
+  intro p hOr
+  show ConceptDerivableEL O (treeNodeInitialAtoms Q p) B
+  rcases hOr with hA1 | hA2
+  · exact ConceptDerivableEL.step_disj_LHS_left hA1 hAx
+  · exact ConceptDerivableEL.step_disj_LHS_right hA2 hAx
+
+/-- `(top, atom B) ∈ O`: by `step_top`. -/
+theorem elHerbrandInterpTree_sat_top_atom
+    (O : Ontology) (Q : QueryClause)
+    (B : Nat)
+    (hAx : (ALCHOQ.Concept.top, ALCHOQ.Concept.atom B) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval ALCHOQ.Concept.top p →
+      (elHerbrandInterpTree O Q).eval (ALCHOQ.Concept.atom B) p := by
+  intro p _
+  show ConceptDerivableEL O (treeNodeInitialAtoms Q p) B
+  exact ConceptDerivableEL.step_top hAx
+
+/-- `(conj (atom A₁) (atom A₂), conj (atom B) (atom C)) ∈ O`. -/
+theorem elHerbrandInterpTree_sat_conj_conj
+    (O : Ontology) (Q : QueryClause)
+    (A₁ A₂ B C : Nat)
+    (hAx : (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂),
+            ALCHOQ.Concept.conj (.atom B) (.atom C)) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂)) p →
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.conj (.atom B) (.atom C)) p := by
+  intro p ⟨hA1, hA2⟩
+  refine ⟨?_, ?_⟩
+  · show ConceptDerivableEL O (treeNodeInitialAtoms Q p) B
+    exact ConceptDerivableEL.step_conj_conj_left hA1 hA2 hAx
+  · show ConceptDerivableEL O (treeNodeInitialAtoms Q p) C
+    exact ConceptDerivableEL.step_conj_conj_right hA1 hA2 hAx
+
+/-- `(disj (atom A₁) (atom A₂), conj (atom B) (atom C)) ∈ O`. -/
+theorem elHerbrandInterpTree_sat_disj_conj
+    (O : Ontology) (Q : QueryClause)
+    (A₁ A₂ B C : Nat)
+    (hAx : (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂),
+            ALCHOQ.Concept.conj (.atom B) (.atom C)) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂)) p →
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.conj (.atom B) (.atom C)) p := by
+  intro p hOr
+  rcases hOr with hA1 | hA2
+  · refine ⟨?_, ?_⟩
+    · show ConceptDerivableEL O (treeNodeInitialAtoms Q p) B
+      exact ConceptDerivableEL.step_disj_conj_left_L hA1 hAx
+    · show ConceptDerivableEL O (treeNodeInitialAtoms Q p) C
+      exact ConceptDerivableEL.step_disj_conj_right_L hA1 hAx
+  · refine ⟨?_, ?_⟩
+    · show ConceptDerivableEL O (treeNodeInitialAtoms Q p) B
+      exact ConceptDerivableEL.step_disj_conj_left_R hA2 hAx
+    · show ConceptDerivableEL O (treeNodeInitialAtoms Q p) C
+      exact ConceptDerivableEL.step_disj_conj_right_R hA2 hAx
+
+/-- `(top, conj (atom B) (atom C)) ∈ O`. -/
+theorem elHerbrandInterpTree_sat_top_conj
+    (O : Ontology) (Q : QueryClause)
+    (B C : Nat)
+    (hAx : (ALCHOQ.Concept.top,
+            ALCHOQ.Concept.conj (.atom B) (.atom C)) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval ALCHOQ.Concept.top p →
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.conj (.atom B) (.atom C)) p := by
+  intro p _
+  refine ⟨?_, ?_⟩
+  · show ConceptDerivableEL O (treeNodeInitialAtoms Q p) B
+    exact ConceptDerivableEL.step_top_conj_L hAx
+  · show ConceptDerivableEL O (treeNodeInitialAtoms Q p) C
+    exact ConceptDerivableEL.step_top_conj_R hAx
+
+-- ============================================================
 -- §UNIVERSAL-ROLE VACUITY PREDICATES.  Concept shapes whose
 -- evaluation under `elHerbrandInterpUniversal` reduces to a
 -- fixed `True`/`False` value (modulo derivability through inner

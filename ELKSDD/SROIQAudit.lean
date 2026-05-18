@@ -807,4 +807,20 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_atom_exist_atom
 
+-- ============================================================
+-- §TREE HERBRAND: EL-substantive axiom satisfaction at every
+-- node of the recursive tree domain.   Together with the
+-- existential-RHS satisfaction from
+-- elHerbrandInterpTree_sat_atom_exist_atom, this covers the
+-- full EL-substantive shape catalogue uniformly on the tree.
+-- ============================================================
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_atom_atom
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_conj_atom
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_atom_conj
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_disj_atom
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_top_atom
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_conj_conj
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_disj_conj
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_top_conj
+
 end ELKSDD
