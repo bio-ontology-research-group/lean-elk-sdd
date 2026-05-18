@@ -9330,5 +9330,71 @@ theorem isCanonicalSeed_canonicalSeedOfFull_partial_nil_nil :
           ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
   isCanonicalSeed_canonicalSeedOfFull_partial [] [] inUnifiedSlice_nil_nil
 
+-- ============================================================
+-- §CONCRETE NON-TRIVIAL WORKED EXAMPLES.   To show the slice
+-- machinery composes on real input, we exhibit explicit
+-- ontology/RBox pairs assembled via the constructors above and
+-- prove they live in the unified slice.
+-- ============================================================
+
+/-- **Example ontology**: a 2-axiom chain of atom-atom subsumptions
+    `atom 0 ⊑ atom 1`, `atom 1 ⊑ atom 2`. -/
+def exampleAtomChain : Ontology :=
+  [(ALCHOQ.Concept.atom 0, ALCHOQ.Concept.atom 1),
+   (ALCHOQ.Concept.atom 1, ALCHOQ.Concept.atom 2)]
+
+/-- The example ontology is atom-atom-only. -/
+theorem exampleAtomChain_isAtomicSubsumptionOnly :
+    IsAtomicSubsumptionOnly exampleAtomChain := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact ⟨0, 1, rfl⟩
+  · rcases List.mem_cons.mp hMem with rfl | hMem'
+    · exact ⟨1, 2, rfl⟩
+    · exact absurd hMem' List.not_mem_nil
+
+/-- **Example RBox** (universal-role family): a single transitive
+    role `Trans(0)` plus a role inclusion `0 ⊑ 1`.   Both shapes
+    are compatible with universal roles. -/
+def exampleTransInclRBox : SROIQ.RBox :=
+  [SROIQ.RAxiom.trans 0, SROIQ.RAxiom.incl 0 1]
+
+/-- The example RBox is universal-roles-compatible.   Built
+    modularly via the cons + shape constructors. -/
+theorem exampleTransInclRBox_compat :
+    RBoxCompatibleWithUniversalRoles exampleTransInclRBox :=
+  rBoxCompatibleWithUniversalRoles_cons
+    (rAxiomCompatibleWithUniversalRoles_trans 0)
+    (rBoxCompatibleWithUniversalRoles_cons
+      (rAxiomCompatibleWithUniversalRoles_incl 0 1)
+      emptyRBox_compatibleUniversal)
+
+/-- The (atom-atom-only) example ontology is in the unified slice
+    with the empty RBox via the empty-roles family branch. -/
+theorem exampleAtomChain_in_unifiedSlice_emptyRBox :
+    InUnifiedSlice exampleAtomChain ([] : SROIQ.RBox) :=
+  inUnifiedSlice_of_isAtomicSubsumptionOnly_emptyRBox exampleAtomChain
+    exampleAtomChain_isAtomicSubsumptionOnly
+
+/-- Atom-atom-only ontologies embed into
+    `IsELOrUniversalRoleVacuousOnly`, since atom-atom is the first
+    EL-substantive disjunct of both maximal slice predicates. -/
+theorem exampleAtomChain_isELOrUniversalRoleVacuousOnly :
+    IsELOrUniversalRoleVacuousOnly exampleAtomChain := by
+  intro ax hax
+  obtain ⟨A, B, rfl⟩ :=
+    exampleAtomChain_isAtomicSubsumptionOnly ax hax
+  exact Or.inl ⟨A, B, rfl⟩
+
+/-- The example ontology paired with the *non-empty*
+    `exampleTransInclRBox` is in the unified slice via the
+    universal-role family branch. -/
+theorem exampleAtomChain_in_unifiedSlice_transInclRBox :
+    InUnifiedSlice exampleAtomChain exampleTransInclRBox :=
+  inUnifiedSlice_of_isELOrUniversalRoleVacuousOnly
+    exampleAtomChain exampleTransInclRBox
+    exampleAtomChain_isELOrUniversalRoleVacuousOnly
+    exampleTransInclRBox_compat
+
 end ALCHOIQContext
 end ELKSDD

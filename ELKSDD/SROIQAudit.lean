@@ -1086,5 +1086,11 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.rAxiomCompatibleWithUniversalRoles_sym
 #print axioms ALCHOIQContext.rAxiomCompatibleWithUniversalRoles_refl
 #print axioms ALCHOIQContext.rAxiomCompatibleWithUniversalRoles_inv
+-- §CONCRETE NON-TRIVIAL WORKED EXAMPLE: atom-atom chain + trans+incl RBox
+#print axioms ALCHOIQContext.exampleAtomChain_isAtomicSubsumptionOnly
+#print axioms ALCHOIQContext.exampleTransInclRBox_compat
+#print axioms ALCHOIQContext.exampleAtomChain_in_unifiedSlice_emptyRBox
+#print axioms ALCHOIQContext.exampleAtomChain_isELOrUniversalRoleVacuousOnly
+#print axioms ALCHOIQContext.exampleAtomChain_in_unifiedSlice_transInclRBox
 
 end ELKSDD
