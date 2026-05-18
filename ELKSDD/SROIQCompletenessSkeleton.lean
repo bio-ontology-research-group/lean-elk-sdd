@@ -9005,6 +9005,91 @@ theorem inUnifiedSlice_of_sliceEligibleBoth_universalFamily
     InUnifiedSlice O rbox :=
   Or.inr ⟨hO.2, hRBox⟩
 
+-- SliceEligibleBoth cons-builders.   Cover the EL-substantive
+-- shapes that appear identically in the first prefix of both
+-- maximal slice predicates: atom-atom, atom-bot, conj-atom,
+-- atom-conj, disj-atom.   Inline proofs (the maximal-slice
+-- cons-builders are defined later in the file).
+
+theorem sliceEligibleBoth_cons_atomAtom
+    {A B : Nat} {O : Ontology}
+    (hTail : SliceEligibleBoth O) :
+    SliceEligibleBoth
+      ((ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) :: O) := by
+  refine ⟨?_, ?_⟩
+  · intro ax hax
+    rcases List.mem_cons.mp hax with rfl | hMem
+    · exact Or.inl ⟨A, B, rfl⟩
+    · exact hTail.1 ax hMem
+  · intro ax hax
+    rcases List.mem_cons.mp hax with rfl | hMem
+    · exact Or.inl ⟨A, B, rfl⟩
+    · exact hTail.2 ax hMem
+
+theorem sliceEligibleBoth_cons_atomBot
+    {A : Nat} {O : Ontology}
+    (hTail : SliceEligibleBoth O) :
+    SliceEligibleBoth
+      ((ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) :: O) := by
+  refine ⟨?_, ?_⟩
+  · intro ax hax
+    rcases List.mem_cons.mp hax with rfl | hMem
+    · exact Or.inr (Or.inl ⟨A, rfl⟩)
+    · exact hTail.1 ax hMem
+  · intro ax hax
+    rcases List.mem_cons.mp hax with rfl | hMem
+    · exact Or.inr (Or.inl ⟨A, rfl⟩)
+    · exact hTail.2 ax hMem
+
+theorem sliceEligibleBoth_cons_conjAtom
+    {A₁ A₂ B : Nat} {O : Ontology}
+    (hTail : SliceEligibleBoth O) :
+    SliceEligibleBoth
+      ((ALCHOQ.Concept.conj (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+        ALCHOQ.Concept.atom B) :: O) := by
+  refine ⟨?_, ?_⟩
+  · intro ax hax
+    rcases List.mem_cons.mp hax with rfl | hMem
+    · exact Or.inr (Or.inr (Or.inl ⟨A₁, A₂, B, rfl⟩))
+    · exact hTail.1 ax hMem
+  · intro ax hax
+    rcases List.mem_cons.mp hax with rfl | hMem
+    · exact Or.inr (Or.inr (Or.inl ⟨A₁, A₂, B, rfl⟩))
+    · exact hTail.2 ax hMem
+
+theorem sliceEligibleBoth_cons_atomConj
+    {A B C : Nat} {O : Ontology}
+    (hTail : SliceEligibleBoth O) :
+    SliceEligibleBoth
+      ((ALCHOQ.Concept.atom A,
+        ALCHOQ.Concept.conj (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C))
+       :: O) := by
+  refine ⟨?_, ?_⟩
+  · intro ax hax
+    rcases List.mem_cons.mp hax with rfl | hMem
+    · exact Or.inr (Or.inr (Or.inr (Or.inl ⟨A, B, C, rfl⟩)))
+    · exact hTail.1 ax hMem
+  · intro ax hax
+    rcases List.mem_cons.mp hax with rfl | hMem
+    · exact Or.inr (Or.inr (Or.inr (Or.inl ⟨A, B, C, rfl⟩)))
+    · exact hTail.2 ax hMem
+
+theorem sliceEligibleBoth_cons_disjAtom
+    {A₁ A₂ B : Nat} {O : Ontology}
+    (hTail : SliceEligibleBoth O) :
+    SliceEligibleBoth
+      ((ALCHOQ.Concept.disj (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+        ALCHOQ.Concept.atom B) :: O) := by
+  refine ⟨?_, ?_⟩
+  · intro ax hax
+    rcases List.mem_cons.mp hax with rfl | hMem
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨A₁, A₂, B, rfl⟩))))
+    · exact hTail.1 ax hMem
+  · intro ax hax
+    rcases List.mem_cons.mp hax with rfl | hMem
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨A₁, A₂, B, rfl⟩))))
+    · exact hTail.2 ax hMem
+
 /-- Every slice-eligible ontology has some RBox in the unified
     slice — by maximal-family choice followed by empty-RBox
     discharge. -/

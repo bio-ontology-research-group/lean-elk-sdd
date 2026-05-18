@@ -1160,6 +1160,11 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.sliceEligibleBoth_of_isAtomicSubsumptionOnly
 #print axioms ALCHOIQContext.inUnifiedSlice_of_sliceEligibleBoth_emptyFamily
 #print axioms ALCHOIQContext.inUnifiedSlice_of_sliceEligibleBoth_universalFamily
+#print axioms ALCHOIQContext.sliceEligibleBoth_cons_atomAtom
+#print axioms ALCHOIQContext.sliceEligibleBoth_cons_atomBot
+#print axioms ALCHOIQContext.sliceEligibleBoth_cons_conjAtom
+#print axioms ALCHOIQContext.sliceEligibleBoth_cons_atomConj
+#print axioms ALCHOIQContext.sliceEligibleBoth_cons_disjAtom
 #print axioms ALCHOIQContext.unconditionalSCExtensionGap_vacuous_on_slice
 #print axioms ALCHOIQContext.partial_isCanonicalSeed_of_sliceEligible
 -- §RBOX BOTH-FAMILIES
