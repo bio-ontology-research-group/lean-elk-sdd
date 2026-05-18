@@ -2139,6 +2139,42 @@ theorem isCanonicalSeed_canonicalSeedOf_atomic_modulo
    canonicalSeedOf_herbrandProperty_atomic_modulo O hO hSatComplete hAtomShape⟩
 
 -- ============================================================
+-- §FINAL-CONCRETE.  An explicit name for the combined gap.
+--
+-- We package the two remaining hypotheses into a single named
+-- predicate that future work must discharge.   This isolates the
+-- substantive thesis content that remains.
+-- ============================================================
+
+/-- **The combined saturation-completeness predicate.**  Holds for
+    an ontology `O` iff: for every `D` obtainable by full
+    derivation from `canonicalSeedOf O`, every saturated such `D`
+    satisfies both the propositional invariant
+    (`PropSaturationInvariantAtomic`) and the atom-atom Q-shape
+    restriction.   Discharging this for arbitrary `O` is the
+    saturation-completeness theorem of §5.4-§6.3 of the thesis. -/
+def CanonicalSaturationGap (O : Ontology) : Prop :=
+  (∀ D : ContextStructure,
+     FullDerivation (canonicalSeedOf O) D → FullSaturated D →
+     PropSaturationInvariantAtomic O D) ∧
+  (∀ D : ContextStructure,
+     FullDerivation (canonicalSeedOf O) D → FullSaturated D →
+     ∀ Q : QueryClause,
+       (∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+       ∃ A B : Nat,
+         Q.Gamma = [BLit.atomTrue (PTerm.atom A ATerm.x)] ∧
+         Q.Delta = [CLit.atomTrue (PTerm.atom B ATerm.x)])
+
+/-- **IsCanonicalSeed via the combined gap.**  This is the final
+    packaged form: given `CanonicalSaturationGap O`, all three
+    `IsCanonicalSeed` conjuncts are discharged. -/
+theorem isCanonicalSeed_canonicalSeedOf_via_gap
+    (O : Ontology) (hO : IsAtomicSubsumptionOnly O)
+    (hGap : CanonicalSaturationGap O) :
+    IsCanonicalSeed O (canonicalSeedOf O) :=
+  isCanonicalSeed_canonicalSeedOf_atomic_modulo O hO hGap.1 hGap.2
+
+-- ============================================================
 -- §FINAL-GAP.  Remaining work for unconditional IsCanonicalSeed.
 --
 -- The two hypotheses required by

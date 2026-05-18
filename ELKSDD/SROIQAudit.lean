@@ -514,5 +514,7 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.canonicalSeedOf_sound
 #print axioms ALCHOIQContext.canonicalSeedOf_herbrandProperty_atomic_modulo
 #print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOf_atomic_modulo
+#print axioms ALCHOIQContext.CanonicalSaturationGap
+#print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOf_via_gap
 
 end ELKSDD
