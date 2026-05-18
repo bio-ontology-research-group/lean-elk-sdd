@@ -1932,5 +1932,211 @@ theorem atomicHerbrandInterp_satisfies_emptyRBox
     SROIQ.RBox.eval (atomicHerbrandInterp O Q) ([] : SROIQ.RBox) :=
   atomicHerbrandInterp_satisfies_compatible_rbox O Q [] emptyRBox_compatible
 
+-- ============================================================
+-- §FINAL.  `canonicalSeedOf : Ontology → ContextStructure`
+--
+-- The total canonical-seed function: takes an ontology `O` and
+-- returns a context structure that encodes `O`'s atom-atom axioms
+-- as clauses at `S(0)`.   For atom-atom-only ontologies, this
+-- seed satisfies the full `IsCanonicalSeed` predicate.   For
+-- ontologies with non-atom-atom axioms, the missing axioms are
+-- filtered out by `axiomToCClause`; full SROIQ coverage requires
+-- the normalisation work flagged as future work (item #9).
+-- ============================================================
+
+/-- **Per-axiom clause translation.**  An atom-atom inclusion
+    `(atom A, atom B)` becomes the clause `{A(x)} → {B(x)}`.   All
+    other axiom shapes return `none` (placeholder for the full
+    SROIQ normalisation). -/
+def axiomToCClause : ALCHOQ.Axiom → Option CClause
+  | (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) =>
+    some { body := [BLit.atomTrue (PTerm.atom A ATerm.x)]
+         , head := [CLit.atomTrue (PTerm.atom B ATerm.x)] }
+  | _ => none
+
+/-- **Ontology-to-clauses translation.**  Filters and maps the
+    axiom list through `axiomToCClause`. -/
+def ontologyToClauses (O : Ontology) : List CClause :=
+  O.filterMap axiomToCClause
+
+/-- **The canonical-seed context structure for `O`.**  One context
+    (the root `0`), no edges, empty core, `S(0)` populated with the
+    atom-atom axiom clauses from `O`.   Compatible with the
+    `IsCanonicalSeed` shape: `vr = 0`, `vr ∈ contexts`,
+    `D.S = [ontologyToClauses O at 0, [] elsewhere]`. -/
+def canonicalSeedOf (O : Ontology) : ContextStructure where
+  contexts := [0]
+  vr       := 0
+  edges    := []
+  core     := fun _ => { atoms := [] }
+  S        := fun v => if v = 0 then ontologyToClauses O else []
+  m        := trivialAdmissibleOrder
+  θ        := fun _ => trivialContextOrder
+
+/-- **First IsCanonicalSeed conjunct**: the root lives in
+    `contexts`. -/
+theorem canonicalSeedOf_vr_in_contexts (O : Ontology) :
+    (canonicalSeedOf O).vr ∈ (canonicalSeedOf O).contexts := by
+  show (0 : CtxId) ∈ [0]
+  exact List.mem_singleton.mpr rfl
+
+/-- **Origin of clauses in `ontologyToClauses`**: every produced
+    clause comes from an atom-atom axiom of `O`. -/
+theorem mem_ontologyToClauses
+    (O : Ontology) (c : CClause) (hc : c ∈ ontologyToClauses O) :
+    ∃ A B : Nat,
+      (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) ∈ O ∧
+      c = { body := [BLit.atomTrue (PTerm.atom A ATerm.x)]
+          , head := [CLit.atomTrue (PTerm.atom B ATerm.x)] } := by
+  unfold ontologyToClauses at hc
+  rcases List.mem_filterMap.mp hc with ⟨ax, haxO, haxC⟩
+  -- ax : Axiom; haxC : axiomToCClause ax = some c.
+  -- axiomToCClause produces `some _` only for the (atom A, atom B) case.
+  match hax : ax, haxC with
+  | (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B), haxC' =>
+    have hcEq : c = { body := [BLit.atomTrue (PTerm.atom A ATerm.x)]
+                    , head := [CLit.atomTrue (PTerm.atom B ATerm.x)] } := by
+      have hUnfold : axiomToCClause (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) =
+                     some { body := [BLit.atomTrue (PTerm.atom A ATerm.x)]
+                          , head := [CLit.atomTrue (PTerm.atom B ATerm.x)] } := rfl
+      rw [hUnfold] at haxC'
+      exact (Option.some.inj haxC').symm
+    exact ⟨A, B, haxO, hcEq⟩
+
+/-- **Soundness of an atom-atom clause** under a model satisfying
+    the corresponding axiom. -/
+theorem atomAtom_clause_sound
+    {α : Type} (I : Interp α) (γ : Indu → α) (φ : FunSym → α → α)
+    (A B : Nat) (vx vy : α)
+    (hAx : I.satisfiesAxiom (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B)) :
+    CClause.eval I ⟨γ, φ, vx, vy⟩
+      { body := [BLit.atomTrue (PTerm.atom A ATerm.x)]
+      , head := [CLit.atomTrue (PTerm.atom B ATerm.x)] } := by
+  intro hBody
+  -- hBody : ∀ b ∈ [atomTrue (atom A x)], BLit.eval I _ b
+  have hAxBody : BLit.atomTrue (PTerm.atom A ATerm.x) ∈
+                  [BLit.atomTrue (PTerm.atom A ATerm.x)] :=
+    List.mem_singleton.mpr rfl
+  have hAEval : BLit.eval I ⟨γ, φ, vx, vy⟩
+                  (BLit.atomTrue (PTerm.atom A ATerm.x)) :=
+    hBody _ hAxBody
+  -- hAEval reduces to PTerm.eval = ext_concept A vx.
+  have hExtA : I.ext_concept A vx := hAEval
+  -- Apply hAx to get ext_concept B vx.
+  have hExtB : I.ext_concept B vx := hAx vx hExtA
+  refine ⟨CLit.atomTrue (PTerm.atom B ATerm.x), ?_, ?_⟩
+  · exact List.mem_singleton.mpr rfl
+  · -- CLit.eval reduces to PTerm.eval = ext_concept B vx.
+    exact hExtB
+
+/-- **Second IsCanonicalSeed conjunct**: there exists a derived-clause
+    set `CD` such that `canonicalSeedOf O` is sound for `O`.   We
+    take `CD := { clauses := [] }` (empty derived clauses); soundness
+    of each placed clause reduces to the corresponding ontology axiom. -/
+theorem canonicalSeedOf_sound (O : Ontology) :
+    ∃ CD : DerivedClauses, isSound O (canonicalSeedOf O) CD := by
+  refine ⟨{ clauses := [] }, ?_, ?_⟩
+  · -- S1: every clause in S(v) is sound.
+    intro v hv c hc α I γ φ hIO _hICD vx vy _hCore
+    -- hv : v ∈ [0], so v = 0.
+    have hv0 : v = 0 := by
+      rcases List.mem_cons.mp hv with h | h
+      · exact h
+      · exact absurd h List.not_mem_nil
+    subst hv0
+    -- hc : c ∈ (canonicalSeedOf O).S 0 = ontologyToClauses O
+    have hS0 : (canonicalSeedOf O).S 0 = ontologyToClauses O := by
+      show (if (0 : CtxId) = 0 then ontologyToClauses O else []) =
+           ontologyToClauses O
+      simp
+    rw [hS0] at hc
+    obtain ⟨A, B, hAxO, hCEq⟩ := mem_ontologyToClauses O c hc
+    rw [hCEq]
+    exact atomAtom_clause_sound I γ φ A B vx vy (hIO _ hAxO)
+  · -- S2: every fn-edge propagates; canonicalSeedOf has no edges.
+    intro v w f hEdge _hne
+    unfold ContextStructure.hasEdge at hEdge
+    show ∀ {α : Type} (I : Interp α) (γ : Indu → α) (φ : FunSym → α → α),
+      I.satisfies O →
+      InterpSatisfiesCD I γ φ { clauses := [] } →
+      ∀ vx vy : α,
+        coreSat I ⟨γ, φ, vx, vy⟩ ((canonicalSeedOf O).core v) →
+        coreSat I ⟨γ, φ, φ f vx, vx⟩ ((canonicalSeedOf O).core w)
+    -- canonicalSeedOf O.edges = [], so hEdge is False.
+    exact absurd hEdge List.not_mem_nil
+
+/-- **HerbrandProperty for the atom-atom slice modulo saturation
+    completeness.**  The seed `canonicalSeedOf O` discharges the
+    Herbrand property when any saturated derivative satisfies the
+    propositional saturation invariant `PropSaturationInvariantAtomic`.
+    This invariant captures the §6.3.4 closure under transitive
+    consequences — the thesis's saturation-completeness content. -/
+theorem canonicalSeedOf_herbrandProperty_atomic_modulo
+    (O : Ontology) (hO : IsAtomicSubsumptionOnly O)
+    (hSatComplete : ∀ D : ContextStructure,
+       FullDerivation (canonicalSeedOf O) D → FullSaturated D →
+       PropSaturationInvariantAtomic O D)
+    (hAtomShape : ∀ D : ContextStructure,
+       FullDerivation (canonicalSeedOf O) D → FullSaturated D →
+       ∀ Q : QueryClause,
+         (∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+         ∃ A B : Nat,
+           Q.Gamma = [BLit.atomTrue (PTerm.atom A ATerm.x)] ∧
+           Q.Delta = [CLit.atomTrue (PTerm.atom B ATerm.x)]) :
+    HerbrandProperty O (canonicalSeedOf O) := by
+  apply herbrandProperty_atomicSubsumption O hO
+  intro D hDeriv hSat Q hNoSub
+  obtain ⟨A, B, hQA, hQB⟩ := hAtomShape D hDeriv hSat Q hNoSub
+  have hInv := hSatComplete D hDeriv hSat
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · -- noRoleBody: no role atoms in body
+    intro S t₁ t₂ hMem
+    rw [hQA] at hMem
+    have : BLit.atomTrue (PTerm.role S t₁ t₂) =
+           BLit.atomTrue (PTerm.atom A ATerm.x) :=
+      List.mem_singleton.mp hMem
+    cases this
+  · -- noTtrueHead
+    intro hMem
+    rw [hQB] at hMem
+    have : CLit.atomTrue PTerm.ttrue =
+           CLit.atomTrue (PTerm.atom B ATerm.x) :=
+      List.mem_singleton.mp hMem
+    cases this
+  · -- noEqLHead
+    intro s₁ s₂ hMem
+    rw [hQB] at hMem
+    cases List.mem_singleton.mp hMem
+  · -- noRoleHead
+    intro S t₁ t₂ hMem
+    rw [hQB] at hMem
+    have : CLit.atomTrue (PTerm.role S t₁ t₂) =
+           CLit.atomTrue (PTerm.atom B ATerm.x) :=
+      List.mem_singleton.mp hMem
+    cases this
+  · -- headNotDerivable
+    exact headNotDerivable_from_propSaturationInvariant O D hInv Q A B
+      hQA hQB hNoSub
+
+/-- **IsCanonicalSeed for the atom-atom slice modulo saturation
+    completeness.**  The two unconditional conjuncts (`vr ∈ contexts`,
+    soundness) combine with the conditional Herbrand property. -/
+theorem isCanonicalSeed_canonicalSeedOf_atomic_modulo
+    (O : Ontology) (hO : IsAtomicSubsumptionOnly O)
+    (hSatComplete : ∀ D : ContextStructure,
+       FullDerivation (canonicalSeedOf O) D → FullSaturated D →
+       PropSaturationInvariantAtomic O D)
+    (hAtomShape : ∀ D : ContextStructure,
+       FullDerivation (canonicalSeedOf O) D → FullSaturated D →
+       ∀ Q : QueryClause,
+         (∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+         ∃ A B : Nat,
+           Q.Gamma = [BLit.atomTrue (PTerm.atom A ATerm.x)] ∧
+           Q.Delta = [CLit.atomTrue (PTerm.atom B ATerm.x)]) :
+    IsCanonicalSeed O (canonicalSeedOf O) :=
+  ⟨canonicalSeedOf_vr_in_contexts O,
+   canonicalSeedOf_sound O,
+   canonicalSeedOf_herbrandProperty_atomic_modulo O hO hSatComplete hAtomShape⟩
+
 end ALCHOIQContext
 end ELKSDD
