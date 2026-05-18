@@ -857,6 +857,17 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_disj_conjOfAtoms
 
 -- ============================================================
+-- §TREE: first universal-RHS coverage — (top, ∀R.atom B) axioms.
+-- Universal-propagation through tree successors: when `ax` produces
+-- role R and `(top, ∀R.atom B) ∈ O`, atom B is added to the
+-- successor's initial-atom set.
+-- ============================================================
+#print axioms ALCHOIQContext.axiomTriggersRole
+#print axioms ALCHOIQContext.universalPropagatedAtoms
+#print axioms ALCHOIQContext.axiomTriggersRoleAtom_imp_axiomTriggersRole
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_top_univ_atom
+
+-- ============================================================
 -- §TREE SATISFIES O composition.   Single satisfaction theorem
 -- assembled by dispatching per-axiom to the tree-Herbrand lemmas.
 -- ============================================================
