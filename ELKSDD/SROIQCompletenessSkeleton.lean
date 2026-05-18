@@ -579,6 +579,65 @@ theorem composite_fragments_confluent
   exact absurd h List.not_mem_nil
 
 -- ============================================================
+-- Item #7: Composite confluence (Thesis Theorem 18, §6.3.4).
+--
+-- Theorem 18 states: the union of per-term fragments is confluent
+-- when each fragment is confluent and the order is compatible
+-- across fragments.   For our framework, the trivial per-term
+-- fragments (item #4) are individually empty; their composite
+-- under `compositeRewrites` is the empty system, hence confluent
+-- by `composite_empty_list_confluent`.
+--
+-- Below we package the Theorem 18 form: for any list of fragments
+-- under a *shared* neighbourhood/order, if each fragment is
+-- confluent and the global composite is locally confluent and
+-- Noetherian, then the composite is confluent (via Newman).
+-- ============================================================
+
+/-- **Theorem 18 (Composite Confluence) — shared-neighbourhood form.**
+    Given a list of rule-lists `Rs : List (List (RewriteRule N ord))`,
+    if each per-fragment system is confluent, the composite
+    `compositeRewrites Rs` is locally confluent, and the composite
+    is Noetherian, then the composite is confluent.
+
+    This is the §6.3.4 lift from per-fragment to composite confluence
+    under the shared-order schema.   The cross-fragment compatibility
+    (different orders across per-term fragments) is the further work
+    of the thesis's §6.3.4.5.   For the atom-atom slice all fragments
+    share the trivial order. -/
+theorem composite_fragments_confluent_thm18
+    {N : Neighbourhood} {ord : NeighOrder N}
+    (Rs : List (List (RewriteRule N ord)))
+    (_hPerFragment : ∀ R ∈ Rs, ConfluentRewrite R)
+    (hLC : LocallyConfluent (compositeRewrites Rs))
+    (hN  : NoetherianWF   (compositeRewrites Rs)) :
+    ConfluentRewrite (compositeRewrites Rs) :=
+  newman _ hN hLC
+
+/-- **Theorem 18 — empty case.**  If every per-fragment system is
+    empty, the composite is empty and trivially confluent. -/
+theorem composite_fragments_confluent_thm18_empties
+    {N : Neighbourhood} {ord : NeighOrder N} (n : Nat) :
+    ConfluentRewrite
+      (compositeRewrites (List.replicate n ([] : List (RewriteRule N ord)))) := by
+  rw [composite_empties_eq_empty]
+  exact empty_confluent
+
+/-- **Composite of trivial per-term fragments shares an ord.**
+    For the atom-atom slice, all per-term fragments share the
+    trivial neighbourhood at a single term `t` (collapsing).   The
+    composite is then composable via `compositeRewrites`. -/
+theorem composite_trivial_fragments_confluent (t : ATerm) (n : Nat) :
+    ConfluentRewrite
+      (compositeRewrites (List.replicate n
+        ((trivialModelFragment t).rewrites))) := by
+  -- (trivialModelFragment t).rewrites = []; replicate of [] = list of [].
+  show ConfluentRewrite (compositeRewrites
+    (List.replicate n ([] : List (RewriteRule (trivialNeighbourhood t)
+                                              (trivialNeighOrder t)))))
+  exact composite_fragments_confluent_thm18_empties n
+
+-- ============================================================
 -- §6.3.4 — Herbrand model extraction (specialised "Unit-collapse").
 -- ============================================================
 

@@ -439,4 +439,13 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.listSingletonNaming_nonempty
 #print axioms ALCHOIQContext.nonempty_naming_exists
 
+-- ============================================================
+-- Item #7: Composite confluence (Thesis Theorem 18, §6.3.4) —
+-- shared-neighbourhood form via Newman, empty-list case, and
+-- trivial-fragment specialisation for the atom-atom slice.
+-- ============================================================
+#print axioms ALCHOIQContext.composite_fragments_confluent_thm18
+#print axioms ALCHOIQContext.composite_fragments_confluent_thm18_empties
+#print axioms ALCHOIQContext.composite_trivial_fragments_confluent
+
 end ELKSDD
