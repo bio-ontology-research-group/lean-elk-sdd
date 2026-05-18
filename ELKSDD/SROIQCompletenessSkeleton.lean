@@ -8570,5 +8570,62 @@ theorem isCanonicalSeed_canonicalSeedOfFull_partial
    canonicalSeedOfFull_sound O,
    canonicalSeedOfFull_herbrand_property_unifiedSlice O rbox hSlice⟩
 
+-- ============================================================
+-- §UNCONDITIONAL THEOREM (modulo the §6.3.4 saturation-
+-- completeness gap).
+--
+-- The literal unconditional theorem statement `∀ O,
+-- IsCanonicalSeed O (canonicalSeedOfFull O)` is decomposed into:
+--   (i) the two unconditional conjuncts (vr ∈ contexts, sound),
+--   (ii) the HerbrandProperty conjunct via classical case
+--        analysis on `entailsQuery O Q`:
+--        - Entailed case: discharged by the
+--          `saturation_completeness` hypothesis.
+--        - Not-entailed case: directly extracts the counter-model
+--          from `¬ entailsQuery O Q` via `push_neg`.
+--
+-- The `saturation_completeness` hypothesis IS the substantive
+-- §6.3.4 obligation that requires multi-session formalisation
+-- (Tena-Cucala 2021 Theorem 2 saturation completeness).   When
+-- discharged, `unconditional_IsCanonicalSeed` becomes the literal
+-- unconditional theorem `∀ O, IsCanonicalSeed O (canonicalSeedOfFull O)`.
+-- ============================================================
+
+/-- **THE UNCONDITIONAL THEOREM, modulo the saturation-completeness gap.**
+    Given a proof of saturation completeness (the substantive
+    Tena-Cucala §6.3.4 obligation), every ontology `O` satisfies
+    `IsCanonicalSeed O (canonicalSeedOfFull O)` unconditionally.
+    The hypothesis precisely isolates the multi-session research
+    gap; the rest of the proof is purely classical case analysis. -/
+theorem unconditional_IsCanonicalSeed_modulo_completeness
+    (saturation_completeness :
+      ∀ (O : Ontology) (D : ContextStructure),
+        FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+        ∀ (Q : QueryClause),
+          entailsQuery O Q →
+          ∃ c ∈ D.S D.vr,
+            subsumes c {body := Q.Gamma, head := Q.Delta})
+    (O : Ontology) :
+    IsCanonicalSeed O (canonicalSeedOfFull O) := by
+  refine ⟨canonicalSeedOfFull_vr_in_contexts O,
+          canonicalSeedOfFull_sound O, ?_⟩
+  -- HerbrandProperty O (canonicalSeedOfFull O)
+  intro D hDeriv hSat Q hNoSub
+  classical
+  by_cases hEnt : entailsQuery O Q
+  · -- Entailed: by saturation_completeness, Q is subsumed —
+    -- contradicts hNoSub.
+    exfalso
+    obtain ⟨c, hcMem, hcSub⟩ :=
+      saturation_completeness O D hDeriv hSat Q hEnt
+    exact hNoSub c hcMem hcSub
+  · -- Not entailed: ¬ entailsQuery O Q expands to existence of a
+    -- counter-model.   Extract α, I, γ, φ, vx, vy and construct
+    -- the HerbrandProperty witness.
+    unfold entailsQuery at hEnt
+    push_neg at hEnt
+    obtain ⟨α, I, γ, φ, hSatO, vx, vy, hNotEval⟩ := hEnt
+    exact ⟨α, ⟨vx⟩, I, γ, φ, vx, vy, hSatO, hNotEval⟩
+
 end ALCHOIQContext
 end ELKSDD

@@ -991,4 +991,20 @@ namespace ELKSDD
 -- ============================================================
 #print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOfFull_partial
 
+-- ============================================================
+-- §UNCONDITIONAL THEOREM (modulo §6.3.4 saturation-completeness).
+-- Structurally decomposes the literal `∀ O, IsCanonicalSeed O
+-- (canonicalSeedOfFull O)` into:
+--   - two unconditional conjuncts (vr ∈ contexts + sound), plus
+--   - the HerbrandProperty conjunct decomposed by classical case
+--     analysis on `entailsQuery O Q`:
+--       * Entailed case → discharged by the
+--         saturation_completeness hypothesis.
+--       * Not-entailed case → directly extracts the counter-model
+--         from ¬ entailsQuery via push_neg.
+-- The `saturation_completeness` hypothesis IS the multi-session
+-- §6.3.4 Tena-Cucala obligation.
+-- ============================================================
+#print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_modulo_completeness
+
 end ELKSDD
