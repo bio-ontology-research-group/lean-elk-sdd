@@ -5090,10 +5090,14 @@ theorem the_el_plus_vacuous_plus_compatible_rbox_slice
 -- conj-atom, exist-LHS, univ-RHS, top-RHS).
 -- ============================================================
 
-/-- **A concept that evaluates to False everywhere in the
-    empty-role Unit Herbrand.**  Structurally recursive: closed
-    under conjunction (either conjunct False ⇒ conj False) and
-    disjunction (both disjuncts False ⇒ disj False). -/
+-- **Mutually recursive Herbrand-vacuous classification.**
+--   `HerbrandFalseLHS C` ⇒ `C` evaluates to `False` everywhere.
+--   `HerbrandTrueRHS  D` ⇒ `D` evaluates to `True`  everywhere.
+-- Closed under De Morgan-style rules:
+--   conj False if either conjunct False, True if both conjuncts True;
+--   disj False if both  disjuncts  False, True if either disjunct  True;
+--   neg  False if argument True, True if argument False.
+mutual
 def HerbrandFalseLHS : ALCHOQ.Concept → Prop
   | ALCHOQ.Concept.bot         => True
   | ALCHOQ.Concept.exist _ _   => True
@@ -5101,13 +5105,9 @@ def HerbrandFalseLHS : ALCHOQ.Concept → Prop
   | ALCHOQ.Concept.atLeast (_ + 1) _ _ => True
   | ALCHOQ.Concept.conj C₁ C₂  => HerbrandFalseLHS C₁ ∨ HerbrandFalseLHS C₂
   | ALCHOQ.Concept.disj C₁ C₂  => HerbrandFalseLHS C₁ ∧ HerbrandFalseLHS C₂
+  | ALCHOQ.Concept.neg C       => HerbrandTrueRHS C
   | _                          => False
 
-/-- **A concept that evaluates to True everywhere in the
-    empty-role Unit Herbrand with single-element domain.**
-    Structurally recursive: closed under conjunction (both conjuncts
-    True ⇒ conj True) and disjunction (either disjunct True ⇒ disj
-    True). -/
 def HerbrandTrueRHS : ALCHOQ.Concept → Prop
   | ALCHOQ.Concept.top         => True
   | ALCHOQ.Concept.univ _ _    => True
@@ -5116,104 +5116,134 @@ def HerbrandTrueRHS : ALCHOQ.Concept → Prop
   | ALCHOQ.Concept.nom _       => True
   | ALCHOQ.Concept.conj D₁ D₂  => HerbrandTrueRHS D₁ ∧ HerbrandTrueRHS D₂
   | ALCHOQ.Concept.disj D₁ D₂  => HerbrandTrueRHS D₁ ∨ HerbrandTrueRHS D₂
+  | ALCHOQ.Concept.neg D       => HerbrandFalseLHS D
   | _                          => False
+end
 
-/-- **`elHerbrandInterp` falsifies any `HerbrandFalseLHS` concept.**
-    Proof by structural induction on the concept, with hypothesis
-    generalized so the inductive hypothesis applies to subconcepts. -/
-theorem elHerbrandInterp_falsifies
-    (O : Ontology) (Q : QueryClause)
-    (C : ALCHOQ.Concept) (hC : HerbrandFalseLHS C) (x : Unit) :
-    ¬ (elHerbrandInterp O Q).eval C x := by
+/-- **Combined Herbrand-falsifies / Herbrand-trivialises lemma.**
+    Proved simultaneously by structural induction on the concept so
+    the mutually recursive `neg` cases of `HerbrandFalseLHS` /
+    `HerbrandTrueRHS` can each appeal to the other branch via the
+    inductive hypothesis for the same subconcept. -/
+theorem elHerbrandInterp_falseLHS_trueRHS_aux
+    (O : Ontology) (Q : QueryClause) (C : ALCHOQ.Concept) :
+    (HerbrandFalseLHS C → ∀ x : Unit, ¬ (elHerbrandInterp O Q).eval C x) ∧
+    (HerbrandTrueRHS  C → ∀ x : Unit,    (elHerbrandInterp O Q).eval C x) := by
   induction C with
-  | atom _ => exact absurd hC (fun h => h)
-  | top => exact absurd hC (fun h => h)
-  | bot => intro hEval; exact hEval
-  | nom _ => exact absurd hC (fun h => h)
-  | neg _ _ => exact absurd hC (fun h => h)
-  | conj C₁ C₂ ih₁ ih₂ =>
-    intro hEval
-    have hConj : HerbrandFalseLHS C₁ ∨ HerbrandFalseLHS C₂ := hC
-    rcases hConj with h1 | h2
-    · exact ih₁ h1 hEval.1
-    · exact ih₂ h2 hEval.2
-  | disj C₁ C₂ ih₁ ih₂ =>
-    intro hEval
-    have hDisj : HerbrandFalseLHS C₁ ∧ HerbrandFalseLHS C₂ := hC
-    rcases hEval with hE1 | hE2
-    · exact ih₁ hDisj.1 hE1
-    · exact ih₂ hDisj.2 hE2
-  | exist R _ _ =>
-    intro hEval
-    obtain ⟨y, hRxy, _⟩ := hEval
-    exact absurd hRxy (elHerbrandInterp_ext_role_false O Q R x y)
-  | univ _ _ _ => exact absurd hC (fun h => h)
-  | atLeast n R C' _ =>
-    cases n with
-    | zero => exact absurd hC (fun h => h)
-    | succ n' =>
-      intro hEval
-      have hAt : ALCHOQ.Interp.atLeastCard
-               (fun y => (elHerbrandInterp O Q).ext_role R x y ∧
-                         (elHerbrandInterp O Q).eval C' y) (n' + 1) := hEval
-      unfold ALCHOQ.Interp.atLeastCard at hAt
-      obtain ⟨y, ⟨hRxy, _⟩, _⟩ := hAt
-      exact absurd hRxy (elHerbrandInterp_ext_role_false O Q R x y)
-  | atMost _ _ _ _ => exact absurd hC (fun h => h)
-  | hasSelf R =>
-    intro hEval
-    exact absurd hEval (elHerbrandInterp_ext_role_false O Q R x x)
-
-/-- **`elHerbrandInterp` satisfies (eval-to-True) any `HerbrandTrueRHS`
-    concept.**  Proof by structural induction; conjunction recurses
-    on both children, disjunction recurses on whichever child is
-    `HerbrandTrueRHS`. -/
-theorem elHerbrandInterp_trivialises
-    (O : Ontology) (Q : QueryClause)
-    (D : ALCHOQ.Concept) (hD : HerbrandTrueRHS D) (x : Unit) :
-    (elHerbrandInterp O Q).eval D x := by
-  induction D with
-  | atom _ => exact absurd hD (fun h => h)
-  | top => trivial
-  | bot => exact absurd hD (fun h => h)
+  | atom _ =>
+    refine ⟨?_, ?_⟩
+    · intro h; exact absurd h (fun h => h)
+    · intro h; exact absurd h (fun h => h)
+  | top =>
+    refine ⟨?_, ?_⟩
+    · intro h; exact absurd h (fun h => h)
+    · intro _ _; trivial
+  | bot =>
+    refine ⟨?_, ?_⟩
+    · intro _ _ hEval; exact hEval
+    · intro h; exact absurd h (fun h => h)
   | nom i =>
-    show x = (elHerbrandInterp O Q).ext_ind i
-    -- Both x : Unit and ext_ind i : Unit are (), so equal.
-    cases x; rfl
-  | neg _ _ => exact absurd hD (fun h => h)
-  | conj D₁ D₂ ih₁ ih₂ =>
-    have hConj : HerbrandTrueRHS D₁ ∧ HerbrandTrueRHS D₂ := hD
-    exact ⟨ih₁ hConj.1, ih₂ hConj.2⟩
-  | disj D₁ D₂ ih₁ ih₂ =>
-    have hDisj : HerbrandTrueRHS D₁ ∨ HerbrandTrueRHS D₂ := hD
-    rcases hDisj with h1 | h2
-    · exact Or.inl (ih₁ h1)
-    · exact Or.inr (ih₂ h2)
-  | exist _ _ _ => exact absurd hD (fun h => h)
+    refine ⟨?_, ?_⟩
+    · intro h; exact absurd h (fun h => h)
+    · intro _ x
+      show x = (elHerbrandInterp O Q).ext_ind i
+      cases x; rfl
+  | neg C' ih =>
+    refine ⟨?_, ?_⟩
+    · -- HerbrandFalseLHS (neg C') = HerbrandTrueRHS C'.
+      intro h x hEval
+      -- hEval : ¬ (elHerbrandInterp O Q).eval C' x
+      exact hEval (ih.2 h x)
+    · -- HerbrandTrueRHS (neg C') = HerbrandFalseLHS C'.
+      intro h x
+      -- Goal: ¬ (elHerbrandInterp O Q).eval C' x
+      exact ih.1 h x
+  | conj C₁ C₂ ih₁ ih₂ =>
+    refine ⟨?_, ?_⟩
+    · intro h x hEval
+      have hConj : HerbrandFalseLHS C₁ ∨ HerbrandFalseLHS C₂ := h
+      rcases hConj with h1 | h2
+      · exact ih₁.1 h1 x hEval.1
+      · exact ih₂.1 h2 x hEval.2
+    · intro h x
+      have hConj : HerbrandTrueRHS C₁ ∧ HerbrandTrueRHS C₂ := h
+      exact ⟨ih₁.2 hConj.1 x, ih₂.2 hConj.2 x⟩
+  | disj C₁ C₂ ih₁ ih₂ =>
+    refine ⟨?_, ?_⟩
+    · intro h x hEval
+      have hDisj : HerbrandFalseLHS C₁ ∧ HerbrandFalseLHS C₂ := h
+      rcases hEval with hE1 | hE2
+      · exact ih₁.1 hDisj.1 x hE1
+      · exact ih₂.1 hDisj.2 x hE2
+    · intro h x
+      have hDisj : HerbrandTrueRHS C₁ ∨ HerbrandTrueRHS C₂ := h
+      rcases hDisj with h1 | h2
+      · exact Or.inl (ih₁.2 h1 x)
+      · exact Or.inr (ih₂.2 h2 x)
+  | exist R _ _ =>
+    refine ⟨?_, ?_⟩
+    · intro _ x hEval
+      obtain ⟨y, hRxy, _⟩ := hEval
+      exact absurd hRxy (elHerbrandInterp_ext_role_false O Q R x y)
+    · intro h; exact absurd h (fun h => h)
   | univ R _ _ =>
-    intro y hRxy
-    exact absurd hRxy (elHerbrandInterp_ext_role_false O Q R x y)
+    refine ⟨?_, ?_⟩
+    · intro h; exact absurd h (fun h => h)
+    · intro _ x y hRxy
+      exact absurd hRxy (elHerbrandInterp_ext_role_false O Q R x y)
   | atLeast n R C' _ =>
     cases n with
     | zero =>
-      show ALCHOQ.Interp.atLeastCard
-        (fun y => (elHerbrandInterp O Q).ext_role R x y ∧
-                  (elHerbrandInterp O Q).eval C' y) 0
-      unfold ALCHOQ.Interp.atLeastCard
-      trivial
-    | succ _ => exact absurd hD (fun h => h)
+      refine ⟨?_, ?_⟩
+      · intro h; exact absurd h (fun h => h)
+      · intro _ x
+        show ALCHOQ.Interp.atLeastCard
+          (fun y => (elHerbrandInterp O Q).ext_role R x y ∧
+                    (elHerbrandInterp O Q).eval C' y) 0
+        unfold ALCHOQ.Interp.atLeastCard
+        trivial
+    | succ n' =>
+      refine ⟨?_, ?_⟩
+      · intro _ x hEval
+        have hAt : ALCHOQ.Interp.atLeastCard
+                 (fun y => (elHerbrandInterp O Q).ext_role R x y ∧
+                           (elHerbrandInterp O Q).eval C' y) (n' + 1) := hEval
+        unfold ALCHOQ.Interp.atLeastCard at hAt
+        obtain ⟨y, ⟨hRxy, _⟩, _⟩ := hAt
+        exact absurd hRxy (elHerbrandInterp_ext_role_false O Q R x y)
+      · intro h; exact absurd h (fun h => h)
   | atMost n R C' _ =>
-    -- atMost n = ¬ atLeastCard (n+1).  With empty role,
-    -- atLeastCard (n+1) requires a witness y with ext_role R x y;
-    -- impossible, so ¬ holds vacuously.
-    show ALCHOQ.Interp.atMostCard
-      (fun y => (elHerbrandInterp O Q).ext_role R x y ∧
-                (elHerbrandInterp O Q).eval C' y) n
-    intro hAtLeast
-    unfold ALCHOQ.Interp.atLeastCard at hAtLeast
-    obtain ⟨y, ⟨hRxy, _⟩, _⟩ := hAtLeast
-    exact absurd hRxy (elHerbrandInterp_ext_role_false O Q R x y)
-  | hasSelf _ => exact absurd hD (fun h => h)
+    refine ⟨?_, ?_⟩
+    · intro h; exact absurd h (fun h => h)
+    · intro _ x
+      show ALCHOQ.Interp.atMostCard
+        (fun y => (elHerbrandInterp O Q).ext_role R x y ∧
+                  (elHerbrandInterp O Q).eval C' y) n
+      intro hAtLeast
+      unfold ALCHOQ.Interp.atLeastCard at hAtLeast
+      obtain ⟨y, ⟨hRxy, _⟩, _⟩ := hAtLeast
+      exact absurd hRxy (elHerbrandInterp_ext_role_false O Q R x y)
+  | hasSelf R =>
+    refine ⟨?_, ?_⟩
+    · intro _ x hEval
+      exact absurd hEval (elHerbrandInterp_ext_role_false O Q R x x)
+    · intro h; exact absurd h (fun h => h)
+
+/-- **`elHerbrandInterp` falsifies any `HerbrandFalseLHS` concept.**
+    Public-facing projection of `elHerbrandInterp_falseLHS_trueRHS_aux`. -/
+theorem elHerbrandInterp_falsifies
+    (O : Ontology) (Q : QueryClause)
+    (C : ALCHOQ.Concept) (hC : HerbrandFalseLHS C) (x : Unit) :
+    ¬ (elHerbrandInterp O Q).eval C x :=
+  (elHerbrandInterp_falseLHS_trueRHS_aux O Q C).1 hC x
+
+/-- **`elHerbrandInterp` satisfies any `HerbrandTrueRHS` concept.**
+    Public-facing projection of `elHerbrandInterp_falseLHS_trueRHS_aux`. -/
+theorem elHerbrandInterp_trivialises
+    (O : Ontology) (Q : QueryClause)
+    (D : ALCHOQ.Concept) (hD : HerbrandTrueRHS D) (x : Unit) :
+    (elHerbrandInterp O Q).eval D x :=
+  (elHerbrandInterp_falseLHS_trueRHS_aux O Q D).2 hD x
 
 /-- **Maximal Herbrand-friendly ontology shape.**  Strict extension
     of `IsELOrVacuousOnly`. -/

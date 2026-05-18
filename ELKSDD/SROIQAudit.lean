@@ -690,6 +690,7 @@ namespace ELKSDD
 -- ============================================================
 #print axioms ALCHOIQContext.HerbrandFalseLHS
 #print axioms ALCHOIQContext.HerbrandTrueRHS
+#print axioms ALCHOIQContext.elHerbrandInterp_falseLHS_trueRHS_aux
 #print axioms ALCHOIQContext.elHerbrandInterp_falsifies
 #print axioms ALCHOIQContext.elHerbrandInterp_trivialises
 #print axioms ALCHOIQContext.IsELOrAllVacuousOnly
