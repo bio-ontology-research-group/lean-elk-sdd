@@ -708,8 +708,8 @@ def SaturationTerminates (O : Ontology) (D_seed : ContextStructure) : Prop :=
   ∃ Λ : Nat, ∀ D : ContextStructure,
     FullDerivation D_seed D → CClausesBounded D Λ
 
--- Note: `emptySeed_saturationTerminates` is stated below, after
--- `fullSaturated_emptyContextStructure` is in scope.
+-- Note: `emptySeed_saturationTerminates` and the item #9 normalisation
+-- block are stated below, after their dependencies are in scope.
 
 -- ============================================================
 -- §6.3.4 — Herbrand model extraction (specialised "Unit-collapse").
@@ -1752,6 +1752,81 @@ theorem emptySeed_saturationTerminates (_O : Ontology) :
   | refl _ => exact emptyContextStructure_CClausesBounded 0
   | step hStep _ =>
     exact absurd hStep (fullSaturated_emptyContextStructure _ _)
+
+-- ============================================================
+-- Item #9: Concept → QueryClause normalisation + Bridge.
+--
+-- The thesis §6.2 normalisation maps a description-logic concept
+-- inclusion `C ⊑ D` to an equisatisfiable QueryClause such that
+-- `O ⊨ C ⊑ D` iff the QueryClause is entailed by `O`.
+--
+-- For the atom-atom slice of SROIQ, the normalisation is the
+-- identity: `atom A ⊑ atom B` becomes the canonical query
+-- `{atomTrue (atom A x)} → {atomTrue (atom B x)}`.   The Bridge
+-- gives the iff between QueryClause entailment and the
+-- DL-level subsumption statement.
+-- ============================================================
+
+/-- **Atom-subsumption query**: the canonical QueryClause for
+    `atom A ⊑ atom B`. -/
+def atomSubsumptionQuery (A B : Nat) : QueryClause :=
+  { Gamma := [BLit.atomTrue (PTerm.atom A ATerm.x)]
+  , Delta := [CLit.atomTrue (PTerm.atom B ATerm.x)] }
+
+/-- The atom-subsumption query and `atomAtomSubsumptionClause` carry
+    identical body/head data — the two views (QueryClause vs CClause)
+    on the same atom-atom subsumption. -/
+theorem atomSubsumptionQuery_eq_atomAtomSubsumptionClause (A B : Nat) :
+    ({body := (atomSubsumptionQuery A B).Gamma,
+      head := (atomSubsumptionQuery A B).Delta} : CClause) =
+    atomAtomSubsumptionClause A B := rfl
+
+/-- **Bridge: semantic-entailment of the atom-subsumption query**
+    is equivalent to the DL statement `O ⊨ atom A ⊑ atom B`. -/
+theorem entailsQuery_atomSubsumption (O : Ontology) (A B : Nat) :
+    entailsQuery O (atomSubsumptionQuery A B) ↔
+    (∀ {α : Type} (I : Interp α), I.satisfies O →
+       ∀ x : α, I.ext_concept A x → I.ext_concept B x) := by
+  constructor
+  · intro hEnt α I hSat x hAx
+    have hQ := hEnt I (fun _ => x) (fun _ a => a) hSat x x
+    have hBody : ∀ b ∈ (atomSubsumptionQuery A B).Gamma,
+                 BLit.eval I ⟨fun _ => x, fun _ a => a, x, x⟩ b := by
+      intro b hb
+      rcases List.mem_singleton.mp hb with rfl
+      -- BLit.eval ... (atomTrue (atom A x)) = PTerm.eval ... = ext_concept A x.
+      change I.ext_concept A x
+      exact hAx
+    obtain ⟨h, hMem, hEval⟩ := hQ hBody
+    rcases List.mem_singleton.mp hMem with rfl
+    -- hEval : CLit.eval ... (atomTrue (atom B x)) = PTerm.eval ... = ext_concept B x.
+    exact hEval
+  · intro hSem α I γ φ hSat vx _vy hBody
+    have hAxBody : BLit.atomTrue (PTerm.atom A ATerm.x) ∈
+                   (atomSubsumptionQuery A B).Gamma :=
+      List.mem_singleton.mpr rfl
+    have hAxEval : I.ext_concept A vx := hBody _ hAxBody
+    have hBx : I.ext_concept B vx := hSem I hSat vx hAxEval
+    refine ⟨CLit.atomTrue (PTerm.atom B ATerm.x), ?_, ?_⟩
+    · exact List.mem_singleton.mpr rfl
+    · exact hBx
+
+/-- **Normalisation of a single axiom into a QueryClause** (atom-atom
+    slice).   Given `(atom A, atom B) ∈ O`, the normalised query is
+    `atomSubsumptionQuery A B`. -/
+def axiomToQuery (axR : ALCHOQ.Concept × ALCHOQ.Concept) :
+    Option QueryClause :=
+  match axR with
+  | (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) => some (atomSubsumptionQuery A B)
+  | _ => none
+
+/-- For atom-atom-only ontologies, `axiomToQuery` always produces
+    `some` value. -/
+theorem axiomToQuery_some_of_atomic (O : Ontology) (hO : IsAtomicSubsumptionOnly O)
+    (ax : ALCHOQ.Concept × ALCHOQ.Concept) (hax : ax ∈ O) :
+    ∃ A B : Nat, axiomToQuery ax = some (atomSubsumptionQuery A B) := by
+  obtain ⟨A, B, rfl⟩ := hO ax hax
+  exact ⟨A, B, rfl⟩
 
 end ALCHOIQContext
 end ELKSDD

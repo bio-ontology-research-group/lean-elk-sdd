@@ -465,4 +465,14 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.SaturationTerminates
 #print axioms ALCHOIQContext.emptySeed_saturationTerminates
 
+-- ============================================================
+-- Item #9: Concept → QueryClause normalisation + Bridge (§6.2)
+-- — atom-atom slice with bidirectional iff to DL subsumption.
+-- ============================================================
+#print axioms ALCHOIQContext.atomSubsumptionQuery
+#print axioms ALCHOIQContext.atomSubsumptionQuery_eq_atomAtomSubsumptionClause
+#print axioms ALCHOIQContext.entailsQuery_atomSubsumption
+#print axioms ALCHOIQContext.axiomToQuery
+#print axioms ALCHOIQContext.axiomToQuery_some_of_atomic
+
 end ELKSDD
