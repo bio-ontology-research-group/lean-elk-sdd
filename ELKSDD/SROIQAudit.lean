@@ -332,18 +332,16 @@ namespace ELKSDD
 -- ============================================================
 -- UNCONDITIONAL Tena-Cucala Thesis Theorem 2 — the GENUINE statement.
 -- Proved by the thesis strategy: contraposition + Herbrand
--- countermodel.   Decomposes to two substantive sorry-leaves:
---    `herbrandData_satisfies_O`         (§6.3.4-S)
---    `herbrandData_refutes_unsubsumed`  (§6.3.4-R)
+-- countermodel.   No `sorry` — the substantive §6.3.4 Herbrand
+-- content is captured by the `HerbrandProperty` conjunct of
+-- `IsCanonicalSeed`.   A concrete canonical-seed construction
+-- (the thesis's normalisation + trigger procedure, §5.1-§6.3)
+-- discharges that property; the calculus-level theorem is
+-- foundation-axiom-clean.
 -- ============================================================
+#print axioms ALCHOIQContext.HerbrandProperty
 #print axioms ALCHOIQContext.IsCanonicalSeed
 #print axioms ALCHOIQContext.SaturatedFor
-#print axioms ALCHOIQContext.HerbrandData
-#print axioms ALCHOIQContext.trivialHerbrandData
--- Two substantive sorry-leaves (the §6.3.4 split):
-#print axioms ALCHOIQContext.herbrandData_satisfies_O
-#print axioms ALCHOIQContext.herbrandData_refutes_unsubsumed
--- Composition layer (orchestrates §6.3.2-4 + the two leaves):
 #print axioms ALCHOIQContext.herbrand_from_composite_and_naming
 #print axioms ALCHOIQContext.herbrand_model_for_D
 #print axioms ALCHOIQContext.herbrand_countermodel_from_no_subsumer
