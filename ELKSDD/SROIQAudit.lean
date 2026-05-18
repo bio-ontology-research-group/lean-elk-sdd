@@ -317,8 +317,9 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.tenacucala_completeness_thm2_specialized
 
 -- ============================================================
--- The UNRESTRICTED Tena-Cucala Theorem 2 (no hO, no hPR).
--- Proved by inductive preservation of the subsumption invariant.
+-- LEGACY: Q-seeded preservation form ("unrestricted" theorem with
+-- vacuous proof — does not use entailsQuery hypothesis).   Kept for
+-- documentation; honest name is `subsumer_preservation`.
 -- ============================================================
 #print axioms ALCHOIQContext.subsumes_refl
 #print axioms ALCHOIQContext.subsumes_trans
@@ -327,5 +328,26 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.fullStep_preserves_SubsumerInvariant
 #print axioms ALCHOIQContext.fullDeriv_preserves_SubsumerInvariant
 #print axioms ALCHOIQContext.tenacucala_completeness_thm2
+
+-- ============================================================
+-- UNCONDITIONAL Tena-Cucala Thesis Theorem 2 — the GENUINE statement.
+-- Proved by the thesis strategy: contraposition + Herbrand
+-- countermodel.   Decomposes to two substantive sorry-leaves:
+--    `herbrandData_satisfies_O`         (§6.3.4-S)
+--    `herbrandData_refutes_unsubsumed`  (§6.3.4-R)
+-- ============================================================
+#print axioms ALCHOIQContext.IsCanonicalSeed
+#print axioms ALCHOIQContext.SaturatedFor
+#print axioms ALCHOIQContext.HerbrandData
+#print axioms ALCHOIQContext.trivialHerbrandData
+-- Two substantive sorry-leaves (the §6.3.4 split):
+#print axioms ALCHOIQContext.herbrandData_satisfies_O
+#print axioms ALCHOIQContext.herbrandData_refutes_unsubsumed
+-- Composition layer (orchestrates §6.3.2-4 + the two leaves):
+#print axioms ALCHOIQContext.herbrand_from_composite_and_naming
+#print axioms ALCHOIQContext.herbrand_model_for_D
+#print axioms ALCHOIQContext.herbrand_countermodel_from_no_subsumer
+#print axioms ALCHOIQContext.tenacucala_thm2_via_contraposition
+#print axioms ALCHOIQContext.tenacucala_completeness_thm2_unconditional
 
 end ELKSDD
