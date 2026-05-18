@@ -448,4 +448,21 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.composite_fragments_confluent_thm18_empties
 #print axioms ALCHOIQContext.composite_trivial_fragments_confluent
 
+-- ============================================================
+-- Item #8: Saturation termination via aux-constant depth bound Λ
+-- (§5.4).   Depth measures on a-terms / p-terms / clauses,
+-- `CClausesBounded` invariant, `SaturationTerminates` predicate,
+-- and a vacuous discharge for the empty seed.
+-- ============================================================
+#print axioms ALCHOIQContext.aTermAuxDepth
+#print axioms ALCHOIQContext.pTermAuxDepth
+#print axioms ALCHOIQContext.aEqAuxDepth
+#print axioms ALCHOIQContext.bLitAuxDepth
+#print axioms ALCHOIQContext.cLitAuxDepth
+#print axioms ALCHOIQContext.cclauseAuxDepth
+#print axioms ALCHOIQContext.CClausesBounded
+#print axioms ALCHOIQContext.emptyContextStructure_CClausesBounded
+#print axioms ALCHOIQContext.SaturationTerminates
+#print axioms ALCHOIQContext.emptySeed_saturationTerminates
+
 end ELKSDD
