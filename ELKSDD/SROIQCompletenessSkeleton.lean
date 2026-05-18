@@ -2175,33 +2175,48 @@ theorem isCanonicalSeed_canonicalSeedOf_via_gap
   isCanonicalSeed_canonicalSeedOf_atomic_modulo O hO hGap.1 hGap.2
 
 -- ============================================================
--- §FINAL-GAP.  Remaining work for unconditional IsCanonicalSeed.
+-- §FINAL-GAP.  Theoretical obstacles to unconditional IsCanonicalSeed.
 --
--- The two hypotheses required by
--- `isCanonicalSeed_canonicalSeedOf_atomic_modulo`
--- (`hSatComplete` and `hAtomShape`) capture the substantive
--- remaining work — *not* discharged here:
+-- Beyond `CanonicalSaturationGap O` (the named hypothesis bundling
+-- the two outstanding obligations), two STRUCTURAL obstacles
+-- prevent a literal unconditional discharge:
 --
---   * `hSatComplete` requires a real saturation procedure deriving
---     transitive closure under the Join rule.   For finite atom-atom
---     O of length n, the closure has at most n² entries, but
---     computing it in Lean (with decidability of `ConceptDerivable`)
---     remains future work.   In addition, `PropSaturationInvariantAtomic`
---     universally quantifies over `(A, B) : Nat × Nat` — including
---     the reflexive case `B = A` via `ConceptDerivable.base` — so
---     the seed must contain a subsumer of every reflexive clause
---     `{A(x)} → {A(x)}`.   Since `A` ranges unboundedly, we cannot
---     enumerate such reflexives in the seed.   A refined invariant
---     restricting `(A, B)` to concepts actually referenced is
---     required.
+-- (1) Reflexive coverage over unbounded `Nat`.   The current
+--     `PropSaturationInvariantAtomic` universally quantifies over
+--     `(A, B) : Nat × Nat`.   `ConceptDerivable.base` gives
+--     `ConceptDerivable O (fun X => X = A) A` for *every* `A`.
+--     So the invariant requires a subsumer of `{A(x)} → {A(x)}`
+--     for every `A : Nat`.   A finite seed cannot enumerate these.
 --
---   * `hAtomShape` requires every unsubsumed Q to have atom-atom
---     shape.   For arbitrary Q this fails; removing the restriction
---     needs a Q-parameterised Herbrand model handling role literals,
---     compound heads, and propositional shapes beyond atom-atom.
+-- (2) Tautological Q over unbounded `Nat`.   `HerbrandProperty`
+--     asserts: every unsubsumed Q admits an O-model refuting it.
+--     For tautological Q (e.g., `{[A(x)], [A(x)]}` for any `A`),
+--     no model refutes it — so HerbrandProperty implicitly
+--     requires every tautological Q to be subsumed by S(D.vr).
+--     Same unboundedness obstacle as (1).
 --
--- These are flagged as the next concrete deliverables on the path
--- to the unconditional theorem.
+-- The thesis (Tena-Cucala 2021) implicitly assumes a finite
+-- signature (the concepts/roles actually used in `O`), which
+-- avoids these issues.   Discharging the gap unconditionally
+-- requires one of:
+--
+--   * A FINITE-SIGNATURE restriction on the framework
+--     (changing `Ontology`'s underlying types from `Nat` to a
+--     bounded set);
+--   * A Q-parameterised canonical seed
+--     (`canonicalSeedOf : Ontology → QueryClause → ContextStructure`),
+--     where the seed includes reflexives for Q's concepts;
+--   * A refined `PropSaturationInvariantAtomic` restricted to a
+--     fixed finite signature, together with a refined
+--     `HerbrandProperty` that excludes tautological Q.
+--
+-- Any of these is a substantial framework change.   We isolate
+-- the current state honestly: `canonicalSeedOf` and its two
+-- unconditional conjuncts (`vr ∈ contexts`, soundness) are
+-- foundation-axiom-clean; the third conjunct reduces to
+-- `CanonicalSaturationGap`, which captures the §6.3 thesis
+-- content and the framework-level signature restrictions
+-- described above.
 -- ============================================================
 
 end ALCHOIQContext
