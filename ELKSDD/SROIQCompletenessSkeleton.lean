@@ -5505,5 +5505,175 @@ theorem isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology_allVacuous
       (canonicalSeedELConjFromOntology O) :=
   isCanonicalSeedAtomConjDisj_ELOrAllVacuous (ontologyConceptSig O) O hO
 
+-- ============================================================
+-- §FINAL-FULL-VACUOUS+RBOX.  Extend the maximal slice to also
+-- enforce satisfaction of any RBox compatible with empty roles.
+-- This is the headline result for the fragment attainable without
+-- successor-context introduction.
+-- ============================================================
+
+/-- **HerbrandProperty + RBox compatibility for the maximally-Herbrand-
+    friendly TBox shape.**  Strengthens
+    `herbrandPropertyAtomConjDisj_ELOrAllVacuous` with the guarantee
+    that the counter-model also satisfies any compatible RBox.
+
+    The proof reuses `elHerbrandInterp_satisfies_O_aux_full` for the
+    TBox side (the maximal `IsELOrAllVacuousOnly` shape) and
+    `elHerbrandInterp_satisfies_compatible_rbox` for the RBox side.
+    The query refutation is identical to the no-RBox version. -/
+theorem herbrandPropertyAtomConjDisj_ELOrAllVacuous_withRBox
+    (sig : List Nat) (O : Ontology) (hO : IsELOrAllVacuousOnly O)
+    (rbox : SROIQ.RBox) (hRBox : RBoxCompatibleWithEmptyRoles rbox) :
+    ∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedELConj sig O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature sig Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩ := by
+  classical
+  intro D hDeriv _hSat Q hQsig hQAtom hNoSub
+  obtain ⟨hBodyShape, hHeadShape⟩ := hQAtom
+  refine ⟨Unit, ⟨()⟩, elHerbrandInterp O Q, atomicAssign.γ,
+          atomicAssign.φ, atomicAssign.vx, atomicAssign.vy, ?_, ?_, ?_⟩
+  · exact elHerbrandInterp_satisfies_O_aux_full sig O hO D hDeriv Q hQsig
+      ⟨hBodyShape, hHeadShape⟩ hNoSub
+  · exact elHerbrandInterp_satisfies_compatible_rbox O Q rbox hRBox
+  · intro hQEval
+    have hNoSubSeed :
+        ∀ c ∈ (canonicalSeedELConj sig O).S
+                (canonicalSeedELConj sig O).vr,
+          ¬ subsumes c {body := Q.Gamma, head := Q.Delta} := by
+      intro c hc hSub
+      have hSubInv : SubsumerInvariant Q (canonicalSeedELConj sig O) :=
+        ⟨canonicalSeedELConj_vr_in_contexts sig O, c, hc, hSub⟩
+      have hSubInvD := fullDeriv_preserves_SubsumerInvariant hDeriv Q hSubInv
+      obtain ⟨_, c', hc'In, hc'Sub⟩ := hSubInvD
+      exact hNoSub c' hc'In hc'Sub
+    have hBodyAtomsInGamma : ∀ A : Nat, queryBodyAtomConcepts Q A →
+        BLit.atomTrue (PTerm.atom A ATerm.x) ∈ Q.Gamma := by
+      intro A hA
+      obtain ⟨t, ht⟩ := hA
+      have ht_eq : t = ATerm.x :=
+        atomConjDisj_bodyTerm_is_x Q hBodyShape A t ht
+      subst ht_eq; exact ht
+    have hHeadNotDerivable_aux :
+        ∀ B t, CLit.atomTrue (PTerm.atom B t) ∈ Q.Delta →
+          ¬ ConceptDerivableEL O (queryBodyAtomConcepts Q) B := by
+      intro B t hMem hDer
+      have ht_eq : t = ATerm.x :=
+        atomConjDisj_headTerm_is_x Q hHeadShape B t hMem
+      subst ht_eq
+      have hB_sig : B ∈ sig := hQsig.2 B ATerm.x hMem
+      obtain ⟨S, hSinit, hSDer⟩ :=
+        conceptDerivableEL_multi_witness O _ hDer
+      have hS_sub_sig : ∀ A, A ∈ S → A ∈ sig := by
+        intro A hA
+        have hAinit := hSinit A hA
+        obtain ⟨tA, hAmem⟩ := hAinit
+        have htA_eq : tA = ATerm.x :=
+          atomConjDisj_bodyTerm_is_x Q hBodyShape A tA hAmem
+        subst htA_eq
+        exact hQsig.1 A ATerm.x hAmem
+      set L := sig.filter (fun X => decide (X ∈ S)) with hLdef
+      have hLsig : L ∈ sig.sublists := filter_mem_sublists sig (· ∈ S)
+      have hL_eq_S : ∀ A, A ∈ L ↔ A ∈ S := by
+        intro A
+        rw [hLdef]
+        rw [mem_filter_iff sig (· ∈ S)]
+        constructor
+        · exact fun ⟨_, h⟩ => h
+        · intro h; exact ⟨hS_sub_sig A h, h⟩
+      have hDerL : ConceptDerivableEL O (fun X => X ∈ L) B := by
+        apply conceptDerivableEL_mono O (fun X => X ∈ S) (fun X => X ∈ L)
+          _ hSDer
+        intro X hXS
+        exact (hL_eq_S X).mpr hXS
+      have hClauseIn :
+          multiBodyAtomClause L B ∈ (canonicalSeedELConj sig O).S
+                                     (canonicalSeedELConj sig O).vr :=
+        canonicalSeedELConj_subsumes_elDerivable sig O L hLsig B hB_sig hDerL
+      have hSubs :
+          subsumes (multiBodyAtomClause L B)
+                   { body := Q.Gamma, head := Q.Delta } := by
+        refine ⟨?_, ?_⟩
+        · intro b hb
+          rcases List.mem_map.mp hb with ⟨A, hA, rfl⟩
+          have hAinS : A ∈ S := (hL_eq_S A).mp hA
+          have hAinit := hSinit A hAinS
+          exact hBodyAtomsInGamma A hAinit
+        · intro hLit hLitMem
+          rcases List.mem_singleton.mp hLitMem with rfl
+          exact hMem
+      exact hNoSubSeed _ hClauseIn hSubs
+    have hNoRoleBody : ∀ S t₁ t₂, BLit.atomTrue (PTerm.role S t₁ t₂) ∉ Q.Gamma := by
+      intro S t₁ t₂ hMem
+      obtain ⟨A, hEq⟩ := hBodyShape _ hMem
+      exact (by cases hEq)
+    have hNoTtrueHead : CLit.atomTrue PTerm.ttrue ∉ Q.Delta := by
+      intro hMem
+      obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+      exact (by cases hEq)
+    have hNoEqLHead : ∀ s₁ s₂, CLit.aeq (AEq.eqL s₁ s₂) ∉ Q.Delta := by
+      intro s₁ s₂ hMem
+      obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+      exact (by cases hEq)
+    have hNoRoleHead : ∀ S t₁ t₂, CLit.atomTrue (PTerm.role S t₁ t₂) ∉ Q.Delta := by
+      intro S t₁ t₂ hMem
+      obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+      exact (by cases hEq)
+    have hBody := elHerbrandInterp_body_holds O Q hNoRoleBody
+    have hHead := elHerbrandInterp_head_fails O Q hNoTtrueHead
+      hNoEqLHead hNoRoleHead hHeadNotDerivable_aux
+    obtain ⟨hh, hMem, hEval⟩ := hQEval hBody
+    exact hHead hh hMem hEval
+
+/-- **HEADLINE THEOREM** for the maximal SROIQ slice attainable
+    without successor-context introduction.  Combines the maximal
+    TBox shape `IsELOrAllVacuousOnly` with any compatible RBox.
+
+    Total function over `(O, rbox)` satisfying the two shape
+    predicates, witnessing:
+      · vr is in the seed's contexts;
+      · the seed has a sound derived-clauses witness;
+      · the HerbrandProperty holds for `AtomConjDisjQuery` queries
+        whose signature is contained in `ontologyConceptSig O`;
+      · for any saturated extension `D` and unsubsumed such query
+        `Q`, an explicit counter-model `(α=Unit, I, γ)` exists
+        satisfying both `O` and `rbox` while refuting `Q`.
+
+    This is strictly stronger than the previous
+    `the_el_plus_vacuous_plus_compatible_rbox_slice` (which used
+    the weaker `IsELOrVacuousOnly`). -/
+theorem the_el_plus_all_vacuous_plus_compatible_rbox_slice
+    (O : Ontology) (hO : IsELOrAllVacuousOnly O)
+    (rbox : SROIQ.RBox) (hRBox : RBoxCompatibleWithEmptyRoles rbox) :
+    (canonicalSeedELConjFromOntology O).vr ∈
+      (canonicalSeedELConjFromOntology O).contexts ∧
+    (∃ CD : DerivedClauses,
+      isSound O (canonicalSeedELConjFromOntology O) CD) ∧
+    HerbrandPropertyAtomConjDisj (ontologyConceptSig O) O
+      (canonicalSeedELConjFromOntology O) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedELConjFromOntology O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig O) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  ⟨canonicalSeedELConj_vr_in_contexts (ontologyConceptSig O) O,
+   canonicalSeedELConj_sound_anyO (ontologyConceptSig O) O,
+   herbrandPropertyAtomConjDisj_ELOrAllVacuous (ontologyConceptSig O) O hO,
+   herbrandPropertyAtomConjDisj_ELOrAllVacuous_withRBox
+     (ontologyConceptSig O) O hO rbox hRBox⟩
+
 end ALCHOIQContext
 end ELKSDD

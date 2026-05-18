@@ -699,5 +699,7 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.herbrandPropertyAtomConjDisj_ELOrAllVacuous
 #print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_ELOrAllVacuous
 #print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology_allVacuous
+#print axioms ALCHOIQContext.herbrandPropertyAtomConjDisj_ELOrAllVacuous_withRBox
+#print axioms ALCHOIQContext.the_el_plus_all_vacuous_plus_compatible_rbox_slice
 
 end ELKSDD
