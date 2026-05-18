@@ -517,4 +517,16 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.CanonicalSaturationGap
 #print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOf_via_gap
 
+-- ============================================================
+-- FORMAL NEGATIVE RESULT: the literal unconditional goal is
+-- structurally unattainable for empty O over unbounded Nat.
+-- This guides necessary framework refactoring.
+-- ============================================================
+#print axioms ALCHOIQContext.fullSaturated_canonicalSeedOf_empty
+#print axioms ALCHOIQContext.atomSubsumptionQuery_self_eval
+#print axioms ALCHOIQContext.canonicalSeedOf_empty_no_subsumer
+#print axioms ALCHOIQContext.not_herbrandProperty_canonicalSeedOf_empty
+#print axioms ALCHOIQContext.not_isCanonicalSeed_canonicalSeedOf_empty
+#print axioms ALCHOIQContext.not_canonicalSaturationGap_empty
+
 end ELKSDD

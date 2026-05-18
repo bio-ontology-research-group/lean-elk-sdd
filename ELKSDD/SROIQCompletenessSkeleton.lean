@@ -2219,5 +2219,166 @@ theorem isCanonicalSeed_canonicalSeedOf_via_gap
 -- described above.
 -- ============================================================
 
+-- ============================================================
+-- §FINAL-NEGATIVE.  A formal negative meta-result.
+--
+-- We FORMALLY show that `canonicalSeedOf []` (the canonical seed
+-- for the empty ontology) does NOT satisfy `IsCanonicalSeed []`.
+-- This makes precise the framework-level obstacle: the literal
+-- unconditional goal is unattainable for this specific instance,
+-- because the tautological query
+-- `Q := atomSubsumptionQuery 0 0` is unsubsumed in `S(0) = []` but
+-- admits no counter-model.
+-- ============================================================
+
+/-- **canonicalSeedOf [] is FullSaturated.**  Empty ontology means
+    `ontologyToClauses [] = []`, so the seed has empty `S`, empty
+    `core`, no edges — structurally identical to
+    `emptyContextStructure` from the rule-firing perspective. -/
+theorem fullSaturated_canonicalSeedOf_empty :
+    FullSaturated (canonicalSeedOf []) := by
+  intro D' rn hStep
+  -- All rule firings require some non-empty piece of structure
+  -- that `canonicalSeedOf []` lacks.   Mirror of
+  -- `fullSaturated_emptyContextStructure`.
+  cases hStep with
+  | viaCore hSC =>
+    obtain ⟨_, hA, _⟩ := hSC
+    -- hA : A ∈ (canonicalSeedOf []).core v .atoms = []
+    exact absurd hA List.not_mem_nil
+  | @viaElim _ _ v _ hSE =>
+    obtain ⟨_, hCM, _⟩ := hSE
+    have hSv : (canonicalSeedOf []).S v = [] := by
+      show (if v = 0 then ontologyToClauses [] else []) = []
+      split <;> rfl
+    rw [hSv] at hCM
+    exact absurd hCM List.not_mem_nil
+  | @viaIneq _ _ v _ _ _ hSI =>
+    obtain ⟨_, hCM, _, _, _⟩ := hSI
+    have hSv : (canonicalSeedOf []).S v = [] := by
+      show (if v = 0 then ontologyToClauses [] else []) = []
+      split <;> rfl
+    rw [hSv] at hCM
+    exact absurd hCM List.not_mem_nil
+  | @viaHyper _ _ _ _ v _ hSH =>
+    have hSv : (canonicalSeedOf []).S v = [] := by
+      show (if v = 0 then ontologyToClauses [] else []) = []
+      split <;> rfl
+    exact hSH.2 hSv
+  | @viaEq _ _ _ _ v _ hSE =>
+    have hSv : (canonicalSeedOf []).S v = [] := by
+      show (if v = 0 then ontologyToClauses [] else []) = []
+      split <;> rfl
+    exact hSE.2 hSv
+  | @viaFactor _ _ _ _ v _ hSF =>
+    have hSv : (canonicalSeedOf []).S v = [] := by
+      show (if v = 0 then ontologyToClauses [] else []) = []
+      split <;> rfl
+    exact hSF.2 hSv
+  | @viaJoin _ _ _ _ v _ hSJ =>
+    have hSv : (canonicalSeedOf []).S v = [] := by
+      show (if v = 0 then ontologyToClauses [] else []) = []
+      split <;> rfl
+    exact hSJ.2 hSv
+  | @viaNom _ _ _ _ v _ hSN =>
+    have hSv : (canonicalSeedOf []).S v = [] := by
+      show (if v = 0 then ontologyToClauses [] else []) = []
+      split <;> rfl
+    exact hSN.2 hSv
+  | viaSucc hSS =>
+    obtain ⟨hvIn, hvne, _⟩ := hSS
+    have hv0 : ∀ v : CtxId, v ∈ [(0 : CtxId)] → v = 0 := by
+      intro v hv
+      rcases List.mem_cons.mp hv with h | h
+      · exact h
+      · exact absurd h List.not_mem_nil
+    have := hv0 _ hvIn
+    exact hvne (by rw [this]; rfl)
+  | viaPred hSP =>
+    obtain ⟨_w, _f, hEdge⟩ := hSP.2
+    exact absurd hEdge List.not_mem_nil
+  | viaRsucc hSR =>
+    obtain ⟨hvIn, hvne, _⟩ := hSR
+    have hv0 : ∀ v : CtxId, v ∈ [(0 : CtxId)] → v = 0 := by
+      intro v hv
+      rcases List.mem_cons.mp hv with h | h
+      · exact h
+      · exact absurd h List.not_mem_nil
+    have := hv0 _ hvIn
+    exact hvne (by rw [this]; rfl)
+  | viaRpred hSR =>
+    obtain ⟨_u, hEdge⟩ := hSR.2
+    exact absurd hEdge List.not_mem_nil
+
+/-- **The tautological query is unconditionally satisfied** by every
+    interpretation.   `atomSubsumptionQuery A A` says
+    `A(x) → A(x)`, which is `True`. -/
+theorem atomSubsumptionQuery_self_eval
+    {α : Type} (I : Interp α) (γ : Indu → α) (φ : FunSym → α → α)
+    (A : Nat) (vx vy : α) :
+    (atomSubsumptionQuery A A).eval I ⟨γ, φ, vx, vy⟩ := by
+  intro hBody
+  refine ⟨CLit.atomTrue (PTerm.atom A ATerm.x), List.mem_singleton.mpr rfl, ?_⟩
+  -- CLit.eval ... (atomTrue (atom A x)) = PTerm.eval = ext_concept A vx.
+  -- Body asserted ext_concept A vx already (via hBody applied to the singleton).
+  have hAxBody : BLit.atomTrue (PTerm.atom A ATerm.x) ∈
+                 (atomSubsumptionQuery A A).Gamma :=
+    List.mem_singleton.mpr rfl
+  exact hBody _ hAxBody
+
+/-- **No clause subsumes the self-subsumption query unless it
+    is itself the same.**  For `canonicalSeedOf []` with empty `S`,
+    vacuously no clause subsumes anything. -/
+theorem canonicalSeedOf_empty_no_subsumer (A : Nat) :
+    ∀ c ∈ (canonicalSeedOf []).S (canonicalSeedOf []).vr,
+      ¬ subsumes c {body := (atomSubsumptionQuery A A).Gamma,
+                    head := (atomSubsumptionQuery A A).Delta} := by
+  intro c hc _hSub
+  have : (canonicalSeedOf []).S (canonicalSeedOf []).vr = [] := by
+    show (canonicalSeedOf []).S 0 = []
+    show (if (0 : CtxId) = 0 then ontologyToClauses [] else []) = []
+    simp [ontologyToClauses]
+  rw [this] at hc
+  exact List.not_mem_nil hc
+
+/-- **HerbrandProperty fails for `canonicalSeedOf []`.**  The
+    tautological query `atomSubsumptionQuery 0 0` is unsubsumed by
+    `S((canonicalSeedOf []).vr) = []` but admits no counter-model,
+    since every interpretation satisfies it.   Hence the
+    HerbrandProperty's existential witness is unachievable. -/
+theorem not_herbrandProperty_canonicalSeedOf_empty :
+    ¬ HerbrandProperty [] (canonicalSeedOf []) := by
+  intro hHP
+  -- Apply to D = canonicalSeedOf [] (via FullDerivation.refl)
+  -- and Q = atomSubsumptionQuery 0 0.
+  have hDeriv : FullDerivation (canonicalSeedOf []) (canonicalSeedOf []) :=
+    FullDerivation.refl _
+  have hSat : FullSaturated (canonicalSeedOf []) :=
+    fullSaturated_canonicalSeedOf_empty
+  obtain ⟨α, _hα, I, γ, φ, vx, vy, _hISat, hQfail⟩ :=
+    hHP _ hDeriv hSat (atomSubsumptionQuery 0 0)
+      (canonicalSeedOf_empty_no_subsumer 0)
+  -- But (atomSubsumptionQuery 0 0).eval is unconditionally true.
+  exact hQfail (atomSubsumptionQuery_self_eval I γ φ 0 vx vy)
+
+/-- **IsCanonicalSeed [] (canonicalSeedOf []) is FALSE.**  Direct
+    corollary of `not_herbrandProperty_canonicalSeedOf_empty`. -/
+theorem not_isCanonicalSeed_canonicalSeedOf_empty :
+    ¬ IsCanonicalSeed [] (canonicalSeedOf []) := by
+  intro ⟨_, _, hHP⟩
+  exact not_herbrandProperty_canonicalSeedOf_empty hHP
+
+/-- **Consequence**: `CanonicalSaturationGap []` is FALSE.   The
+    conditional `isCanonicalSeed_canonicalSeedOf_via_gap` therefore
+    holds vacuously for the empty ontology; the substantive
+    framework restriction (finite signature, or refined invariant)
+    is necessary. -/
+theorem not_canonicalSaturationGap_empty :
+    ¬ CanonicalSaturationGap [] := by
+  intro hGap
+  have hIsCS : IsCanonicalSeed [] (canonicalSeedOf []) :=
+    isCanonicalSeed_canonicalSeedOf_via_gap [] (by intro ax hax; exact absurd hax List.not_mem_nil) hGap
+  exact not_isCanonicalSeed_canonicalSeedOf_empty hIsCS
+
 end ALCHOIQContext
 end ELKSDD
