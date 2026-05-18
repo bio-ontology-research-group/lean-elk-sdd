@@ -951,6 +951,17 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_anyLHS_atLeast1_treeTrueRHS
 
 -- ============================================================
+-- §TREE: (any-LHS, ≥1 R.atom B) and (≥1 R.conjOfAtoms).
+-- triggerAtomsOfAxiom extended to fire for atLeast (n+1) R filler,
+-- letting the successor's initial atoms inherit from atLeast-RHS
+-- axioms.   Three branches together now cover (any-LHS, ≥1 R.X)
+-- for X ∈ {TreeTrueRHS, atom, conjOfAtoms}.
+-- ============================================================
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_anyLHS_atLeast1_atom
+#print axioms ALCHOIQContext.isConjOfAtoms_trigger_eval_succ_atLeast1
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_anyLHS_atLeast1_conjOfAtoms
+
+-- ============================================================
 -- §TREE SATISFIES O composition.   Single satisfaction theorem
 -- assembled by dispatching per-axiom to the tree-Herbrand lemmas.
 -- ============================================================
