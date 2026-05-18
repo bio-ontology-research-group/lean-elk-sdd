@@ -543,5 +543,23 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.QueryReferencesSignature
 #print axioms ALCHOIQContext.HerbrandPropertyOver
 #print axioms ALCHOIQContext.IsCanonicalSeedOver
+#print axioms ALCHOIQContext.AtomAtomQuery
+#print axioms ALCHOIQContext.canonicalSeedOver_emptyO_atomAtom_neq
+#print axioms ALCHOIQContext.conceptDerivable_emptyO_iff
+#print axioms ALCHOIQContext.herbrandPropertyOver_emptyO_atomAtomQ
+#print axioms ALCHOIQContext.HerbrandPropertyOverAtomAtom
+#print axioms ALCHOIQContext.IsCanonicalSeedOverAtomAtom
+
+-- THE FINAL UNCONDITIONAL OPTION-3 THEOREMS:
+#print axioms ALCHOIQContext.isCanonicalSeedOverAtomAtom_emptyO
+#print axioms ALCHOIQContext.atomAtomClosureClauses
+#print axioms ALCHOIQContext.canonicalSeedOverClosed
+#print axioms ALCHOIQContext.canonicalSeedOverClosed_vr_in_contexts
+#print axioms ALCHOIQContext.conceptDerivable_eval_transport
+#print axioms ALCHOIQContext.atomAtomClosureClause_sound
+#print axioms ALCHOIQContext.canonicalSeedOverClosed_sound
+#print axioms ALCHOIQContext.canonicalSeedOverClosed_subsumes_derivable
+#print axioms ALCHOIQContext.herbrandPropertyOverAtomAtom_atomic
+#print axioms ALCHOIQContext.isCanonicalSeedOverAtomAtom_atomic
 
 end ELKSDD

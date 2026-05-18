@@ -2514,5 +2514,468 @@ def IsCanonicalSeedOver (sig : List Nat) (O : Ontology)
   (∃ CD : DerivedClauses, isSound O D_seed CD) ∧
   HerbrandPropertyOver sig O D_seed
 
+-- ============================================================
+-- §FINAL-EMPTY-O.  Unconditional discharge of `IsCanonicalSeedOver`
+-- for empty O and atom-atom Q.   This is the concrete instance of
+-- Option 3's refined goal.
+-- ============================================================
+
+/-- **Q is an atom-atom subsumption shape**: body and head each a
+    single concept atom at `x`. -/
+def AtomAtomQuery (Q : QueryClause) : Prop :=
+  ∃ A B : Nat,
+    Q.Gamma = [BLit.atomTrue (PTerm.atom A ATerm.x)] ∧
+    Q.Delta = [CLit.atomTrue (PTerm.atom B ATerm.x)]
+
+/-- Helper: if Q has body `[atom A x]` and head `[atom B x]` with
+    `A ∈ sig` and unsubsumed by the empty-O seed's S(0), then
+    `A ≠ B`.   Because the reflexive clause for A is in S(0) and
+    would subsume any `{A(x)} → {A(x)}` query. -/
+theorem canonicalSeedOver_emptyO_atomAtom_neq
+    (sig : List Nat) (A B : Nat) (hA : A ∈ sig) (hB : B ∈ sig)
+    (Q : QueryClause)
+    (hQA : Q.Gamma = [BLit.atomTrue (PTerm.atom A ATerm.x)])
+    (hQB : Q.Delta = [CLit.atomTrue (PTerm.atom B ATerm.x)])
+    (hNoSub : ∀ c ∈ (canonicalSeedOver sig []).S
+                       (canonicalSeedOver sig []).vr,
+                ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) :
+    A ≠ B := by
+  intro hEq
+  subst hEq
+  -- Now Q.Gamma = [atom A x], Q.Delta = [atom A x].
+  -- reflexiveClause A is in S(canonicalSeedOver sig []).vr = S(0).
+  apply hNoSub (reflexiveClause A) ?_
+  · -- Subsumes Q: body of reflexive ⊆ Q.Gamma, head of reflexive ⊆ Q.Delta.
+    refine ⟨?_, ?_⟩
+    · intro b hb
+      rw [hQA]
+      exact hb
+    · intro h hh
+      rw [hQB]
+      exact hh
+  · -- reflexiveClause A ∈ S(0)
+    show reflexiveClause A ∈
+      (if (0 : CtxId) = 0 then
+         ontologyToClauses [] ++ sig.map reflexiveClause
+       else [])
+    rw [if_pos rfl]
+    exact List.mem_append.mpr (Or.inr (List.mem_map.mpr ⟨A, hA, rfl⟩))
+
+/-- **Helper**: for empty O, `ConceptDerivable [] (fun X => X = A) B`
+    iff `B = A`.   No axioms means only `.base` fires. -/
+theorem conceptDerivable_emptyO_iff (A B : Nat) :
+    ConceptDerivable ([] : Ontology) (fun X => X = A) B ↔ B = A := by
+  constructor
+  · intro h
+    induction h with
+    | base hInit => exact hInit
+    | step _ hAx _ => exact absurd hAx List.not_mem_nil
+  · intro hEq
+    subst hEq
+    exact ConceptDerivable.base rfl
+
+/-- **HerbrandPropertyOver for empty O restricted to atom-atom Q**.
+    Discharged via the atomic Herbrand interpretation. -/
+theorem herbrandPropertyOver_emptyO_atomAtomQ
+    (sig : List Nat) :
+    ∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOver sig []) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature sig Q →
+        AtomAtomQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies ([] : Ontology) ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩ := by
+  intro D hDeriv _hSat Q hQsig hQAtom hNoSub
+  obtain ⟨A, B, hQA, hQB⟩ := hQAtom
+  -- A and B are in sig (Q references sig).
+  have hAsig : A ∈ sig := by
+    apply hQsig.1 A ATerm.x
+    rw [hQA]
+    exact List.mem_singleton.mpr rfl
+  have hBsig : B ∈ sig := by
+    apply hQsig.2 B ATerm.x
+    rw [hQB]
+    exact List.mem_singleton.mpr rfl
+  -- For unsubsumed Q at D, the seed-level reflexive A would have
+  -- to fail to subsume — needs A ≠ B.   But hNoSub is for D, not
+  -- the seed.   We need the reflexive A to persist through
+  -- derivation.   This follows from SubsumerInvariant preservation
+  -- (fullDeriv_preserves_SubsumerInvariant in spirit).
+  -- For empty O, FullDerivation from the seed preserves the
+  -- reflexive clauses since no rule removes them via Elim
+  -- (reflexive is not subsumed by anything else generically).
+  -- Direct path: use atomicHerbrandInterp to refute.
+  -- For atomicHerbrandInterp to refute Q, AtomicRefutable holds:
+  --   * noRoleBody, noTtrueHead, noEqLHead, noRoleHead: from
+  --     atom-atom Q shape (hQA, hQB).
+  --   * headNotDerivable: need ¬ ConceptDerivable [] (queryBodyAtomConcepts Q) B
+  --     iff B ≠ A (from conceptDerivable_emptyO_iff and singleton).
+  refine ⟨Unit, ⟨()⟩, atomicHerbrandInterp [] Q, atomicAssign.γ,
+          atomicAssign.φ, atomicAssign.vx, atomicAssign.vy, ?_, ?_⟩
+  · exact atomicHerbrandInterp_satisfies [] (by intro ax hax; exact absurd hax List.not_mem_nil) Q
+  · intro hQeval
+    have hAR : AtomicRefutable [] Q := by
+      refine ⟨?_, ?_, ?_, ?_, ?_⟩
+      · intro S t₁ t₂ hMem; rw [hQA] at hMem
+        cases List.mem_singleton.mp hMem
+      · intro hMem; rw [hQB] at hMem
+        cases List.mem_singleton.mp hMem
+      · intro s₁ s₂ hMem; rw [hQB] at hMem
+        cases List.mem_singleton.mp hMem
+      · intro S t₁ t₂ hMem; rw [hQB] at hMem
+        cases List.mem_singleton.mp hMem
+      · -- headNotDerivable
+        intro B' t hMem hDer
+        rw [hQB] at hMem
+        rcases List.mem_singleton.mp hMem with heq
+        cases heq
+        -- B' = B, t = x.   hDer : ConceptDerivable [] (queryBodyAtomConcepts Q) B
+        -- queryBodyAtomConcepts Q with hQA: ∃ t, atomTrue (atom B t) ∈ [atomTrue (atom A x)]
+        -- iff B = A.
+        have hQBC : queryBodyAtomConcepts Q = fun X => X = A := by
+          funext X
+          unfold queryBodyAtomConcepts
+          rw [hQA]
+          apply propext
+          constructor
+          · rintro ⟨t, ht⟩
+            rcases List.mem_singleton.mp ht with heq'
+            cases heq'; rfl
+          · rintro rfl
+            exact ⟨ATerm.x, List.mem_singleton.mpr rfl⟩
+        rw [hQBC] at hDer
+        -- hDer : ConceptDerivable [] (fun X => X = A) B
+        have hBeqA : B = A := (conceptDerivable_emptyO_iff A B).mp hDer
+        -- But A ≠ B from unsubsumed (need to lift hNoSub to seed).
+        -- For empty O, FullDerivation preserves S clauses (no axioms
+        -- fire to remove/add).   So if Q were subsumed at seed, it'd be
+        -- subsumed at D.   Contrapositively, unsubsumed at D implies
+        -- unsubsumed at seed.
+        -- This requires a lemma `fullDeriv_preserves_unsubsumption`
+        -- (or its contrapositive `fullDeriv_preserves_subsumption`).
+        -- We use the existing `SubsumerInvariant` preservation:
+        -- if seed has a subsumer, D has a subsumer.
+        -- Contrapositive: if D has no subsumer, seed has no subsumer.
+        have hNoSubSeed :
+            ∀ c ∈ (canonicalSeedOver sig []).S (canonicalSeedOver sig []).vr,
+              ¬ subsumes c {body := Q.Gamma, head := Q.Delta} := by
+          intro c hc hSub
+          -- c ∈ S(seed.vr) and subsumes Q.   By fullDeriv preservation
+          -- of "having a subsumer", there's also a subsumer in S(D.vr).
+          have hSubInv : SubsumerInvariant Q (canonicalSeedOver sig []) :=
+            ⟨canonicalSeedOver_vr_in_contexts sig [], c, hc, hSub⟩
+          have hSubInvD := fullDeriv_preserves_SubsumerInvariant hDeriv Q hSubInv
+          obtain ⟨_, c', hc'In, hc'Sub⟩ := hSubInvD
+          exact hNoSub c' hc'In hc'Sub
+        have hNeq : A ≠ B := canonicalSeedOver_emptyO_atomAtom_neq
+          sig A B hAsig hBsig Q hQA hQB hNoSubSeed
+        exact hNeq hBeqA.symm
+    have hBody := atomicHerbrandInterp_body_holds [] Q hAR.noRoleBody
+    have hHead := atomicHerbrandInterp_head_fails [] Q hAR.noTtrueHead
+      hAR.noEqLHead hAR.noRoleHead hAR.headNotDerivable
+    obtain ⟨h, hMem, hEval⟩ := hQeval hBody
+    exact hHead h hMem hEval
+
+/-- **Refined HerbrandProperty restricted to atom-atom Q.**  This
+    is the form that's unconditionally provable for the empty
+    ontology over an arbitrary signature `sig`. -/
+def HerbrandPropertyOverAtomAtom (sig : List Nat) (O : Ontology)
+    (D_seed : ContextStructure) : Prop :=
+  ∀ (D : ContextStructure),
+    FullDerivation D_seed D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      QueryReferencesSignature sig Q →
+      AtomAtomQuery Q →
+      (∀ c ∈ D.S D.vr,
+         ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+      ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+        (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+        I.satisfies O ∧ ¬ Q.eval I ⟨γ, φ, vx, vy⟩
+
+/-- **The refined IsCanonicalSeed for atom-atom Q.** -/
+def IsCanonicalSeedOverAtomAtom (sig : List Nat) (O : Ontology)
+    (D_seed : ContextStructure) : Prop :=
+  D_seed.vr ∈ D_seed.contexts ∧
+  (∃ CD : DerivedClauses, isSound O D_seed CD) ∧
+  HerbrandPropertyOverAtomAtom sig O D_seed
+
+/-- **THE FINAL UNCONDITIONAL THEOREM (empty O case).**  For every
+    signature `sig` and the empty ontology, `canonicalSeedOver sig []`
+    is a canonical seed in the atom-atom-Q-restricted sense. -/
+theorem isCanonicalSeedOverAtomAtom_emptyO (sig : List Nat) :
+    IsCanonicalSeedOverAtomAtom sig [] (canonicalSeedOver sig []) := by
+  refine ⟨canonicalSeedOver_vr_in_contexts sig [], ?_, ?_⟩
+  · exact canonicalSeedOver_sound sig []
+  · intro D hDeriv hSat Q hQsig hQAtom hNoSub
+    exact herbrandPropertyOver_emptyO_atomAtomQ sig D hDeriv hSat Q
+      hQsig hQAtom hNoSub
+
+-- ============================================================
+-- §FINAL-CLOSURE.  Extending to atom-atom O via explicit
+-- transitive closure of axiom clauses placed in the seed.
+-- ============================================================
+
+/-- **Transitive closure clauses for atom-atom O.**  For each pair
+    `(A, B)` with `B` ConceptDerivable from `A` under `O`, place
+    the clause `{A(x)} → {B(x)}` in the seed.   With a finite
+    signature `sig`, only finitely many pairs need consideration.
+    Uses `Classical.propDecidable` for decidability of
+    `ConceptDerivable`. -/
+noncomputable def atomAtomClosureClauses (sig : List Nat) (O : Ontology) :
+    List CClause := by
+  classical
+  exact sig.flatMap (fun A =>
+    sig.filterMap (fun B =>
+      if ConceptDerivable O (fun X => X = A) B then
+        some (atomAtomSubsumptionClause A B)
+      else none))
+
+/-- **The signature-and-closure-aware canonical seed.**  Extends
+    `canonicalSeedOver sig O` with the transitive closure clauses
+    over the signature.   For atom-atom O, this seed is
+    propositionally saturated within `sig`. -/
+noncomputable def canonicalSeedOverClosed (sig : List Nat) (O : Ontology) :
+    ContextStructure where
+  contexts := [0]
+  vr       := 0
+  edges    := []
+  core     := fun _ => { atoms := [] }
+  S        := fun v => if v = 0 then
+                          ontologyToClauses O ++ sig.map reflexiveClause
+                          ++ atomAtomClosureClauses sig O
+                       else []
+  m        := trivialAdmissibleOrder
+  θ        := fun _ => trivialContextOrder
+
+/-- `vr ∈ contexts` for `canonicalSeedOverClosed`. -/
+theorem canonicalSeedOverClosed_vr_in_contexts (sig : List Nat) (O : Ontology) :
+    (canonicalSeedOverClosed sig O).vr ∈ (canonicalSeedOverClosed sig O).contexts := by
+  show (0 : CtxId) ∈ [0]
+  exact List.mem_singleton.mpr rfl
+
+/-- **Auxiliary: ConceptDerivable transports through model evaluation.**
+    Given `B` ConceptDerivable from `A` under `O` and a model `I`
+    satisfying `O`, if `I.ext_concept A vx` holds then so does
+    `I.ext_concept B vx`. -/
+theorem conceptDerivable_eval_transport
+    {α : Type} (I : Interp α) (O : Ontology) (hIO : I.satisfies O)
+    (A : Nat) (vx : α) (hAEval : I.ext_concept A vx) :
+    ∀ {B : Nat}, ConceptDerivable O (fun X => X = A) B →
+      I.ext_concept B vx := by
+  intro B hDer
+  induction hDer with
+  | @base B' hEq =>
+    have : B' = A := hEq
+    subst this
+    exact hAEval
+  | @step A' B' _ hAx ih =>
+    have hAxEval := hIO _ hAx
+    exact hAxEval vx ih
+
+/-- The closure clauses are sound under any model satisfying `O`. -/
+theorem atomAtomClosureClause_sound
+    {α : Type} (I : Interp α) (γ : Indu → α) (φ : FunSym → α → α)
+    (O : Ontology) (_hO : IsAtomicSubsumptionOnly O) (hIO : I.satisfies O)
+    (A B : Nat) (hDer : ConceptDerivable O (fun X => X = A) B)
+    (vx vy : α) :
+    CClause.eval I ⟨γ, φ, vx, vy⟩ (atomAtomSubsumptionClause A B) := by
+  intro hBody
+  have hAEval : I.ext_concept A vx :=
+    hBody _ (List.mem_singleton.mpr rfl)
+  have hBEval : I.ext_concept B vx :=
+    conceptDerivable_eval_transport I O hIO A vx hAEval hDer
+  refine ⟨CLit.atomTrue (PTerm.atom B ATerm.x), ?_, ?_⟩
+  · exact List.mem_singleton.mpr rfl
+  · exact hBEval
+
+/-- Soundness of `canonicalSeedOverClosed`. -/
+theorem canonicalSeedOverClosed_sound
+    (sig : List Nat) (O : Ontology) (hO : IsAtomicSubsumptionOnly O) :
+    ∃ CD : DerivedClauses, isSound O (canonicalSeedOverClosed sig O) CD := by
+  classical
+  refine ⟨{ clauses := [] }, ?_, ?_⟩
+  · intro v hv c hc α I γ φ hIO _ vx vy _
+    have hv0 : v = 0 := by
+      rcases List.mem_cons.mp hv with h | h
+      · exact h
+      · exact absurd h List.not_mem_nil
+    subst hv0
+    have hS0 : (canonicalSeedOverClosed sig O).S 0 =
+               ontologyToClauses O ++ sig.map reflexiveClause
+               ++ atomAtomClosureClauses sig O := by
+      show (if (0 : CtxId) = 0 then
+              ontologyToClauses O ++ sig.map reflexiveClause
+              ++ atomAtomClosureClauses sig O
+            else []) = _
+      simp
+    rw [hS0] at hc
+    rcases List.mem_append.mp hc with hMain | hClosure
+    · rcases List.mem_append.mp hMain with hAx | hReflex
+      · obtain ⟨A, B, hAxO, hCEq⟩ := mem_ontologyToClauses O c hAx
+        rw [hCEq]
+        exact atomAtom_clause_sound I γ φ A B vx vy (hIO _ hAxO)
+      · rcases List.mem_map.mp hReflex with ⟨A, _hA, hCEq⟩
+        rw [← hCEq]
+        exact reflexiveClause_sound I γ φ A vx vy
+    · -- Closure clause.
+      have hClosureUnfold :
+          atomAtomClosureClauses sig O =
+          sig.flatMap (fun A =>
+            sig.filterMap (fun B =>
+              if ConceptDerivable O (fun X => X = A) B then
+                some (atomAtomSubsumptionClause A B)
+              else none)) := rfl
+      rw [hClosureUnfold] at hClosure
+      rcases List.mem_flatMap.mp hClosure with ⟨A, _hA, hInner⟩
+      rcases List.mem_filterMap.mp hInner with ⟨B, _hB, hCEq⟩
+      by_cases h : ConceptDerivable O (fun X => X = A) B
+      · have hSimp :
+            (if ConceptDerivable O (fun X => X = A) B then
+              some (atomAtomSubsumptionClause A B) else none) =
+            some (atomAtomSubsumptionClause A B) := if_pos h
+        rw [hSimp] at hCEq
+        have : c = atomAtomSubsumptionClause A B := (Option.some.inj hCEq).symm
+        rw [this]
+        exact atomAtomClosureClause_sound I γ φ O hO hIO A B h vx vy
+      · have hSimp :
+            (if ConceptDerivable O (fun X => X = A) B then
+              some (atomAtomSubsumptionClause A B) else none) =
+            none := if_neg h
+        rw [hSimp] at hCEq
+        exact absurd hCEq (by intro h'; cases h')
+  · intro v w f hEdge _
+    unfold ContextStructure.hasEdge at hEdge
+    exact absurd hEdge List.not_mem_nil
+
+/-- **Closure subsumes derivable pairs.**  For atom-atom O, sig with
+    `A, B ∈ sig`, and `B` ConceptDerivable from `A` under `O`, the
+    seed S(0) of `canonicalSeedOverClosed sig O` contains a clause
+    subsuming the canonical atom-atom subsumption clause `(A, B)`. -/
+theorem canonicalSeedOverClosed_subsumes_derivable
+    (sig : List Nat) (O : Ontology)
+    (A B : Nat) (hA : A ∈ sig) (hB : B ∈ sig)
+    (hDer : ConceptDerivable O (fun X => X = A) B) :
+    ∃ c ∈ (canonicalSeedOverClosed sig O).S
+            (canonicalSeedOverClosed sig O).vr,
+      subsumes c (atomAtomSubsumptionClause A B) := by
+  classical
+  refine ⟨atomAtomSubsumptionClause A B, ?_, subsumes_refl _⟩
+  show atomAtomSubsumptionClause A B ∈
+    (if (0 : CtxId) = 0 then
+       ontologyToClauses O ++ sig.map reflexiveClause
+       ++ atomAtomClosureClauses sig O
+     else [])
+  rw [if_pos rfl]
+  apply List.mem_append.mpr
+  right
+  -- atomAtomSubsumptionClause A B ∈ atomAtomClosureClauses sig O
+  show atomAtomSubsumptionClause A B ∈
+    sig.flatMap (fun A' =>
+      sig.filterMap (fun B' =>
+        if ConceptDerivable O (fun X => X = A') B' then
+          some (atomAtomSubsumptionClause A' B') else none))
+  apply List.mem_flatMap.mpr
+  refine ⟨A, hA, ?_⟩
+  apply List.mem_filterMap.mpr
+  refine ⟨B, hB, ?_⟩
+  exact if_pos hDer
+
+/-- **HerbrandPropertyOverAtomAtom for atom-atom O.**  Unconditional
+    discharge using the closure-extended seed.   For any unsubsumed
+    atom-atom Q referencing `sig`, `atomicHerbrandInterp O Q`
+    satisfies `O` and refutes `Q`. -/
+theorem herbrandPropertyOverAtomAtom_atomic
+    (sig : List Nat) (O : Ontology) (hO : IsAtomicSubsumptionOnly O) :
+    HerbrandPropertyOverAtomAtom sig O (canonicalSeedOverClosed sig O) := by
+  classical
+  intro D hDeriv _hSat Q hQsig hQAtom hNoSub
+  obtain ⟨A, B, hQA, hQB⟩ := hQAtom
+  have hAsig : A ∈ sig := by
+    apply hQsig.1 A ATerm.x; rw [hQA]; exact List.mem_singleton.mpr rfl
+  have hBsig : B ∈ sig := by
+    apply hQsig.2 B ATerm.x; rw [hQB]; exact List.mem_singleton.mpr rfl
+  -- Lift hNoSub from D to seed via SubsumerInvariant preservation.
+  have hNoSubSeed :
+      ∀ c ∈ (canonicalSeedOverClosed sig O).S
+              (canonicalSeedOverClosed sig O).vr,
+        ¬ subsumes c {body := Q.Gamma, head := Q.Delta} := by
+    intro c hc hSub
+    have hSubInv : SubsumerInvariant Q (canonicalSeedOverClosed sig O) :=
+      ⟨canonicalSeedOverClosed_vr_in_contexts sig O, c, hc, hSub⟩
+    have hSubInvD := fullDeriv_preserves_SubsumerInvariant hDeriv Q hSubInv
+    obtain ⟨_, c', hc'In, hc'Sub⟩ := hSubInvD
+    exact hNoSub c' hc'In hc'Sub
+  -- From hNoSubSeed: ¬ ConceptDerivable O (fun X => X = A) B.
+  have hNotDer : ¬ ConceptDerivable O (fun X => X = A) B := by
+    intro hDer
+    -- Derive contradiction: closure subsumes (A, B), so Q is subsumed.
+    obtain ⟨c, hc, hcSub⟩ := canonicalSeedOverClosed_subsumes_derivable
+      sig O A B hAsig hBsig hDer
+    have hQeq : ({ body := Q.Gamma, head := Q.Delta } : CClause) =
+                atomAtomSubsumptionClause A B := by
+      rw [hQA, hQB]; rfl
+    exact hNoSubSeed c hc (hQeq ▸ hcSub)
+  -- Build the Herbrand model.
+  refine ⟨Unit, ⟨()⟩, atomicHerbrandInterp O Q, atomicAssign.γ,
+          atomicAssign.φ, atomicAssign.vx, atomicAssign.vy, ?_, ?_⟩
+  · exact atomicHerbrandInterp_satisfies O hO Q
+  · intro hQeval
+    have hAR : AtomicRefutable O Q := by
+      refine ⟨?_, ?_, ?_, ?_, ?_⟩
+      · intro S t₁ t₂ hMem; rw [hQA] at hMem
+        cases List.mem_singleton.mp hMem
+      · intro hMem; rw [hQB] at hMem
+        cases List.mem_singleton.mp hMem
+      · intro s₁ s₂ hMem; rw [hQB] at hMem
+        cases List.mem_singleton.mp hMem
+      · intro S t₁ t₂ hMem; rw [hQB] at hMem
+        cases List.mem_singleton.mp hMem
+      · intro B' t hMem hDer
+        rw [hQB] at hMem
+        rcases List.mem_singleton.mp hMem with heq
+        cases heq
+        -- B' = B, t = x.  Need to convert ConceptDerivable from
+        -- queryBodyAtomConcepts Q to (fun X => X = A) then derive False.
+        have hQBC : queryBodyAtomConcepts Q = fun X => X = A := by
+          funext X
+          unfold queryBodyAtomConcepts
+          rw [hQA]
+          apply propext
+          constructor
+          · rintro ⟨t, ht⟩
+            rcases List.mem_singleton.mp ht with heq'
+            cases heq'; rfl
+          · rintro rfl
+            exact ⟨ATerm.x, List.mem_singleton.mpr rfl⟩
+        rw [hQBC] at hDer
+        exact hNotDer hDer
+    have hBody := atomicHerbrandInterp_body_holds O Q hAR.noRoleBody
+    have hHead := atomicHerbrandInterp_head_fails O Q hAR.noTtrueHead
+      hAR.noEqLHead hAR.noRoleHead hAR.headNotDerivable
+    obtain ⟨h, hMem, hEval⟩ := hQeval hBody
+    exact hHead h hMem hEval
+
+/-- **THE UNCONDITIONAL OPTION-3 THEOREM (atom-atom O case).**  For
+    every signature `sig` and every atom-atom-subsumption ontology `O`,
+    `canonicalSeedOverClosed sig O` satisfies
+    `IsCanonicalSeedOverAtomAtom sig O`.
+
+    Honestly unconditional: NO `hSatComplete`, NO `hAtomShape`, NO
+    `CanonicalSaturationGap` hypothesis.   The price is the
+    restriction to atom-atom Q (via `IsCanonicalSeedOverAtomAtom`)
+    and to atom-atom O (via `IsAtomicSubsumptionOnly`); together
+    with finite signature `sig`, this matches the thesis's
+    finite-signature assumption. -/
+theorem isCanonicalSeedOverAtomAtom_atomic
+    (sig : List Nat) (O : Ontology) (hO : IsAtomicSubsumptionOnly O) :
+    IsCanonicalSeedOverAtomAtom sig O (canonicalSeedOverClosed sig O) :=
+  ⟨canonicalSeedOverClosed_vr_in_contexts sig O,
+   canonicalSeedOverClosed_sound sig O hO,
+   herbrandPropertyOverAtomAtom_atomic sig O hO⟩
+
 end ALCHOIQContext
 end ELKSDD
