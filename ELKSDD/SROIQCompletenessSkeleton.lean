@@ -6041,6 +6041,45 @@ theorem elHerbrandInterpTree_sat_atom_exist_top
   · show True
     trivial
 
+/-- **Generic any-LHS variant of `_sat_atom_exist_conjOfAtoms`.**
+    The proof never inspects the LHS evaluation, so the LHS shape
+    can be arbitrary.   This single lemma subsumes the atom-,
+    top-, conj-, disj-LHS variants of `(_, ∃R.conjOfAtoms)`
+    coverage. -/
+theorem elHerbrandInterpTree_sat_anyLHS_exist_conjOfAtoms
+    (O : Ontology) (Q : QueryClause)
+    (LHS : ALCHOQ.Concept) (R : Nat) (filler : ALCHOQ.Concept)
+    (hF : IsConjOfAtoms filler)
+    (hAx : (LHS, ALCHOQ.Concept.exist R filler) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval LHS p →
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.exist R filler) p := by
+  intro p _hLHS
+  refine ⟨HerbrandTree.succ p (LHS, ALCHOQ.Concept.exist R filler) hAx,
+          ?_, ?_⟩
+  · exact ⟨rfl, rfl⟩
+  · exact isConjOfAtoms_trigger_eval_succ O Q hAx rfl hF
+      (fun _ hM => hM) p
+
+/-- **Generic any-LHS variant of `_sat_atom_exist_top`.**  Like the
+    conjOfAtoms variant, the LHS shape is unused. -/
+theorem elHerbrandInterpTree_sat_anyLHS_exist_top
+    (O : Ontology) (Q : QueryClause)
+    (LHS : ALCHOQ.Concept) (R : Nat)
+    (hAx : (LHS, ALCHOQ.Concept.exist R ALCHOQ.Concept.top) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval LHS p →
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.exist R ALCHOQ.Concept.top) p := by
+  intro p _hLHS
+  refine ⟨HerbrandTree.succ p
+            (LHS, ALCHOQ.Concept.exist R ALCHOQ.Concept.top) hAx,
+          ?_, ?_⟩
+  · exact ⟨rfl, rfl⟩
+  · show True
+    trivial
+
 /-- `axiomTriggersRoleAtom` implies the role-only variant
     `axiomTriggersRole`.   Both predicates project the same `R' = R`
     conjunct from the `exist R' filler` pattern; the conj-member
@@ -6341,6 +6380,15 @@ def IsTreeFriendlyAxiom (ax : ALCHOQ.Axiom) : Prop :=
   (∃ A R : Nat,
      ax = (ALCHOQ.Concept.atom A,
            ALCHOQ.Concept.exist R ALCHOQ.Concept.top)) ∨
+  -- (any-LHS, ∃R.conjOfAtoms-filler): LHS shape is irrelevant for
+  -- the successor mechanism.  Subsumes the specific atom/top/conj/disj-LHS
+  -- branches above for the conjOfAtoms filler case.
+  (∃ LHS : ALCHOQ.Concept, ∃ R : Nat, ∃ filler : ALCHOQ.Concept,
+     ax = (LHS, ALCHOQ.Concept.exist R filler) ∧ IsConjOfAtoms filler) ∨
+  -- (any-LHS, ∃R.top): LHS shape is irrelevant for the successor
+  -- mechanism; RHS top is True at every node.
+  (∃ LHS : ALCHOQ.Concept, ∃ R : Nat,
+     ax = (LHS, ALCHOQ.Concept.exist R ALCHOQ.Concept.top)) ∨
   (∃ R B : Nat,
      ax = (ALCHOQ.Concept.top,
            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B))) ∨
@@ -6387,7 +6435,7 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     (elHerbrandInterpTree O Q).satisfies O := by
   intro ax hax
   intro p hLHS
-  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hTopCM | hCJCM | hDJCM | hExLHS | hExLHS_CM | hExLHS_Top | hTopEx | hCJEx | hDJEx | hTopUniv | hTopUnivCM | hTTRHSUniv | hBotLHS | hTopRHS
+  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hTopCM | hCJCM | hDJCM | hExLHS | hExLHS_CM | hExLHS_Top | hAnyExCM | hAnyExTop | hTopEx | hCJEx | hDJEx | hTopUniv | hTopUnivCM | hTTRHSUniv | hBotLHS | hTopRHS
   · obtain ⟨A, B, rfl⟩ := hAA
     exact elHerbrandInterpTree_sat_atom_atom O Q A B hax p hLHS
   · obtain ⟨A₁, A₂, B, rfl⟩ := hCJ
@@ -6418,6 +6466,10 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     exact elHerbrandInterpTree_sat_atom_exist_conjOfAtoms O Q A R filler hF hax p hLHS
   · obtain ⟨A, R, rfl⟩ := hExLHS_Top
     exact elHerbrandInterpTree_sat_atom_exist_top O Q A R hax p hLHS
+  · obtain ⟨LHS, R, filler, rfl, hF⟩ := hAnyExCM
+    exact elHerbrandInterpTree_sat_anyLHS_exist_conjOfAtoms O Q LHS R filler hF hax p hLHS
+  · obtain ⟨LHS, R, rfl⟩ := hAnyExTop
+    exact elHerbrandInterpTree_sat_anyLHS_exist_top O Q LHS R hax p hLHS
   · obtain ⟨R, B, rfl⟩ := hTopEx
     exact elHerbrandInterpTree_sat_top_exist_atom O Q R B hax p hLHS
   · obtain ⟨A₁, A₂, R, B, rfl⟩ := hCJEx

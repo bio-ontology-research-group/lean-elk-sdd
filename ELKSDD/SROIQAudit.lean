@@ -921,6 +921,14 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_atom_exist_top
 
 -- ============================================================
+-- §TREE: any-LHS exist-RHS generic lemmas.   The proofs never
+-- inspected the LHS evaluation, so a single any-LHS variant
+-- subsumes the atom/top/conj/disj-LHS specifics.
+-- ============================================================
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_anyLHS_exist_conjOfAtoms
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_anyLHS_exist_top
+
+-- ============================================================
 -- §TREE SATISFIES O composition.   Single satisfaction theorem
 -- assembled by dispatching per-axiom to the tree-Herbrand lemmas.
 -- ============================================================
