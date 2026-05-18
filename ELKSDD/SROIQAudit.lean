@@ -1006,5 +1006,8 @@ namespace ELKSDD
 -- §6.3.4 Tena-Cucala obligation.
 -- ============================================================
 #print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_modulo_completeness
+#print axioms ALCHOIQContext.SaturationCompleteness
+#print axioms ALCHOIQContext.UnconditionalIsCanonicalSeed
+#print axioms ALCHOIQContext.saturationCompleteness_implies_unconditional_IsCanonicalSeed
 
 end ELKSDD

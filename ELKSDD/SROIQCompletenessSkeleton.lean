@@ -8591,6 +8591,24 @@ theorem isCanonicalSeed_canonicalSeedOfFull_partial
 -- unconditional theorem `∀ O, IsCanonicalSeed O (canonicalSeedOfFull O)`.
 -- ============================================================
 
+/-- **The named saturation-completeness statement.**   This is
+    precisely the substantive Tena-Cucala §6.3.4 obligation.
+    Discharging it for arbitrary SROIQ ontologies is the central
+    multi-session research task. -/
+def SaturationCompleteness : Prop :=
+  ∀ (O : Ontology) (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      entailsQuery O Q →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- **The literal unconditional goal statement.**   The proposition
+    `∀ O, IsCanonicalSeed O (canonicalSeedOfFull O)` named as a
+    single Prop for symmetric reasoning with `SaturationCompleteness`. -/
+def UnconditionalIsCanonicalSeed : Prop :=
+  ∀ (O : Ontology), IsCanonicalSeed O (canonicalSeedOfFull O)
+
 /-- **THE UNCONDITIONAL THEOREM, modulo the saturation-completeness gap.**
     Given a proof of saturation completeness (the substantive
     Tena-Cucala §6.3.4 obligation), every ontology `O` satisfies
@@ -8626,6 +8644,18 @@ theorem unconditional_IsCanonicalSeed_modulo_completeness
     push_neg at hEnt
     obtain ⟨α, I, γ, φ, hSatO, vx, vy, hNotEval⟩ := hEnt
     exact ⟨α, ⟨vx⟩, I, γ, φ, vx, vy, hSatO, hNotEval⟩
+
+/-- **Backward direction of the equivalence.**   The literal
+    unconditional goal follows from saturation completeness.
+    This is `unconditional_IsCanonicalSeed_modulo_completeness`
+    wrapped as a single-direction implication on the named
+    propositions.   The forward direction (IsCanonicalSeed ⇒
+    SaturationCompleteness) requires soundness-preservation
+    machinery that is part of the §6.3.4 chain. -/
+theorem saturationCompleteness_implies_unconditional_IsCanonicalSeed :
+    SaturationCompleteness → UnconditionalIsCanonicalSeed :=
+  fun hSC O =>
+    unconditional_IsCanonicalSeed_modulo_completeness hSC O
 
 end ALCHOIQContext
 end ELKSDD
