@@ -1124,5 +1124,8 @@ namespace ELKSDD
 -- §NAMED RESTRICTED SC + UNCONDITIONAL DISCHARGE
 #print axioms ALCHOIQContext.SaturationCompletenessAtomConjDisjUnifiedSlice
 #print axioms ALCHOIQContext.saturationCompletenessAtomConjDisjUnifiedSlice_holds
+#print axioms ALCHOIQContext.universalSC_implies_restrictedSC
+#print axioms ALCHOIQContext.UnconditionalSCExtensionGap
+#print axioms ALCHOIQContext.universalSC_decomposed
 
 end ELKSDD

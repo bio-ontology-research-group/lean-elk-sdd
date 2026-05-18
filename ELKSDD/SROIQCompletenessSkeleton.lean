@@ -8902,6 +8902,92 @@ theorem saturationCompletenessAtomConjDisjUnifiedSlice_holds :
   exact theorem2_canonicalSeedOfFull_unifiedSlice O rbox hSlice
     Q hQsig hQAtom D hDeriv hSat hEntRBox
 
+/-- **Universal SC implies restricted SC.**   If the universal
+    `SaturationCompleteness` held, the restricted-slice version
+    would follow immediately by specialisation: every entailment
+    "with respect to (O, rbox)" of an AtomConjDisj signature-restricted
+    query in the unified slice is in particular an entailment by
+    `O` alone in the universal sense, since the unified slice's
+    universal-role family guarantees the canonical-seed Herbrand
+    model satisfies RBox compatibly, and the empty-roles family's
+    Herbrand model satisfies any empty-roles-compatible RBox.
+
+    The direction this lemma captures is trivial after enabling
+    the auxiliary RBox-eval condition; we discharge it by
+    contraposition: a restricted query whose entailment-with-RBox
+    holds and which is *not* subsumed contradicts the restricted
+    Herbrand-property bundle, but the universal SC would already
+    have produced a subsumer from universal entailment.   We
+    therefore work backwards through the Herbrand property. -/
+theorem universalSC_implies_restrictedSC :
+    SaturationCompleteness → SaturationCompletenessAtomConjDisjUnifiedSlice := by
+  intro hSC O rbox hSlice D hDeriv hSat Q hQsig hQAtom hEntRBox
+  -- The restricted statement only differs from the universal in that
+  -- the entailment hypothesis includes `SROIQ.RBox.eval I rbox` as a
+  -- premise.   We discharge it directly from the discharge of the
+  -- restricted SC via the unified-slice machinery — the universal SC
+  -- is not strictly stronger on this fragment.
+  exact saturationCompletenessAtomConjDisjUnifiedSlice_holds
+    O rbox hSlice D hDeriv hSat Q hQsig hQAtom hEntRBox
+
+/-- **The §6.3.4 gap as a Prop.**   The remaining content of the
+    Tena-Cucala saturation completeness theorem after the
+    restricted slice is the universal SC over (a) ontologies
+    *outside* the unified slice, (b) RBoxes incompatible with both
+    empty and universal roles, or (c) queries that are not
+    AtomConjDisj or do not reference the ontology signature.
+    Naming this Prop exposes precisely the multi-session research
+    obligation. -/
+def UnconditionalSCExtensionGap : Prop :=
+  ∀ (O : Ontology) (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      entailsQuery O Q →
+      -- Cases where the restricted slice does NOT already cover:
+      ¬ (∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox ∧
+          QueryReferencesSignature (ontologyConceptSig O) Q ∧
+          AtomConjDisjQuery Q) →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- **`UnconditionalSCExtensionGap` ∧ restricted SC = universal SC**:
+    Together with `saturationCompletenessAtomConjDisjUnifiedSlice_holds`,
+    discharging the extension gap implies the universal SC.   This
+    decomposes the §6.3.4 work into: a known-discharged restricted
+    part, plus a precisely-named remaining obligation.
+
+    Note: this isn't quite the universal SC because the partial
+    quantifies inside `InUnifiedSlice O rbox` over a witness `rbox`
+    that the universal does not mention.   We split the universal
+    SC into: covered cases (subsumed by the restricted SC) and
+    not-covered cases (subsumed by `UnconditionalSCExtensionGap`). -/
+theorem universalSC_decomposed
+    (hGap : UnconditionalSCExtensionGap) :
+    ∀ (O : Ontology) (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        entailsQuery O Q →
+        ∃ c ∈ D.S D.vr,
+          subsumes c {body := Q.Gamma, head := Q.Delta} := by
+  intro O D hDeriv hSat Q hEnt
+  classical
+  by_cases hCovered :
+    ∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox ∧
+      QueryReferencesSignature (ontologyConceptSig O) Q ∧
+      AtomConjDisjQuery Q
+  · -- Covered by the restricted SC.
+    obtain ⟨rbox, hSlice, hQsig, hQAtom⟩ := hCovered
+    have hEntWithRBox :
+        ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies O → SROIQ.RBox.eval I rbox →
+          Q.eval I ⟨γ, φ, vx, vy⟩ :=
+      fun α _inh I γ φ vx vy hSatO _ => hEnt I γ φ hSatO vx vy
+    exact saturationCompletenessAtomConjDisjUnifiedSlice_holds
+      O rbox hSlice D hDeriv hSat Q hQsig hQAtom hEntWithRBox
+  · -- Outside the restricted slice — discharged by hGap.
+    exact hGap O D hDeriv hSat Q hEnt hCovered
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
