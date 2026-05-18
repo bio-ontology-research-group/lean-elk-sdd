@@ -5469,9 +5469,12 @@ def axiomTriggersRole : ALCHOQ.Axiom → Nat → Prop
 /-- **Tree-vacuity (LHS=False).**   Concepts whose evaluation under
     the tree Herbrand is `False` at every node — purely structural,
     no derivability dependency.  Closed under conj/disj duals:
-    conj-with-False is False; disj is False iff both sides are. -/
+    conj-with-False is False; disj is False iff both sides are.
+    `hasSelf R` is structurally False because the tree has no
+    self-loops in `ext_role`. -/
 def TreeFalseLHS : ALCHOQ.Concept → Prop
   | .bot                       => True
+  | .hasSelf _                 => True
   | .conj C₁ C₂                => TreeFalseLHS C₁ ∨ TreeFalseLHS C₂
   | .disj C₁ C₂                => TreeFalseLHS C₁ ∧ TreeFalseLHS C₂
   | _                          => False
@@ -6287,7 +6290,28 @@ theorem treeFalseLHS_eval_false (O : Ontology) (Q : QueryClause)
   | univ _ _ _ => exact absurd hC (by intro h; exact h)
   | atLeast _ _ _ _ => exact absurd hC (by intro h; exact h)
   | atMost _ _ _ _ => exact absurd hC (by intro h; exact h)
-  | hasSelf _ => exact absurd hC (by intro h; exact h)
+  | hasSelf R =>
+      -- hC : TreeFalseLHS (hasSelf R) = True (always satisfied)
+      -- Goal: ∀ p, ¬ eval (hasSelf R) p = ∀ p, ¬ ext_role R p p
+      -- ext_role R p p: case on p.
+      --   p = root: False directly.
+      --   p = succ p' ax' _: requires p = p' ∧ axiomTriggersRole ax' R.
+      --     But the parent slot in succ p' ax' is p', while the target
+      --     of the match is itself (succ p' ax' _).   p' ≠ succ p' ax' _
+      --     because they are structurally distinct constructors.
+      intro p hSelf
+      cases p with
+      | root =>
+          -- ext_role R root root unfolds: match root with | root => False
+          exact hSelf
+      | succ p' ax' hAx' =>
+          -- hSelf : root-or-succ-match producing
+          --   p = p' ∧ axiomTriggersRole ax' R
+          -- where p = succ p' ax' hAx' (by the case)
+          -- So we need succ p' ax' hAx' = p'.   But succ ≠ p' as
+          -- constructors differ.
+          obtain ⟨hEq, _⟩ := hSelf
+          exact absurd hEq (by intro h; cases h)
 
 /-- **TreeTrueRHS evaluation lemma**: structurally-True concepts
     evaluate to `True` at every tree node. -/
