@@ -5631,6 +5631,82 @@ theorem elHerbrandInterpTree_sat_atom_conjOfAtoms
 -- substantive shapes uniformly.
 
 -- ============================================================
+-- §TREE-FRIENDLY TBOX SHAPE PREDICATE.   Composes the per-axiom
+-- tree-Herbrand satisfaction lemmas into a single statement:
+-- when every axiom of `O` falls in the tree-friendly catalogue,
+-- the tree Herbrand `elHerbrandInterpTree O Q` satisfies `O`.
+-- This is the structural composition of #143/#145/#142, packaged
+-- as a single satisfaction theorem.
+-- ============================================================
+
+/-- An axiom is "tree-friendly" iff it matches one of the shapes
+    whose tree satisfaction is established by the per-axiom lemmas
+    above (#142 successor introduction; #143 atom-atom, conj-atom,
+    atom-conj, disj-atom, top-atom, conj-conj, disj-conj, top-conj;
+    #145 n-ary RHS conjunction). -/
+def IsTreeFriendlyAxiom (ax : ALCHOQ.Axiom) : Prop :=
+  (∃ A B : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B)) ∨
+  (∃ A₁ A₂ B : Nat,
+     ax = (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂),
+           ALCHOQ.Concept.atom B)) ∨
+  (∃ A B C : Nat,
+     ax = (ALCHOQ.Concept.atom A,
+           ALCHOQ.Concept.conj (.atom B) (.atom C))) ∨
+  (∃ A₁ A₂ B : Nat,
+     ax = (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂),
+           ALCHOQ.Concept.atom B)) ∨
+  (∃ A₁ A₂ B C : Nat,
+     ax = (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂),
+           ALCHOQ.Concept.conj (.atom B) (.atom C))) ∨
+  (∃ A₁ A₂ B C : Nat,
+     ax = (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂),
+           ALCHOQ.Concept.conj (.atom B) (.atom C))) ∨
+  (∃ B : Nat, ax = (ALCHOQ.Concept.top, ALCHOQ.Concept.atom B)) ∨
+  (∃ B C : Nat,
+     ax = (ALCHOQ.Concept.top,
+           ALCHOQ.Concept.conj (.atom B) (.atom C))) ∨
+  (∃ A : Nat, ∃ C : ALCHOQ.Concept,
+     ax = (ALCHOQ.Concept.atom A, C) ∧ IsConjOfAtoms C) ∨
+  (∃ A R B : Nat,
+     ax = (ALCHOQ.Concept.atom A,
+           ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)))
+
+/-- A TBox is tree-friendly iff all its axioms are. -/
+def IsTreeFriendlyTBox (O : Ontology) : Prop :=
+  ∀ ax ∈ O, IsTreeFriendlyAxiom ax
+
+/-- **TREE SATISFACTION COMPOSITION.**   When every axiom of `O`
+    is tree-friendly, the tree Herbrand satisfies `O` — dispatch
+    each axiom to its tree-satisfaction lemma. -/
+theorem elHerbrandInterpTree_satisfies_O_tree_friendly
+    (O : Ontology) (Q : QueryClause)
+    (hO : IsTreeFriendlyTBox O) :
+    (elHerbrandInterpTree O Q).satisfies O := by
+  intro ax hax
+  intro p hLHS
+  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hExLHS
+  · obtain ⟨A, B, rfl⟩ := hAA
+    exact elHerbrandInterpTree_sat_atom_atom O Q A B hax p hLHS
+  · obtain ⟨A₁, A₂, B, rfl⟩ := hCJ
+    exact elHerbrandInterpTree_sat_conj_atom O Q A₁ A₂ B hax p hLHS
+  · obtain ⟨A, B, C, rfl⟩ := hCJ_RHS
+    exact elHerbrandInterpTree_sat_atom_conj O Q A B C hax p hLHS
+  · obtain ⟨A₁, A₂, B, rfl⟩ := hDJ_LHS
+    exact elHerbrandInterpTree_sat_disj_atom O Q A₁ A₂ B hax p hLHS
+  · obtain ⟨A₁, A₂, B, C, rfl⟩ := hCJ_CJ
+    exact elHerbrandInterpTree_sat_conj_conj O Q A₁ A₂ B C hax p hLHS
+  · obtain ⟨A₁, A₂, B, C, rfl⟩ := hDJ_CJ
+    exact elHerbrandInterpTree_sat_disj_conj O Q A₁ A₂ B C hax p hLHS
+  · obtain ⟨B, rfl⟩ := hTopLHS
+    exact elHerbrandInterpTree_sat_top_atom O Q B hax p hLHS
+  · obtain ⟨B, C, rfl⟩ := hTopCJ
+    exact elHerbrandInterpTree_sat_top_conj O Q B C hax p hLHS
+  · obtain ⟨A, C, rfl, hC⟩ := hCM
+    exact elHerbrandInterpTree_sat_atom_conjOfAtoms O Q A C hC hax p hLHS
+  · obtain ⟨A, R, B, rfl⟩ := hExLHS
+    exact elHerbrandInterpTree_sat_atom_exist_atom O Q A R B hax p hLHS
+
+-- ============================================================
 -- §UNIVERSAL-ROLE VACUITY PREDICATES.  Concept shapes whose
 -- evaluation under `elHerbrandInterpUniversal` reduces to a
 -- fixed `True`/`False` value (modulo derivability through inner

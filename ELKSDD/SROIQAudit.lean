@@ -826,6 +826,14 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_atom_conjOfAtoms
 
 -- ============================================================
+-- §TREE SATISFIES O composition.   Single satisfaction theorem
+-- assembled by dispatching per-axiom to the tree-Herbrand lemmas.
+-- ============================================================
+#print axioms ALCHOIQContext.IsTreeFriendlyAxiom
+#print axioms ALCHOIQContext.IsTreeFriendlyTBox
+#print axioms ALCHOIQContext.elHerbrandInterpTree_satisfies_O_tree_friendly
+
+-- ============================================================
 -- §FINAL: `canonicalSeedOf` — the total canonical-seed function
 -- named per the literal goal.   Two of three `IsCanonicalSeed`
 -- conjuncts are unconditionally provable for it; the third
