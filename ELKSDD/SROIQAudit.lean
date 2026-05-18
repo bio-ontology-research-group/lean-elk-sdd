@@ -626,4 +626,31 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.IsELConjOnly
 #print axioms ALCHOIQContext.isAtomicOrBotOnly_imp_isELConjOnly
 
+-- ============================================================
+-- EL CANONICAL SEED: full EL fragment support (atom-atom +
+-- atom-bot + atom⊓atom→atom).  Multi-body closure clauses
+-- over sig.sublists.
+-- ============================================================
+#print axioms ALCHOIQContext.multiBodyAtomClause
+#print axioms ALCHOIQContext.multiBodyBotClause
+#print axioms ALCHOIQContext.elClosureClauses
+#print axioms ALCHOIQContext.elBotClosureClauses
+#print axioms ALCHOIQContext.multiBodyAtomClause_sound
+#print axioms ALCHOIQContext.multiBodyBotClause_sound
+#print axioms ALCHOIQContext.canonicalSeedELConj
+#print axioms ALCHOIQContext.canonicalSeedELConj_vr_in_contexts
+#print axioms ALCHOIQContext.canonicalSeedELConj_sound
+#print axioms ALCHOIQContext.elHerbrandInterp
+#print axioms ALCHOIQContext.elHerbrandInterp_aterm_eval
+#print axioms ALCHOIQContext.elHerbrandInterp_body_holds
+#print axioms ALCHOIQContext.elHerbrandInterp_head_fails
+#print axioms ALCHOIQContext.canonicalSeedELConj_subsumes_elDerivable
+#print axioms ALCHOIQContext.canonicalSeedELConj_subsumes_elBot
+#print axioms ALCHOIQContext.mem_filter_iff
+#print axioms ALCHOIQContext.filter_mem_sublists
+#print axioms ALCHOIQContext.herbrandPropertyAtomConjDisj_ELConj
+#print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_ELConj
+#print axioms ALCHOIQContext.canonicalSeedELConjFromOntology
+#print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology
+
 end ELKSDD

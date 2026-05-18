@@ -42,6 +42,7 @@
 -/
 import Mathlib.Tactic.ByContra
 import Mathlib.Tactic.SplitIfs
+import Mathlib.Data.List.Sublists
 import ELKSDD.ALCHOIQContext
 import ELKSDD.SROIQ
 
@@ -3838,6 +3839,537 @@ theorem isAtomicOrBotOnly_imp_isELConjOnly
   rcases hO ax hax with ⟨A, B, h⟩ | ⟨A, h⟩
   · exact Or.inl ⟨A, B, h⟩
   · exact Or.inr (Or.inl ⟨A, h⟩)
+
+-- ============================================================
+-- §FINAL-EL-CLOSURE.  Multi-body closure and Herbrand model for
+-- the EL fragment (atom-atom + atom-bot + conj-atom).
+-- ============================================================
+
+/-- **Multi-body atom-atom subsumption clause.** -/
+def multiBodyAtomClause (L : List Nat) (B : Nat) : CClause :=
+  { body := L.map (fun A => BLit.atomTrue (PTerm.atom A ATerm.x))
+  , head := [CLit.atomTrue (PTerm.atom B ATerm.x)] }
+
+/-- **Multi-body bot clause.** -/
+def multiBodyBotClause (L : List Nat) : CClause :=
+  { body := L.map (fun A => BLit.atomTrue (PTerm.atom A ATerm.x))
+  , head := [] }
+
+/-- **EL closure clauses**: for every sublist `L` of `sig` and every
+    `B ∈ sig` with `B` derivable from `L` under EL, add
+    `multiBodyAtomClause L B`. -/
+noncomputable def elClosureClauses (sig : List Nat) (O : Ontology) :
+    List CClause := by
+  classical
+  exact sig.sublists.flatMap (fun L =>
+    sig.filterMap (fun B =>
+      if ConceptDerivableEL O (fun X => X ∈ L) B then
+        some (multiBodyAtomClause L B)
+      else none))
+
+/-- **EL bot-closure clauses**: for every sublist `L` of `sig` that
+    EL-derives a bot atom, add `multiBodyBotClause L`. -/
+noncomputable def elBotClosureClauses (sig : List Nat) (O : Ontology) :
+    List CClause := by
+  classical
+  exact sig.sublists.filterMap (fun L =>
+    if ∃ A : Nat, ConceptDerivableEL O (fun X => X ∈ L) A ∧
+                   (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O then
+      some (multiBodyBotClause L)
+    else none)
+
+/-- **Soundness of a single multi-body atom clause.** -/
+theorem multiBodyAtomClause_sound
+    {α : Type} (I : Interp α) (γ : Indu → α) (φ : FunSym → α → α)
+    (O : Ontology) (hIO : I.satisfies O)
+    (L : List Nat) (B : Nat)
+    (hDer : ConceptDerivableEL O (fun X => X ∈ L) B)
+    (vx vy : α) :
+    CClause.eval I ⟨γ, φ, vx, vy⟩ (multiBodyAtomClause L B) := by
+  intro hBody
+  have hInit : ∀ A, A ∈ L → I.ext_concept A vx := by
+    intro A hA
+    have hMem : BLit.atomTrue (PTerm.atom A ATerm.x) ∈
+                (L.map (fun A' => BLit.atomTrue (PTerm.atom A' ATerm.x))) :=
+      List.mem_map_of_mem hA
+    have := hBody (BLit.atomTrue (PTerm.atom A ATerm.x)) hMem
+    exact this
+  have hBEval : I.ext_concept B vx :=
+    conceptDerivableEL_eval_transport I O hIO _ vx hInit hDer
+  refine ⟨CLit.atomTrue (PTerm.atom B ATerm.x), ?_, ?_⟩
+  · exact List.mem_singleton.mpr rfl
+  · exact hBEval
+
+/-- **Soundness of a single multi-body bot clause.** -/
+theorem multiBodyBotClause_sound
+    {α : Type} (I : Interp α) (γ : Indu → α) (φ : FunSym → α → α)
+    (O : Ontology) (hIO : I.satisfies O)
+    (L : List Nat) (hBot : ∃ A : Nat,
+        ConceptDerivableEL O (fun X => X ∈ L) A ∧
+        (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O)
+    (vx vy : α) :
+    CClause.eval I ⟨γ, φ, vx, vy⟩ (multiBodyBotClause L) := by
+  intro hBody
+  have hInit : ∀ A, A ∈ L → I.ext_concept A vx := by
+    intro A hA
+    have hMem : BLit.atomTrue (PTerm.atom A ATerm.x) ∈
+                (L.map (fun A' => BLit.atomTrue (PTerm.atom A' ATerm.x))) :=
+      List.mem_map_of_mem hA
+    have := hBody (BLit.atomTrue (PTerm.atom A ATerm.x)) hMem
+    exact this
+  obtain ⟨A, hDer, hABot⟩ := hBot
+  have hAEval : I.ext_concept A vx :=
+    conceptDerivableEL_eval_transport I O hIO _ vx hInit hDer
+  have hAxBot : I.satisfiesAxiom (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) :=
+    hIO _ hABot
+  exact (hAxBot vx hAEval).elim
+
+/-- **The EL canonical seed.** -/
+noncomputable def canonicalSeedELConj (sig : List Nat) (O : Ontology) :
+    ContextStructure where
+  contexts := [0]
+  vr       := 0
+  edges    := []
+  core     := fun _ => { atoms := [] }
+  S        := fun v => if v = 0 then
+                          ontologyToClauses O ++ sig.map reflexiveClause
+                          ++ elClosureClauses sig O
+                          ++ elBotClosureClauses sig O
+                       else []
+  m        := trivialAdmissibleOrder
+  θ        := fun _ => trivialContextOrder
+
+theorem canonicalSeedELConj_vr_in_contexts (sig : List Nat) (O : Ontology) :
+    (canonicalSeedELConj sig O).vr ∈ (canonicalSeedELConj sig O).contexts := by
+  show (0 : CtxId) ∈ [0]
+  exact List.mem_singleton.mpr rfl
+
+/-- Soundness of `canonicalSeedELConj` under `IsELConjOnly O`. -/
+theorem canonicalSeedELConj_sound
+    (sig : List Nat) (O : Ontology) (hO : IsELConjOnly O) :
+    ∃ CD : DerivedClauses, isSound O (canonicalSeedELConj sig O) CD := by
+  classical
+  refine ⟨{ clauses := [] }, ?_, ?_⟩
+  · intro v hv c hc α I γ φ hIO _ vx vy _
+    have hv0 : v = 0 := by
+      rcases List.mem_cons.mp hv with h | h
+      · exact h
+      · exact absurd h List.not_mem_nil
+    subst hv0
+    have hS0 : (canonicalSeedELConj sig O).S 0 =
+               ontologyToClauses O ++ sig.map reflexiveClause
+               ++ elClosureClauses sig O ++ elBotClosureClauses sig O := by
+      show (if (0 : CtxId) = 0 then
+              ontologyToClauses O ++ sig.map reflexiveClause
+              ++ elClosureClauses sig O ++ elBotClosureClauses sig O
+            else []) = _
+      simp
+    rw [hS0] at hc
+    rcases List.mem_append.mp hc with hMain | hBotC
+    · rcases List.mem_append.mp hMain with hL2 | hELC
+      · rcases List.mem_append.mp hL2 with hAx | hReflex
+        · -- ontologyToClauses (atom-atom only)
+          obtain ⟨A, B, hAxO, hCEq⟩ := mem_ontologyToClauses O c hAx
+          rw [hCEq]
+          exact atomAtom_clause_sound I γ φ A B vx vy (hIO _ hAxO)
+        · rcases List.mem_map.mp hReflex with ⟨A, _hA, hCEq⟩
+          rw [← hCEq]
+          exact reflexiveClause_sound I γ φ A vx vy
+      · -- elClosureClauses
+        have hELUnfold :
+            elClosureClauses sig O =
+            sig.sublists.flatMap (fun L =>
+              sig.filterMap (fun B =>
+                if ConceptDerivableEL O (fun X => X ∈ L) B then
+                  some (multiBodyAtomClause L B)
+                else none)) := rfl
+        rw [hELUnfold] at hELC
+        rcases List.mem_flatMap.mp hELC with ⟨L, _hL, hInner⟩
+        rcases List.mem_filterMap.mp hInner with ⟨B, _hB, hCEq⟩
+        by_cases h : ConceptDerivableEL O (fun X => X ∈ L) B
+        · have hSimp :
+              (if ConceptDerivableEL O (fun X => X ∈ L) B then
+                some (multiBodyAtomClause L B) else none) =
+              some (multiBodyAtomClause L B) := if_pos h
+          rw [hSimp] at hCEq
+          have : c = multiBodyAtomClause L B := (Option.some.inj hCEq).symm
+          rw [this]
+          exact multiBodyAtomClause_sound I γ φ O hIO L B h vx vy
+        · have hSimp :
+              (if ConceptDerivableEL O (fun X => X ∈ L) B then
+                some (multiBodyAtomClause L B) else none) = none := if_neg h
+          rw [hSimp] at hCEq
+          exact absurd hCEq (by intro h'; cases h')
+    · -- elBotClosureClauses
+      have hBotUnfold :
+          elBotClosureClauses sig O =
+          sig.sublists.filterMap (fun L =>
+            if ∃ A : Nat, ConceptDerivableEL O (fun X => X ∈ L) A ∧
+                           (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O then
+              some (multiBodyBotClause L)
+            else none) := rfl
+      rw [hBotUnfold] at hBotC
+      rcases List.mem_filterMap.mp hBotC with ⟨L, _hL, hCEq⟩
+      by_cases h : ∃ A : Nat, ConceptDerivableEL O (fun X => X ∈ L) A ∧
+                              (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O
+      · have hSimp :
+            (if ∃ A : Nat, ConceptDerivableEL O (fun X => X ∈ L) A ∧
+                            (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O then
+              some (multiBodyBotClause L) else none) =
+            some (multiBodyBotClause L) := if_pos h
+        rw [hSimp] at hCEq
+        have : c = multiBodyBotClause L := (Option.some.inj hCEq).symm
+        rw [this]
+        exact multiBodyBotClause_sound I γ φ O hIO L h vx vy
+      · have hSimp :
+            (if ∃ A : Nat, ConceptDerivableEL O (fun X => X ∈ L) A ∧
+                            (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O then
+              some (multiBodyBotClause L) else none) = none := if_neg h
+        rw [hSimp] at hCEq
+        exact absurd hCEq (by intro h'; cases h')
+  · intro v w f hEdge _
+    unfold ContextStructure.hasEdge at hEdge
+    exact absurd hEdge List.not_mem_nil
+
+-- ============================================================
+-- EL Herbrand interpretation: uses ConceptDerivableEL.
+-- ============================================================
+
+/-- The EL Herbrand interpretation: `Unit` domain, ext_concept tracks
+    `ConceptDerivableEL`, ext_role := False. -/
+def elHerbrandInterp (O : Ontology) (Q : QueryClause) : Interp Unit where
+  ext_concept B _ := ConceptDerivableEL O (queryBodyAtomConcepts Q) B
+  ext_role _ _ _  := False
+  ext_ind _       := ()
+
+theorem elHerbrandInterp_aterm_eval
+    (O : Ontology) (Q : QueryClause) (t : ATerm) :
+    ATerm.eval (elHerbrandInterp O Q) atomicAssign t = () := by
+  cases t <;> rfl
+
+/-- Body holds in elHerbrandInterp for atom-true bodies. -/
+theorem elHerbrandInterp_body_holds
+    (O : Ontology) (Q : QueryClause)
+    (hNoRoleBody : ∀ S t₁ t₂, BLit.atomTrue (PTerm.role S t₁ t₂) ∉ Q.Gamma) :
+    ∀ b ∈ Q.Gamma, BLit.eval (elHerbrandInterp O Q) atomicAssign b := by
+  intro b hb
+  cases b with
+  | atomTrue p =>
+    cases p with
+    | ttrue =>
+      show PTerm.eval (elHerbrandInterp O Q) atomicAssign PTerm.ttrue
+      exact trivial
+    | atom B t =>
+      show (elHerbrandInterp O Q).ext_concept B
+        (ATerm.eval (elHerbrandInterp O Q) atomicAssign t)
+      exact ConceptDerivableEL.base ⟨t, hb⟩
+    | role S t₁ t₂ =>
+      exact absurd hb (hNoRoleBody S t₁ t₂)
+  | uequ u₁ u₂ =>
+    show atomicAssign.γ u₁ = atomicAssign.γ u₂
+    rfl
+
+/-- Head fails in elHerbrandInterp under EL-refutation conditions. -/
+theorem elHerbrandInterp_head_fails
+    (O : Ontology) (Q : QueryClause)
+    (hNoTtrueHead : CLit.atomTrue PTerm.ttrue ∉ Q.Delta)
+    (hNoEqLHead : ∀ s₁ s₂, CLit.aeq (AEq.eqL s₁ s₂) ∉ Q.Delta)
+    (hNoRoleHead : ∀ S t₁ t₂, CLit.atomTrue (PTerm.role S t₁ t₂) ∉ Q.Delta)
+    (hHeadNotDerivable :
+      ∀ B t, CLit.atomTrue (PTerm.atom B t) ∈ Q.Delta →
+        ¬ ConceptDerivableEL O (queryBodyAtomConcepts Q) B) :
+    ∀ h ∈ Q.Delta, ¬ CLit.eval (elHerbrandInterp O Q) atomicAssign h := by
+  intro h hh hEval
+  cases h with
+  | atomTrue p =>
+    cases p with
+    | ttrue => exact hNoTtrueHead hh
+    | atom B t =>
+      have hDeriv : ConceptDerivableEL O (queryBodyAtomConcepts Q) B := hEval
+      exact hHeadNotDerivable B t hh hDeriv
+    | role S t₁ t₂ => exact hNoRoleHead S t₁ t₂ hh
+  | aeq e =>
+    cases e with
+    | eqL s₁ s₂ => exact hNoEqLHead s₁ s₂ hh
+    | neqL s₁ s₂ =>
+      apply hEval; rfl
+
+/-- **Membership of an EL-closure clause in `canonicalSeedELConj`.** -/
+theorem canonicalSeedELConj_subsumes_elDerivable
+    (sig : List Nat) (O : Ontology)
+    (L : List Nat) (hLsig : L ∈ sig.sublists)
+    (B : Nat) (hBsig : B ∈ sig)
+    (hDer : ConceptDerivableEL O (fun X => X ∈ L) B) :
+    multiBodyAtomClause L B ∈ (canonicalSeedELConj sig O).S
+                                (canonicalSeedELConj sig O).vr := by
+  classical
+  show multiBodyAtomClause L B ∈
+    (if (0 : CtxId) = 0 then
+       ontologyToClauses O ++ sig.map reflexiveClause
+       ++ elClosureClauses sig O ++ elBotClosureClauses sig O
+     else [])
+  rw [if_pos rfl]
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; right
+  show multiBodyAtomClause L B ∈
+    sig.sublists.flatMap (fun L' =>
+      sig.filterMap (fun B' =>
+        if ConceptDerivableEL O (fun X => X ∈ L') B' then
+          some (multiBodyAtomClause L' B') else none))
+  apply List.mem_flatMap.mpr
+  refine ⟨L, hLsig, ?_⟩
+  apply List.mem_filterMap.mpr
+  refine ⟨B, hBsig, ?_⟩
+  exact if_pos hDer
+
+/-- **Membership of an EL-bot-closure clause in `canonicalSeedELConj`.** -/
+theorem canonicalSeedELConj_subsumes_elBot
+    (sig : List Nat) (O : Ontology)
+    (L : List Nat) (hLsig : L ∈ sig.sublists)
+    (hBot : ∃ A : Nat, ConceptDerivableEL O (fun X => X ∈ L) A ∧
+                       (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O) :
+    multiBodyBotClause L ∈ (canonicalSeedELConj sig O).S
+                            (canonicalSeedELConj sig O).vr := by
+  classical
+  show multiBodyBotClause L ∈
+    (if (0 : CtxId) = 0 then
+       ontologyToClauses O ++ sig.map reflexiveClause
+       ++ elClosureClauses sig O ++ elBotClosureClauses sig O
+     else [])
+  rw [if_pos rfl]
+  apply List.mem_append.mpr; right
+  show multiBodyBotClause L ∈
+    sig.sublists.filterMap (fun L' =>
+      if ∃ A : Nat, ConceptDerivableEL O (fun X => X ∈ L') A ∧
+                     (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O then
+        some (multiBodyBotClause L') else none)
+  apply List.mem_filterMap.mpr
+  refine ⟨L, hLsig, ?_⟩
+  exact if_pos hBot
+
+/-- **A filter sublist matches its set of elements.**  For any
+    decidable predicate `p` and list `xs`, `xs.filter p` has elements
+    `{x ∈ xs | p x}`. -/
+theorem mem_filter_iff (xs : List Nat) (p : Nat → Prop) [DecidablePred p] :
+    ∀ A, A ∈ xs.filter (fun X => decide (p X)) ↔ A ∈ xs ∧ p A := by
+  intro A
+  simp [List.mem_filter]
+
+/-- `List.filter` produces a sublist. -/
+theorem filter_mem_sublists (xs : List Nat) (p : Nat → Prop) [DecidablePred p] :
+    xs.filter (fun X => decide (p X)) ∈ xs.sublists := by
+  exact List.mem_sublists.mpr List.filter_sublist
+
+/-- **HerbrandPropertyAtomConjDisj for EL ontologies.**  Strict
+    extension of `herbrandPropertyAtomConjDisj_atomOrBot`: ontology
+    may now contain conjunctive axioms `(atom A₁ ⊓ atom A₂ ⊑ atom B)`. -/
+theorem herbrandPropertyAtomConjDisj_ELConj
+    (sig : List Nat) (O : Ontology) (hO : IsELConjOnly O) :
+    HerbrandPropertyAtomConjDisj sig O (canonicalSeedELConj sig O) := by
+  classical
+  intro D hDeriv _hSat Q hQsig hQCD hNoSub
+  obtain ⟨hBodyShape, hHeadShape⟩ := hQCD
+  -- Lift unsubsumed from D to seed.
+  have hNoSubSeed :
+      ∀ c ∈ (canonicalSeedELConj sig O).S
+              (canonicalSeedELConj sig O).vr,
+        ¬ subsumes c {body := Q.Gamma, head := Q.Delta} := by
+    intro c hc hSub
+    have hSubInv : SubsumerInvariant Q (canonicalSeedELConj sig O) :=
+      ⟨canonicalSeedELConj_vr_in_contexts sig O, c, hc, hSub⟩
+    have hSubInvD := fullDeriv_preserves_SubsumerInvariant hDeriv Q hSubInv
+    obtain ⟨_, c', hc'In, hc'Sub⟩ := hSubInvD
+    exact hNoSub c' hc'In hc'Sub
+  -- Key helper: any list S of body atoms is contained in Q.Gamma.
+  have hBodyAtomsInGamma : ∀ A : Nat, queryBodyAtomConcepts Q A →
+      BLit.atomTrue (PTerm.atom A ATerm.x) ∈ Q.Gamma := by
+    intro A hA
+    obtain ⟨t, ht⟩ := hA
+    have ht_eq : t = ATerm.x :=
+      atomConjDisj_bodyTerm_is_x Q hBodyShape A t ht
+    subst ht_eq; exact ht
+  -- For every sublist L of sig with `L ⊆ Q.Gamma` (literal-wise):
+  -- closure clause `multiBodyAtomClause L B` subsumes Q iff B in Q's
+  -- atom-head (similar for bot).
+  -- Show: no head atom B is ConceptDerivableEL from `queryBodyAtomConcepts Q`.
+  have hHeadNotDerivable_aux :
+      ∀ B t, CLit.atomTrue (PTerm.atom B t) ∈ Q.Delta →
+        ¬ ConceptDerivableEL O (queryBodyAtomConcepts Q) B := by
+    intro B t hMem hDer
+    have ht_eq : t = ATerm.x :=
+      atomConjDisj_headTerm_is_x Q hHeadShape B t hMem
+    subst ht_eq
+    have hB_sig : B ∈ sig := hQsig.2 B ATerm.x hMem
+    -- multi-witness: extract S list with S ⊆ initial and ConceptDerivableEL B from S.
+    obtain ⟨S, hSinit, hSDer⟩ :=
+      conceptDerivableEL_multi_witness O _ hDer
+    -- Construct sublist L of sig matching S as set.
+    -- We need L ∈ sig.sublists with `(X ∈ L) ↔ (X ∈ S)` for relevant X.
+    -- Use sig.filter (X ∈ S).
+    set L := sig.filter (fun X => decide (X ∈ S)) with hLdef
+    have hLsig : L ∈ sig.sublists := filter_mem_sublists sig (· ∈ S)
+    -- Show ConceptDerivableEL B from (· ∈ L).  Need predicate equality
+    -- on the support of the derivation.  Since every A in S has
+    -- queryBodyAtomConcepts Q A (hence A ∈ ontologyConceptSig?) — not
+    -- automatic.  But we have A ∈ S → A ∈ initial → A appears in
+    -- Q.Gamma at term x → A ∈ sig (via hQsig.1).
+    have hS_sub_sig : ∀ A, A ∈ S → A ∈ sig := by
+      intro A hA
+      have hAinit := hSinit A hA
+      obtain ⟨tA, hAmem⟩ := hAinit
+      have htA_eq : tA = ATerm.x :=
+        atomConjDisj_bodyTerm_is_x Q hBodyShape A tA hAmem
+      subst htA_eq
+      exact hQsig.1 A ATerm.x hAmem
+    have hL_eq_S : ∀ A, A ∈ L ↔ A ∈ S := by
+      intro A
+      rw [hLdef]
+      rw [mem_filter_iff sig (· ∈ S)]
+      constructor
+      · exact fun ⟨_, h⟩ => h
+      · intro h; exact ⟨hS_sub_sig A h, h⟩
+    have hDerL : ConceptDerivableEL O (fun X => X ∈ L) B := by
+      apply conceptDerivableEL_mono O (fun X => X ∈ S) (fun X => X ∈ L)
+        _ hSDer
+      intro X hXS
+      exact (hL_eq_S X).mpr hXS
+    -- Now the closure clause `multiBodyAtomClause L B` is in seed.
+    have hClauseIn :
+        multiBodyAtomClause L B ∈ (canonicalSeedELConj sig O).S
+                                   (canonicalSeedELConj sig O).vr :=
+      canonicalSeedELConj_subsumes_elDerivable sig O L hLsig B hB_sig hDerL
+    -- This clause subsumes Q: body of clause is L.map (atomTrue (atom · x)).
+    -- Every such literal is in Q.Gamma (since A ∈ L → A ∈ S → A in body of Q at x).
+    have hSubs :
+        subsumes (multiBodyAtomClause L B)
+                 { body := Q.Gamma, head := Q.Delta } := by
+      refine ⟨?_, ?_⟩
+      · intro b hb
+        rcases List.mem_map.mp hb with ⟨A, hA, rfl⟩
+        have hAinS : A ∈ S := (hL_eq_S A).mp hA
+        have hAinit := hSinit A hAinS
+        exact hBodyAtomsInGamma A hAinit
+      · intro hLit hLitMem
+        rcases List.mem_singleton.mp hLitMem with rfl
+        exact hMem
+    exact hNoSubSeed _ hClauseIn hSubs
+  -- Similarly: no body atom forms a bot consequence multi-source.
+  have hNoBotInBody :
+      ∀ (S : List Nat) (A : Nat),
+        (∀ X, X ∈ S → queryBodyAtomConcepts Q X) →
+        ConceptDerivableEL O (fun X => X ∈ S) A →
+        (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O →
+        False := by
+    intro S A hSinit hSDer hABot
+    have hS_sub_sig : ∀ X, X ∈ S → X ∈ sig := by
+      intro X hX
+      have hXinit := hSinit X hX
+      obtain ⟨tX, hXmem⟩ := hXinit
+      have htX_eq : tX = ATerm.x :=
+        atomConjDisj_bodyTerm_is_x Q hBodyShape X tX hXmem
+      subst htX_eq
+      exact hQsig.1 X ATerm.x hXmem
+    set L := sig.filter (fun X => decide (X ∈ S)) with hLdef
+    have hLsig : L ∈ sig.sublists := filter_mem_sublists sig (· ∈ S)
+    have hL_eq_S : ∀ X, X ∈ L ↔ X ∈ S := by
+      intro X
+      rw [hLdef]
+      rw [mem_filter_iff sig (· ∈ S)]
+      constructor
+      · exact fun ⟨_, h⟩ => h
+      · intro h; exact ⟨hS_sub_sig X h, h⟩
+    have hDerL : ConceptDerivableEL O (fun X => X ∈ L) A := by
+      apply conceptDerivableEL_mono O (fun X => X ∈ S) (fun X => X ∈ L)
+        _ hSDer
+      intro X hXS
+      exact (hL_eq_S X).mpr hXS
+    have hBotL : ∃ A' : Nat,
+        ConceptDerivableEL O (fun X => X ∈ L) A' ∧
+        (ALCHOQ.Concept.atom A', ALCHOQ.Concept.bot) ∈ O :=
+      ⟨A, hDerL, hABot⟩
+    have hClauseIn :
+        multiBodyBotClause L ∈ (canonicalSeedELConj sig O).S
+                                (canonicalSeedELConj sig O).vr :=
+      canonicalSeedELConj_subsumes_elBot sig O L hLsig hBotL
+    have hSubs :
+        subsumes (multiBodyBotClause L)
+                 { body := Q.Gamma, head := Q.Delta } := by
+      refine ⟨?_, ?_⟩
+      · intro b hb
+        rcases List.mem_map.mp hb with ⟨X, hX, rfl⟩
+        have hXinS : X ∈ S := (hL_eq_S X).mp hX
+        have hXinit := hSinit X hXinS
+        exact hBodyAtomsInGamma X hXinit
+      · intro hLit hLitMem
+        exact absurd hLitMem List.not_mem_nil
+    exact hNoSubSeed _ hClauseIn hSubs
+  -- Build the EL Herbrand model.
+  refine ⟨Unit, ⟨()⟩, elHerbrandInterp O Q, atomicAssign.γ,
+          atomicAssign.φ, atomicAssign.vx, atomicAssign.vy, ?_, ?_⟩
+  · -- Herbrand satisfies O (atom-atom + atom-bot + conj-atom).
+    intro ax hax
+    rcases hO ax hax with ⟨A, B, hAxEq⟩ | ⟨A, hAxEq⟩ | ⟨A₁, A₂, B, hAxEq⟩
+    · subst hAxEq
+      intro x hxA
+      show ConceptDerivableEL O (queryBodyAtomConcepts Q) B
+      have hA : ConceptDerivableEL O (queryBodyAtomConcepts Q) A := hxA
+      exact ConceptDerivableEL.step_atom hA hax
+    · subst hAxEq
+      intro x hxA
+      have hDerA : ConceptDerivableEL O (queryBodyAtomConcepts Q) A := hxA
+      -- Multi-witness gives initial subset S that derives A.
+      obtain ⟨S, hSinit, hSDer⟩ :=
+        conceptDerivableEL_multi_witness O _ hDerA
+      exact hNoBotInBody S A hSinit hSDer hax
+    · subst hAxEq
+      intro x hx
+      -- I.eval (conj (atom A₁) (atom A₂)) x = ext_concept A₁ x ∧ ext_concept A₂ x
+      obtain ⟨hA1, hA2⟩ := hx
+      show ConceptDerivableEL O (queryBodyAtomConcepts Q) B
+      exact ConceptDerivableEL.step_conj hA1 hA2 hax
+  · -- Refute Q via the EL atomic-refutability.
+    intro hQeval
+    have hNoRoleBody : ∀ S t₁ t₂, BLit.atomTrue (PTerm.role S t₁ t₂) ∉ Q.Gamma := by
+      intro S t₁ t₂ hMem
+      obtain ⟨A, hEq⟩ := hBodyShape _ hMem
+      exact (by cases hEq)
+    have hNoTtrueHead : CLit.atomTrue PTerm.ttrue ∉ Q.Delta := by
+      intro hMem
+      obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+      exact (by cases hEq)
+    have hNoEqLHead : ∀ s₁ s₂, CLit.aeq (AEq.eqL s₁ s₂) ∉ Q.Delta := by
+      intro s₁ s₂ hMem
+      obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+      exact (by cases hEq)
+    have hNoRoleHead : ∀ S t₁ t₂, CLit.atomTrue (PTerm.role S t₁ t₂) ∉ Q.Delta := by
+      intro S t₁ t₂ hMem
+      obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+      exact (by cases hEq)
+    have hBody := elHerbrandInterp_body_holds O Q hNoRoleBody
+    have hHead := elHerbrandInterp_head_fails O Q hNoTtrueHead
+      hNoEqLHead hNoRoleHead hHeadNotDerivable_aux
+    obtain ⟨hh, hMem, hEval⟩ := hQeval hBody
+    exact hHead hh hMem hEval
+
+/-- **THE EL THEOREM.**  Canonical seed for the EL fragment
+    (atom-atom + atom-bot + atom⊓atom→atom). -/
+theorem isCanonicalSeedAtomConjDisj_ELConj
+    (sig : List Nat) (O : Ontology) (hO : IsELConjOnly O) :
+    IsCanonicalSeedAtomConjDisj sig O (canonicalSeedELConj sig O) :=
+  ⟨canonicalSeedELConj_vr_in_contexts sig O,
+   canonicalSeedELConj_sound sig O hO,
+   herbrandPropertyAtomConjDisj_ELConj sig O hO⟩
+
+/-- Total-function version (EL ontology). -/
+noncomputable def canonicalSeedELConjFromOntology (O : Ontology) :
+    ContextStructure :=
+  canonicalSeedELConj (ontologyConceptSig O) O
+
+theorem isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology
+    (O : Ontology) (hO : IsELConjOnly O) :
+    IsCanonicalSeedAtomConjDisj (ontologyConceptSig O) O
+      (canonicalSeedELConjFromOntology O) :=
+  isCanonicalSeedAtomConjDisj_ELConj (ontologyConceptSig O) O hO
 
 end ALCHOIQContext
 end ELKSDD
