@@ -1069,5 +1069,22 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.inUnifiedSlice_of_isELOrUniversalRoleVacuousOnly_emptyRBox
 #print axioms ALCHOIQContext.theorem2_canonicalSeedOfFull_isELOrAllVacuousOnly
 #print axioms ALCHOIQContext.theorem2_canonicalSeedOfFull_isELOrUniversalRoleVacuousOnly
+-- §RBOX-COMPAT CONS + SHAPE CONSTRUCTORS
+#print axioms ALCHOIQContext.rBoxCompatibleWithEmptyRoles_cons
+#print axioms ALCHOIQContext.rBoxCompatibleWithUniversalRoles_cons
+#print axioms ALCHOIQContext.rAxiomCompatibleWithEmptyRoles_incl
+#print axioms ALCHOIQContext.rAxiomCompatibleWithEmptyRoles_trans
+#print axioms ALCHOIQContext.rAxiomCompatibleWithEmptyRoles_sym
+#print axioms ALCHOIQContext.rAxiomCompatibleWithEmptyRoles_asym
+#print axioms ALCHOIQContext.rAxiomCompatibleWithEmptyRoles_irrefl
+#print axioms ALCHOIQContext.rAxiomCompatibleWithEmptyRoles_inv
+#print axioms ALCHOIQContext.rAxiomCompatibleWithEmptyRoles_disj
+#print axioms ALCHOIQContext.rAxiomCompatibleWithEmptyRoles_chain_cons
+#print axioms ALCHOIQContext.rAxiomCompatibleWithUniversalRoles_incl
+#print axioms ALCHOIQContext.rAxiomCompatibleWithUniversalRoles_chain
+#print axioms ALCHOIQContext.rAxiomCompatibleWithUniversalRoles_trans
+#print axioms ALCHOIQContext.rAxiomCompatibleWithUniversalRoles_sym
+#print axioms ALCHOIQContext.rAxiomCompatibleWithUniversalRoles_refl
+#print axioms ALCHOIQContext.rAxiomCompatibleWithUniversalRoles_inv
 
 end ELKSDD

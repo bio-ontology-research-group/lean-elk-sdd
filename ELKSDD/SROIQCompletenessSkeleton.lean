@@ -9036,6 +9036,86 @@ theorem inUnifiedSlice_of_isELConjOnly_emptyRBox
     InUnifiedSlice O ([] : SROIQ.RBox) :=
   inUnifiedSlice_of_isELConjOnly O [] hO emptyRBox_compatible
 
+-- ============================================================
+-- §RBOX-COMPAT CONSTRUCTORS.   Cons-style builders that let users
+-- assemble concrete non-empty RBoxes plugging into the unified-
+-- slice machinery via the compatibility predicates.
+-- ============================================================
+
+/-- **Cons-builder for `RBoxCompatibleWithEmptyRoles`.**   A non-empty
+    RBox is compatible iff its head axiom is and its tail is. -/
+theorem rBoxCompatibleWithEmptyRoles_cons
+    {ax : SROIQ.RAxiom} {rbox : SROIQ.RBox}
+    (hHead : RAxiomCompatibleWithEmptyRoles ax)
+    (hTail : RBoxCompatibleWithEmptyRoles rbox) :
+    RBoxCompatibleWithEmptyRoles (ax :: rbox) := by
+  intro ax' hax'
+  rcases List.mem_cons.mp hax' with rfl | hMem
+  · exact hHead
+  · exact hTail ax' hMem
+
+/-- **Cons-builder for `RBoxCompatibleWithUniversalRoles`.** -/
+theorem rBoxCompatibleWithUniversalRoles_cons
+    {ax : SROIQ.RAxiom} {rbox : SROIQ.RBox}
+    (hHead : RAxiomCompatibleWithUniversalRoles ax)
+    (hTail : RBoxCompatibleWithUniversalRoles rbox) :
+    RBoxCompatibleWithUniversalRoles (ax :: rbox) := by
+  intro ax' hax'
+  rcases List.mem_cons.mp hax' with rfl | hMem
+  · exact hHead
+  · exact hTail ax' hMem
+
+-- Shape-specific empty-roles compatibility witnesses.
+
+theorem rAxiomCompatibleWithEmptyRoles_incl (R S : Nat) :
+    RAxiomCompatibleWithEmptyRoles (SROIQ.RAxiom.incl R S) := trivial
+
+theorem rAxiomCompatibleWithEmptyRoles_trans (R : Nat) :
+    RAxiomCompatibleWithEmptyRoles (SROIQ.RAxiom.trans R) := trivial
+
+theorem rAxiomCompatibleWithEmptyRoles_sym (R : Nat) :
+    RAxiomCompatibleWithEmptyRoles (SROIQ.RAxiom.sym R) := trivial
+
+theorem rAxiomCompatibleWithEmptyRoles_asym (R : Nat) :
+    RAxiomCompatibleWithEmptyRoles (SROIQ.RAxiom.asym R) := trivial
+
+theorem rAxiomCompatibleWithEmptyRoles_irrefl (R : Nat) :
+    RAxiomCompatibleWithEmptyRoles (SROIQ.RAxiom.irrefl R) := trivial
+
+theorem rAxiomCompatibleWithEmptyRoles_inv (R S : Nat) :
+    RAxiomCompatibleWithEmptyRoles (SROIQ.RAxiom.inv R S) := trivial
+
+theorem rAxiomCompatibleWithEmptyRoles_disj (R S : Nat) :
+    RAxiomCompatibleWithEmptyRoles (SROIQ.RAxiom.disj R S) := trivial
+
+/-- Non-empty role chains are compatible (the empty chain is
+    excluded because `holdsAlong [] x y` collapses to `x = y` and
+    would demand `S(x, x)` everywhere). -/
+theorem rAxiomCompatibleWithEmptyRoles_chain_cons
+    (r : Nat) (rs : List Nat) (S : Nat) :
+    RAxiomCompatibleWithEmptyRoles (SROIQ.RAxiom.chain (r :: rs) S) := trivial
+
+-- Shape-specific universal-roles compatibility witnesses
+-- (excluded shapes are `asym`, `irrefl`, `disj`).
+
+theorem rAxiomCompatibleWithUniversalRoles_incl (R S : Nat) :
+    RAxiomCompatibleWithUniversalRoles (SROIQ.RAxiom.incl R S) := trivial
+
+theorem rAxiomCompatibleWithUniversalRoles_chain (rs : List Nat) (S : Nat) :
+    RAxiomCompatibleWithUniversalRoles (SROIQ.RAxiom.chain rs S) := trivial
+
+theorem rAxiomCompatibleWithUniversalRoles_trans (R : Nat) :
+    RAxiomCompatibleWithUniversalRoles (SROIQ.RAxiom.trans R) := trivial
+
+theorem rAxiomCompatibleWithUniversalRoles_sym (R : Nat) :
+    RAxiomCompatibleWithUniversalRoles (SROIQ.RAxiom.sym R) := trivial
+
+theorem rAxiomCompatibleWithUniversalRoles_refl (R : Nat) :
+    RAxiomCompatibleWithUniversalRoles (SROIQ.RAxiom.refl R) := trivial
+
+theorem rAxiomCompatibleWithUniversalRoles_inv (R S : Nat) :
+    RAxiomCompatibleWithUniversalRoles (SROIQ.RAxiom.inv R S) := trivial
+
 /-- **Concrete `InUnifiedSlice` instance** for any
     `IsELOrAllVacuousOnly` ontology paired with any
     empty-roles-compatible RBox.   This is the *maximal* fragment
