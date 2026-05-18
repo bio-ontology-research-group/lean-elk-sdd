@@ -3780,6 +3780,34 @@ inductive ConceptDerivableEL (O : Ontology) (initial : Nat → Prop) : Nat → P
        ALCHOQ.Concept.conj
          (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C)) ∈ O →
       ConceptDerivableEL O initial C
+  | step_disj_conj_left_L {A₁ A₂ B C : Nat} :
+      ConceptDerivableEL O initial A₁ →
+      (ALCHOQ.Concept.disj
+        (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+       ALCHOQ.Concept.conj
+         (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C)) ∈ O →
+      ConceptDerivableEL O initial B
+  | step_disj_conj_right_L {A₁ A₂ B C : Nat} :
+      ConceptDerivableEL O initial A₁ →
+      (ALCHOQ.Concept.disj
+        (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+       ALCHOQ.Concept.conj
+         (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C)) ∈ O →
+      ConceptDerivableEL O initial C
+  | step_disj_conj_left_R {A₁ A₂ B C : Nat} :
+      ConceptDerivableEL O initial A₂ →
+      (ALCHOQ.Concept.disj
+        (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+       ALCHOQ.Concept.conj
+         (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C)) ∈ O →
+      ConceptDerivableEL O initial B
+  | step_disj_conj_right_R {A₁ A₂ B C : Nat} :
+      ConceptDerivableEL O initial A₂ →
+      (ALCHOQ.Concept.disj
+        (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+       ALCHOQ.Concept.conj
+         (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C)) ∈ O →
+      ConceptDerivableEL O initial C
 
 /-- Every `ConceptDerivable` derivation is a `ConceptDerivableEL`
     derivation. -/
@@ -3813,6 +3841,14 @@ theorem conceptDerivableEL_mono
     exact ConceptDerivableEL.step_conj_conj_left ih1 ih2 hAx
   | @step_conj_conj_right A₁ A₂ B' C' _ _ hAx ih1 ih2 =>
     exact ConceptDerivableEL.step_conj_conj_right ih1 ih2 hAx
+  | @step_disj_conj_left_L A₁ A₂ B' C' _ hAx ih =>
+    exact ConceptDerivableEL.step_disj_conj_left_L ih hAx
+  | @step_disj_conj_right_L A₁ A₂ B' C' _ hAx ih =>
+    exact ConceptDerivableEL.step_disj_conj_right_L ih hAx
+  | @step_disj_conj_left_R A₁ A₂ B' C' _ hAx ih =>
+    exact ConceptDerivableEL.step_disj_conj_left_R ih hAx
+  | @step_disj_conj_right_R A₁ A₂ B' C' _ hAx ih =>
+    exact ConceptDerivableEL.step_disj_conj_right_R ih hAx
 
 /-- **Multi-source witness lemma.**  Every `ConceptDerivableEL`
     derivation of `B` from `initial` factors through a finite
@@ -3893,6 +3929,18 @@ theorem conceptDerivableEL_multi_witness
         conceptDerivableEL_mono O _ _
           (fun A hA => List.mem_append.mpr (Or.inr hA)) hS2Der
       exact ConceptDerivableEL.step_conj_conj_right hMonoA1 hMonoA2 hAx
+  | @step_disj_conj_left_L A₁ A₂ B' C' _ hAx ih =>
+    obtain ⟨S, hSinit, hSDer⟩ := ih
+    exact ⟨S, hSinit, ConceptDerivableEL.step_disj_conj_left_L hSDer hAx⟩
+  | @step_disj_conj_right_L A₁ A₂ B' C' _ hAx ih =>
+    obtain ⟨S, hSinit, hSDer⟩ := ih
+    exact ⟨S, hSinit, ConceptDerivableEL.step_disj_conj_right_L hSDer hAx⟩
+  | @step_disj_conj_left_R A₁ A₂ B' C' _ hAx ih =>
+    obtain ⟨S, hSinit, hSDer⟩ := ih
+    exact ⟨S, hSinit, ConceptDerivableEL.step_disj_conj_left_R hSDer hAx⟩
+  | @step_disj_conj_right_R A₁ A₂ B' C' _ hAx ih =>
+    obtain ⟨S, hSinit, hSDer⟩ := ih
+    exact ⟨S, hSinit, ConceptDerivableEL.step_disj_conj_right_R hSDer hAx⟩
 
 /-- **EL-aware semantic transport lemma**: a model `I` satisfying
     `O` and the initial atoms also satisfies any
@@ -3942,6 +3990,26 @@ theorem conceptDerivableEL_eval_transport
     have hAxEval := hIO _ hAx
     have hConj : I.eval (ALCHOQ.Concept.conj (.atom B') (.atom C')) vx :=
       hAxEval vx ⟨ih1, ih2⟩
+    exact hConj.2
+  | @step_disj_conj_left_L A₁ A₂ B' C' _ hAx ih =>
+    have hAxEval := hIO _ hAx
+    have hConj : I.eval (ALCHOQ.Concept.conj (.atom B') (.atom C')) vx :=
+      hAxEval vx (Or.inl ih)
+    exact hConj.1
+  | @step_disj_conj_right_L A₁ A₂ B' C' _ hAx ih =>
+    have hAxEval := hIO _ hAx
+    have hConj : I.eval (ALCHOQ.Concept.conj (.atom B') (.atom C')) vx :=
+      hAxEval vx (Or.inl ih)
+    exact hConj.2
+  | @step_disj_conj_left_R A₁ A₂ B' C' _ hAx ih =>
+    have hAxEval := hIO _ hAx
+    have hConj : I.eval (ALCHOQ.Concept.conj (.atom B') (.atom C')) vx :=
+      hAxEval vx (Or.inr ih)
+    exact hConj.1
+  | @step_disj_conj_right_R A₁ A₂ B' C' _ hAx ih =>
+    have hAxEval := hIO _ hAx
+    have hConj : I.eval (ALCHOQ.Concept.conj (.atom B') (.atom C')) vx :=
+      hAxEval vx (Or.inr ih)
     exact hConj.2
 
 /-- **The EL fragment predicate**: atom-atom, atom-bot, and
@@ -5399,6 +5467,11 @@ def IsELOrAllVacuousOnly (O : Ontology) : Prop :=
               (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
              ALCHOQ.Concept.conj
                (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C))) ∨
+    (∃ A₁ A₂ B C : Nat,
+       ax = (ALCHOQ.Concept.disj
+              (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+             ALCHOQ.Concept.conj
+               (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C))) ∨
     -- Vacuous shapes (no closure needed):
     HerbrandFalseLHS ax.1 ∨
     HerbrandTrueRHS ax.2
@@ -5413,17 +5486,17 @@ theorem isELOrVacuousOnly_imp_isELOrAllVacuousOnly
   · exact Or.inr (Or.inl hAB)
   · exact Or.inr (Or.inr (Or.inl hCJ))
   · -- (∃R.A, atom B): LHS is exist — HerbrandFalseLHS
-    right; right; right; right; right; right; left
+    right; right; right; right; right; right; right; left
     obtain ⟨R, A, B, rfl⟩ := hEx
     show HerbrandFalseLHS (ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom A))
     trivial
   · -- (atom A, ∀R.B): RHS is univ — HerbrandTrueRHS
-    right; right; right; right; right; right; right
+    right; right; right; right; right; right; right; right
     obtain ⟨A, R, B, rfl⟩ := hUn
     show HerbrandTrueRHS (ALCHOQ.Concept.univ R (ALCHOQ.Concept.atom B))
     trivial
   · -- (atom A, ⊤): RHS is top — HerbrandTrueRHS
-    right; right; right; right; right; right; right
+    right; right; right; right; right; right; right; right
     obtain ⟨A, rfl⟩ := hTop
     show HerbrandTrueRHS ALCHOQ.Concept.top
     trivial
@@ -5509,7 +5582,7 @@ theorem elHerbrandInterp_satisfies_O_aux_full
         exact absurd hLitMem List.not_mem_nil
     exact hNoSubSeed _ hClauseIn hSubs
   intro ax hax
-  rcases hO ax hax with hAA | hAB | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hFalseLHS | hTrueRHS
+  rcases hO ax hax with hAA | hAB | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hFalseLHS | hTrueRHS
   · obtain ⟨A, B, rfl⟩ := hAA
     intro x hxA
     show ConceptDerivableEL O (queryBodyAtomConcepts Q) B
@@ -5553,6 +5626,21 @@ theorem elHerbrandInterp_satisfies_O_aux_full
       exact ConceptDerivableEL.step_conj_conj_left hA1 hA2 hax
     · show ConceptDerivableEL O (queryBodyAtomConcepts Q) C
       exact ConceptDerivableEL.step_conj_conj_right hA1 hA2 hax
+  · -- (disj (atom A₁) (atom A₂), conj (atom B) (atom C)): derive both
+    -- B and C via the new step_disj_conj_*_L/R rules.
+    obtain ⟨A₁, A₂, B, C, rfl⟩ := hDJ_CJ
+    intro x hxOr
+    rcases hxOr with hA1 | hA2
+    · refine ⟨?_, ?_⟩
+      · show ConceptDerivableEL O (queryBodyAtomConcepts Q) B
+        exact ConceptDerivableEL.step_disj_conj_left_L hA1 hax
+      · show ConceptDerivableEL O (queryBodyAtomConcepts Q) C
+        exact ConceptDerivableEL.step_disj_conj_right_L hA1 hax
+    · refine ⟨?_, ?_⟩
+      · show ConceptDerivableEL O (queryBodyAtomConcepts Q) B
+        exact ConceptDerivableEL.step_disj_conj_left_R hA2 hax
+      · show ConceptDerivableEL O (queryBodyAtomConcepts Q) C
+        exact ConceptDerivableEL.step_disj_conj_right_R hA2 hax
   · -- HerbrandFalseLHS ax.1: LHS evaluates to False, axiom vacuous.
     intro x hxLHS
     exact absurd hxLHS (elHerbrandInterp_falsifies O Q ax.1 hFalseLHS x)
