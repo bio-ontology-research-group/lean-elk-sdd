@@ -1020,4 +1020,12 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isConjOfAtomsOrTop_trigger_eval_succ
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_anyLHS_exist_conjOfAtomsOrTop
 
+-- ============================================================
+-- §TREE: number-restriction analogue for IsConjOfAtomsOrTop.
+-- (any-LHS, ≥1 R.IsConjOfAtomsOrTop-filler) parallels the
+-- exist-RHS lemma above.
+-- ============================================================
+#print axioms ALCHOIQContext.isConjOfAtomsOrTop_trigger_eval_succ_atLeast1
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_anyLHS_atLeast1_conjOfAtomsOrTop
+
 end ELKSDD
