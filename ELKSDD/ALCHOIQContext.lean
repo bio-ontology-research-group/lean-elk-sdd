@@ -861,15 +861,42 @@ theorem step_add_entailed_sound
       rw [hif] at hcNew
       exact absurd hcNew (by intro h; exact List.not_mem_nil h)
 
-/-- The **Hyper rule** (Table 5.1) as a named alias for
-    `StepAddEntailed`.  The thesis's rule-specific premise is a
-    substitution σ matching ontology DL-clause body atoms to the
-    head atoms of clauses in `S_v`; in the refined Step, we abstract
-    this into the semantic-entailment side condition. -/
+/-- ``StepAddEntailedNonRedundant`` extends `StepAddEntailed` with the
+    thesis's **clause-elimination fairness** condition (§5.2): the new
+    clause `c` must not be subsumed by any existing clause in `S v`.
+    This is the standard redundancy criterion for resolution-style
+    saturation procedures; combined with a syntactic-universe bound
+    (item #8), it makes `FullSaturated` reachable for finite ontologies. -/
+def StepAddEntailedNonRedundant (O : Ontology) (CD : DerivedClauses)
+    (D : ContextStructure) (v : CtxId) (c : CClause)
+    (D' : ContextStructure) : Prop :=
+  StepAddEntailed O CD D v c D' ∧
+  (∀ c' ∈ D.S v, ¬ subsumes c' c)
+
+/-- **Soundness of `StepAddEntailedNonRedundant`**: the redundancy
+    premise only *restricts* applicability and never weakens what is
+    added, so soundness reduces to `step_add_entailed_sound`. -/
+theorem step_add_entailed_nonredundant_sound
+    (O : Ontology) (CD : DerivedClauses)
+    (D D' : ContextStructure) (v : CtxId) (c : CClause)
+    (hStep : StepAddEntailedNonRedundant O CD D v c D')
+    (hSound : isSound O D CD) :
+    isSound O D' CD :=
+  step_add_entailed_sound O CD D D' v c hStep.1 hSound
+
+/-- The **Hyper rule** (Table 5.1) — hyperresolution between an
+    ontology DL-clause and head literals of clauses in `S_v`.  The
+    refined Step adds (i) the semantic-entailment side condition
+    `StepAddEntailed`, (ii) the thesis's clause-elimination fairness
+    premise (the new clause is not subsumed by any existing clause
+    in `S_v`), and (iii) the *matching premise* `S_v ≠ []`: the rule
+    must resolve against an existing clause's head atoms.  Together,
+    these match the thesis Table 5.1 shape and prevent the rule from
+    firing on a fresh/empty context. -/
 def StepHyper (O : Ontology) (CD : DerivedClauses)
     (D : ContextStructure) (v : CtxId) (c : CClause)
     (D' : ContextStructure) : Prop :=
-  StepAddEntailed O CD D v c D'
+  StepAddEntailedNonRedundant O CD D v c D' ∧ D.S v ≠ []
 
 theorem step_hyper_sound
     (O : Ontology) (CD : DerivedClauses)
@@ -877,14 +904,15 @@ theorem step_hyper_sound
     (hStep : StepHyper O CD D v c D')
     (hSound : isSound O D CD) :
     isSound O D' CD :=
-  step_add_entailed_sound O CD D D' v c hStep hSound
+  step_add_entailed_nonredundant_sound O CD D D' v c hStep.1 hSound
 
 /-- The **Eq rule** (Table 5.1) — paramodulation on equalities.
-    Refined via `StepAddEntailed`. -/
+    Refined via `StepAddEntailedNonRedundant` plus matching premise
+    `S_v ≠ []` (Eq consumes an equality clause from `S_v`). -/
 def StepEq (O : Ontology) (CD : DerivedClauses)
     (D : ContextStructure) (v : CtxId) (c : CClause)
     (D' : ContextStructure) : Prop :=
-  StepAddEntailed O CD D v c D'
+  StepAddEntailedNonRedundant O CD D v c D' ∧ D.S v ≠ []
 
 theorem step_eq_sound
     (O : Ontology) (CD : DerivedClauses)
@@ -892,14 +920,15 @@ theorem step_eq_sound
     (hStep : StepEq O CD D v c D')
     (hSound : isSound O D CD) :
     isSound O D' CD :=
-  step_add_entailed_sound O CD D D' v c hStep hSound
+  step_add_entailed_nonredundant_sound O CD D D' v c hStep.1 hSound
 
 /-- The **Factor rule** (Table 5.1) — equality factoring.
-    Refined via `StepAddEntailed`. -/
+    Refined via `StepAddEntailedNonRedundant` plus matching premise
+    `S_v ≠ []` (Factor consumes one clause from `S_v`). -/
 def StepFactor (O : Ontology) (CD : DerivedClauses)
     (D : ContextStructure) (v : CtxId) (c : CClause)
     (D' : ContextStructure) : Prop :=
-  StepAddEntailed O CD D v c D'
+  StepAddEntailedNonRedundant O CD D v c D' ∧ D.S v ≠ []
 
 theorem step_factor_sound
     (O : Ontology) (CD : DerivedClauses)
@@ -907,14 +936,15 @@ theorem step_factor_sound
     (hStep : StepFactor O CD D v c D')
     (hSound : isSound O D CD) :
     isSound O D' CD :=
-  step_add_entailed_sound O CD D D' v c hStep hSound
+  step_add_entailed_nonredundant_sound O CD D D' v c hStep.1 hSound
 
 /-- The **Join rule** (Table 5.1) — ground resolution within a
-    context.  Refined via `StepAddEntailed`. -/
+    context.  Refined via `StepAddEntailedNonRedundant` plus matching
+    premise `S_v ≠ []` (Join consumes two clauses from `S_v`). -/
 def StepJoin (O : Ontology) (CD : DerivedClauses)
     (D : ContextStructure) (v : CtxId) (c : CClause)
     (D' : ContextStructure) : Prop :=
-  StepAddEntailed O CD D v c D'
+  StepAddEntailedNonRedundant O CD D v c D' ∧ D.S v ≠ []
 
 theorem step_join_sound
     (O : Ontology) (CD : DerivedClauses)
@@ -922,17 +952,16 @@ theorem step_join_sound
     (hStep : StepJoin O CD D v c D')
     (hSound : isSound O D CD) :
     isSound O D' CD :=
-  step_add_entailed_sound O CD D D' v c hStep hSound
+  step_add_entailed_nonredundant_sound O CD D D' v c hStep.1 hSound
 
 /-- The **Nom rule** (Table 5.2) — introduce auxiliary constants
     when a cardinality witness clause fires.  Refined via
-    `StepAddEntailed` (the rule's effect is to add a clause
-    instantiating the equality; the auxiliary-constant creation
-    can be absorbed into the constant-assignment `γ`). -/
+    `StepAddEntailedNonRedundant` plus matching premise `S_v ≠ []`
+    (Nom consumes a cardinality clause from `S_v`). -/
 def StepNom (O : Ontology) (CD : DerivedClauses)
     (D : ContextStructure) (v : CtxId) (c : CClause)
     (D' : ContextStructure) : Prop :=
-  StepAddEntailed O CD D v c D'
+  StepAddEntailedNonRedundant O CD D v c D' ∧ D.S v ≠ []
 
 theorem step_nom_sound
     (O : Ontology) (CD : DerivedClauses)
@@ -940,7 +969,7 @@ theorem step_nom_sound
     (hStep : StepNom O CD D v c D')
     (hSound : isSound O D CD) :
     isSound O D' CD :=
-  step_add_entailed_sound O CD D D' v c hStep hSound
+  step_add_entailed_nonredundant_sound O CD D D' v c hStep.1 hSound
 
 -- ============================================================
 -- §5.2 Succ / Pred / r-Succ / r-Pred rules: refined with edge
@@ -1070,13 +1099,14 @@ theorem step_succ_sound
       exact hSound.2 u u' f' hEdgeD huneD I γ φ hIO hICD vx vy hcoreD p hp
 
 /-- The **Pred rule** (Table 5.2) — backward propagation through a
-    Skolem-function edge.  Refined via `StepAddEntailed` since Pred
-    only adds clauses to an existing context (the predecessor), not
-    edges or contexts. -/
+    Skolem-function edge.  Refined via `StepAddEntailedNonRedundant`
+    plus the edge-existence premise: there must be an outgoing
+    fn-edge from `v` (the successor it propagates from). -/
 def StepPred (O : Ontology) (CD : DerivedClauses)
     (D : ContextStructure) (v : CtxId) (c : CClause)
     (D' : ContextStructure) : Prop :=
-  StepAddEntailed O CD D v c D'
+  StepAddEntailedNonRedundant O CD D v c D' ∧
+  (∃ w f, (v, w, EdgeLabel.fn f) ∈ D.edges)
 
 theorem step_pred_sound
     (O : Ontology) (CD : DerivedClauses)
@@ -1084,7 +1114,7 @@ theorem step_pred_sound
     (hStep : StepPred O CD D v c D')
     (hSound : isSound O D CD) :
     isSound O D' CD :=
-  step_add_entailed_sound O CD D D' v c hStep hSound
+  step_add_entailed_nonredundant_sound O CD D D' v c hStep.1 hSound
 
 /-- The **r-Succ rule** (Table 5.2) — propagation from a non-root
     context to the root via an auxiliary-constant edge.
@@ -1162,12 +1192,14 @@ theorem step_rsucc_sound
       exact hSound.2 u' u'' f' hOld huneD I γ φ hIO hICD vx vy hcoreD p hp
 
 /-- The **r-Pred rule** (Table 5.2) — propagation from root back to
-    a non-root context.  Refined via `StepAddEntailed` since r-Pred
-    only adds clauses (no edges/contexts). -/
+    a non-root context.  Refined via `StepAddEntailedNonRedundant`
+    plus the auxiliary-constant-edge premise: there must be a uind
+    edge from `v` to the root. -/
 def StepRpred (O : Ontology) (CD : DerivedClauses)
     (D : ContextStructure) (v : CtxId) (c : CClause)
     (D' : ContextStructure) : Prop :=
-  StepAddEntailed O CD D v c D'
+  StepAddEntailedNonRedundant O CD D v c D' ∧
+  (∃ u, (v, D.vr, EdgeLabel.uind u) ∈ D.edges)
 
 theorem step_rpred_sound
     (O : Ontology) (CD : DerivedClauses)
@@ -1175,7 +1207,7 @@ theorem step_rpred_sound
     (hStep : StepRpred O CD D v c D')
     (hSound : isSound O D CD) :
     isSound O D' CD :=
-  step_add_entailed_sound O CD D D' v c hStep hSound
+  step_add_entailed_nonredundant_sound O CD D D' v c hStep.1 hSound
 
 -- ============================================================
 -- §5.2 Ineq rule, concretely refined.

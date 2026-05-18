@@ -373,4 +373,15 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.herbrandProperty_atomicSubsumption
 #print axioms ALCHOIQContext.isCanonicalSeed_atomicSubsumption
 
+-- ============================================================
+-- Item #2: Refined Hyper/Eq/Factor/Join/Nom/Pred/Rpred rules with
+-- thesis-faithful syntactic premises (non-redundancy + matching
+-- premise / edge existence).  Makes `FullSaturated` reachable on
+-- finite structures: the empty context structure is a concrete
+-- `FullSaturated` witness.
+-- ============================================================
+#print axioms ALCHOIQContext.StepAddEntailedNonRedundant
+#print axioms ALCHOIQContext.step_add_entailed_nonredundant_sound
+#print axioms ALCHOIQContext.fullSaturated_emptyContextStructure
+
 end ELKSDD

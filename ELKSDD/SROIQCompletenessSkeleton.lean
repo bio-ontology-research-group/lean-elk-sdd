@@ -567,27 +567,27 @@ theorem fullStep_preserves_SubsumerInvariant
     · rw [hVr, hCtx]; exact hVrIn
     · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
   | viaHyper hRule =>
-    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule.1.1
     refine ⟨?_, c_w, ?_, hc_wSub⟩
     · rw [hVr, hCtx]; exact hVrIn
     · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
   | viaEq hRule =>
-    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule.1.1
     refine ⟨?_, c_w, ?_, hc_wSub⟩
     · rw [hVr, hCtx]; exact hVrIn
     · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
   | viaFactor hRule =>
-    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule.1.1
     refine ⟨?_, c_w, ?_, hc_wSub⟩
     · rw [hVr, hCtx]; exact hVrIn
     · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
   | viaJoin hRule =>
-    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule.1.1
     refine ⟨?_, c_w, ?_, hc_wSub⟩
     · rw [hVr, hCtx]; exact hVrIn
     · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
   | viaNom hRule =>
-    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule.1.1
     refine ⟨?_, c_w, ?_, hc_wSub⟩
     · rw [hVr, hCtx]; exact hVrIn
     · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
@@ -598,7 +598,7 @@ theorem fullStep_preserves_SubsumerInvariant
       exact List.mem_cons.mpr (Or.inr hVrIn)
     · rw [hVr]; exact mem_S_after_add_at_new hSeq hWFresh hVrIn hc_wIn
   | viaPred hRule =>
-    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule.1.1
     refine ⟨?_, c_w, ?_, hc_wSub⟩
     · rw [hVr, hCtx]; exact hVrIn
     · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
@@ -608,7 +608,7 @@ theorem fullStep_preserves_SubsumerInvariant
     · rw [hVr, hCtx]; exact hVrIn
     · rw [hVr]; exact mem_S_after_prepend_root hSeq hc_wIn
   | viaRpred hRule =>
-    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule
+    obtain ⟨_, _, _, hCtx, hVr, _, _, _, _, hSeq⟩ := hRule.1.1
     refine ⟨?_, c_w, ?_, hc_wSub⟩
     · rw [hVr, hCtx]; exact hVrIn
     · rw [hVr]; exact mem_S_after_add_at_v hSeq hc_wIn
@@ -1043,6 +1043,75 @@ theorem isCanonicalSeed_atomicSubsumption
         AtomicRefutable O Q) :
     IsCanonicalSeed O D_seed :=
   ⟨hVr, hSound, herbrandProperty_atomicSubsumption O hO D_seed hInvariant⟩
+
+-- ============================================================
+-- §0.2 Reachability demonstrator for the refined 12-rule calculus.
+--
+-- With the thesis-faithful refinements of Hyper/Eq/Factor/Join/Nom
+-- (matching premise `S_v ≠ []`) and Pred/Rpred (edge-existence
+-- premise), the empty context structure is now `FullSaturated`:
+-- no rule has the syntactic shape to fire on it.  This is the
+-- finite-D reachability witness item #2 of the completeness
+-- decomposition asks for.
+-- ============================================================
+
+/-- The empty context structure is `FullSaturated` under the refined
+    12-rule calculus.  Every rule is blocked: Core/Elim/Ineq by the
+    empty `S` and `core`, the five hypothetic rules by `S_v = []`,
+    Pred/Rpred by the empty `edges`, and Succ/Rsucc need a non-root
+    context, which the empty structure does not provide. -/
+theorem fullSaturated_emptyContextStructure :
+    FullSaturated emptyContextStructure := by
+  intro D' rn hStep
+  cases hStep with
+  | viaCore hSC =>
+    obtain ⟨_, hA, _⟩ := hSC
+    exact absurd hA List.not_mem_nil
+  | viaElim hSE =>
+    obtain ⟨_, hCM, _⟩ := hSE
+    exact absurd hCM List.not_mem_nil
+  | viaIneq hSI =>
+    obtain ⟨_, hCM, _, _, _⟩ := hSI
+    exact absurd hCM List.not_mem_nil
+  | viaHyper hSH =>
+    -- hSH.2 : emptyContextStructure.S v ≠ []  but S v = [] by definition.
+    exact hSH.2 rfl
+  | viaEq hSE =>
+    exact hSE.2 rfl
+  | viaFactor hSF =>
+    exact hSF.2 rfl
+  | viaJoin hSJ =>
+    exact hSJ.2 rfl
+  | viaNom hSN =>
+    exact hSN.2 rfl
+  | viaSucc hSS =>
+    -- Succ requires `v ≠ D.vr` AND `v ∈ D.contexts = [0]`, so v = 0 = vr.
+    obtain ⟨hvIn, hvne, _⟩ := hSS
+    have : (0 : CtxId) = 0 := rfl
+    -- hvIn : v ∈ [0], so v = 0; hvne : v ≠ emptyContextStructure.vr = 0.
+    have hv0 : ∀ v : CtxId, v ∈ [(0 : CtxId)] → v = 0 := by
+      intro v hv
+      rcases List.mem_cons.mp hv with h | h
+      · exact h
+      · exact absurd h List.not_mem_nil
+    have := hv0 _ hvIn
+    exact hvne (by rw [this]; rfl)
+  | viaPred hSP =>
+    obtain ⟨_w, _f, hEdge⟩ := hSP.2
+    exact absurd hEdge List.not_mem_nil
+  | viaRsucc hSR =>
+    -- Rsucc requires v ≠ D.vr AND v ∈ D.contexts = [0].
+    obtain ⟨hvIn, hvne, _⟩ := hSR
+    have hv0 : ∀ v : CtxId, v ∈ [(0 : CtxId)] → v = 0 := by
+      intro v hv
+      rcases List.mem_cons.mp hv with h | h
+      · exact h
+      · exact absurd h List.not_mem_nil
+    have := hv0 _ hvIn
+    exact hvne (by rw [this]; rfl)
+  | viaRpred hSR =>
+    obtain ⟨_u, hEdge⟩ := hSR.2
+    exact absurd hEdge List.not_mem_nil
 
 end ALCHOIQContext
 end ELKSDD
