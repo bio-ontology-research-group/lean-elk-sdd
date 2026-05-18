@@ -613,4 +613,17 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_canonicalSeedAtomBotFromOntology
 #print axioms ALCHOIQContext.atomAtomClosureClause_sound_noHyp
 
+-- ============================================================
+-- EL SCAFFOLDING: ConceptDerivableEL with atom-atom + conj-atom
+-- steps.  Provides the technical foundation for multi-body
+-- closure clauses needed for full EL (next step toward SROIQ).
+-- ============================================================
+#print axioms ALCHOIQContext.ConceptDerivableEL
+#print axioms ALCHOIQContext.conceptDerivable_imp_conceptDerivableEL
+#print axioms ALCHOIQContext.conceptDerivableEL_mono
+#print axioms ALCHOIQContext.conceptDerivableEL_multi_witness
+#print axioms ALCHOIQContext.conceptDerivableEL_eval_transport
+#print axioms ALCHOIQContext.IsELConjOnly
+#print axioms ALCHOIQContext.isAtomicOrBotOnly_imp_isELConjOnly
+
 end ELKSDD

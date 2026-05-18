@@ -3701,5 +3701,143 @@ theorem isCanonicalSeedAtomConjDisj_canonicalSeedAtomBotFromOntology
       (canonicalSeedAtomBotFromOntology O) :=
   isCanonicalSeedAtomConjDisj_atomOrBot (ontologyConceptSig O) O hO
 
+-- ============================================================
+-- §FINAL-EL.  Scaffolding for conjunctive axiom support:
+-- `ConceptDerivableEL` extends `ConceptDerivable` with a
+-- conjunctive step `(atom A1 ⊓ atom A2 ⊑ atom B)`.
+--
+-- This is the next axiom-shape extension toward full EL (and
+-- ultimately SROIQ).  Conjunctive axioms break the
+-- singleton-witness lemma — `B` derivable from `{A1, A2}` is not
+-- in general derivable from `{A1}` or `{A2}` alone — so the
+-- closure scheme must be multi-body.  This section provides the
+-- two enabling lemmas:
+--
+--   * `conceptDerivableEL_mono` — derivation closed under
+--     enlarging the initial set.
+--   * `conceptDerivableEL_multi_witness` — every derivation
+--     has a finite list of initial atoms that suffices.
+--
+-- These are the technical foundation for the multi-body closure
+-- clause scheme.  The full HerbrandProperty discharge requires
+-- additional work (multi-body closure construction, soundness,
+-- subsumption argument) — left for follow-up.
+-- ============================================================
+
+/-- **EL-style derivation closure**: atom-atom, atom-bot, and
+    conjunctive (atom ⊓ atom ⊑ atom) axioms.   Strictly richer
+    than `ConceptDerivable` (atom-atom only). -/
+inductive ConceptDerivableEL (O : Ontology) (initial : Nat → Prop) : Nat → Prop where
+  | base {B : Nat} : initial B → ConceptDerivableEL O initial B
+  | step_atom {A B : Nat} : ConceptDerivableEL O initial A →
+                            (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) ∈ O →
+                            ConceptDerivableEL O initial B
+  | step_conj {A₁ A₂ B : Nat} :
+      ConceptDerivableEL O initial A₁ →
+      ConceptDerivableEL O initial A₂ →
+      (ALCHOQ.Concept.conj
+        (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+       ALCHOQ.Concept.atom B) ∈ O →
+      ConceptDerivableEL O initial B
+
+/-- Every `ConceptDerivable` derivation is a `ConceptDerivableEL`
+    derivation. -/
+theorem conceptDerivable_imp_conceptDerivableEL
+    (O : Ontology) (initial : Nat → Prop) :
+    ∀ {B : Nat}, ConceptDerivable O initial B → ConceptDerivableEL O initial B := by
+  intro B hDer
+  induction hDer with
+  | @base B' hInit => exact ConceptDerivableEL.base hInit
+  | @step A' B' _ hAx ih => exact ConceptDerivableEL.step_atom ih hAx
+
+/-- **Monotonicity of `ConceptDerivableEL`** in the initial predicate. -/
+theorem conceptDerivableEL_mono
+    (O : Ontology) (P Q : Nat → Prop) (hPQ : ∀ X, P X → Q X) :
+    ∀ {B : Nat}, ConceptDerivableEL O P B → ConceptDerivableEL O Q B := by
+  intro B hDer
+  induction hDer with
+  | @base B' hP => exact ConceptDerivableEL.base (hPQ _ hP)
+  | @step_atom A' B' _ hAx ih => exact ConceptDerivableEL.step_atom ih hAx
+  | @step_conj A₁ A₂ B' _ _ hAx ih1 ih2 =>
+    exact ConceptDerivableEL.step_conj ih1 ih2 hAx
+
+/-- **Multi-source witness lemma.**  Every `ConceptDerivableEL`
+    derivation of `B` from `initial` factors through a finite
+    list `S` of "actually used" initial atoms.  The list `S` is
+    closed under membership-of-initial, and `ConceptDerivableEL`
+    of `B` from `(· ∈ S)` holds. -/
+theorem conceptDerivableEL_multi_witness
+    (O : Ontology) (initial : Nat → Prop) :
+    ∀ {B : Nat}, ConceptDerivableEL O initial B →
+      ∃ S : List Nat,
+        (∀ A, A ∈ S → initial A) ∧
+        ConceptDerivableEL O (fun X => X ∈ S) B := by
+  intro B hDer
+  induction hDer with
+  | @base B' hInit =>
+    refine ⟨[B'], ?_, ?_⟩
+    · intro A hA
+      rcases List.mem_singleton.mp hA with rfl
+      exact hInit
+    · exact ConceptDerivableEL.base (List.mem_singleton.mpr rfl)
+  | @step_atom A' B' _ hAx ih =>
+    obtain ⟨S, hSinit, hSDer⟩ := ih
+    exact ⟨S, hSinit, ConceptDerivableEL.step_atom hSDer hAx⟩
+  | @step_conj A₁ A₂ B' _ _ hAx ih1 ih2 =>
+    obtain ⟨S1, hS1init, hS1Der⟩ := ih1
+    obtain ⟨S2, hS2init, hS2Der⟩ := ih2
+    refine ⟨S1 ++ S2, ?_, ?_⟩
+    · intro A hA
+      rcases List.mem_append.mp hA with h | h
+      · exact hS1init A h
+      · exact hS2init A h
+    · have hMonoA1 : ConceptDerivableEL O (fun X => X ∈ S1 ++ S2) A₁ :=
+        conceptDerivableEL_mono O _ _
+          (fun A hA => List.mem_append.mpr (Or.inl hA)) hS1Der
+      have hMonoA2 : ConceptDerivableEL O (fun X => X ∈ S1 ++ S2) A₂ :=
+        conceptDerivableEL_mono O _ _
+          (fun A hA => List.mem_append.mpr (Or.inr hA)) hS2Der
+      exact ConceptDerivableEL.step_conj hMonoA1 hMonoA2 hAx
+
+/-- **EL-aware semantic transport lemma**: a model `I` satisfying
+    `O` and the initial atoms also satisfies any
+    `ConceptDerivableEL` consequence. -/
+theorem conceptDerivableEL_eval_transport
+    {α : Type} (I : Interp α) (O : Ontology) (hIO : I.satisfies O)
+    (initial : Nat → Prop) (vx : α)
+    (hInit : ∀ A, initial A → I.ext_concept A vx) :
+    ∀ {B : Nat}, ConceptDerivableEL O initial B → I.ext_concept B vx := by
+  intro B hDer
+  induction hDer with
+  | @base B' hI => exact hInit _ hI
+  | @step_atom A' B' _ hAx ih =>
+    have hAxEval := hIO _ hAx
+    exact hAxEval vx ih
+  | @step_conj A₁ A₂ B' _ _ hAx ih1 ih2 =>
+    have hAxEval := hIO _ hAx
+    -- hAxEval : ∀ x, I.eval (conj (atom A₁) (atom A₂)) x → I.eval (atom B') x
+    -- I.eval (conj (atom A₁) (atom A₂)) vx = I.ext_concept A₁ vx ∧ I.ext_concept A₂ vx
+    exact hAxEval vx ⟨ih1, ih2⟩
+
+/-- **The EL fragment predicate**: atom-atom, atom-bot, and
+    conjunctive-atom axioms only. -/
+def IsELConjOnly (O : Ontology) : Prop :=
+  ∀ ax ∈ O,
+    (∃ A B : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B)) ∨
+    (∃ A : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot)) ∨
+    (∃ A₁ A₂ B : Nat,
+       ax = (ALCHOQ.Concept.conj
+              (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+             ALCHOQ.Concept.atom B))
+
+/-- Atom-or-bot is a special case of EL. -/
+theorem isAtomicOrBotOnly_imp_isELConjOnly
+    (O : Ontology) (hO : IsAtomicOrBotOnly O) :
+    IsELConjOnly O := by
+  intro ax hax
+  rcases hO ax hax with ⟨A, B, h⟩ | ⟨A, h⟩
+  · exact Or.inl ⟨A, B, h⟩
+  · exact Or.inr (Or.inl ⟨A, h⟩)
+
 end ALCHOIQContext
 end ELKSDD
