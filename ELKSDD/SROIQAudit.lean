@@ -912,6 +912,15 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_atom_exist_conjOfAtoms
 
 -- ============================================================
+-- §TREE: simplified ext_role + (atom A, ∃R.top) coverage.
+-- ext_role now uses the filler-agnostic axiomTriggersRole, so
+-- axioms with arbitrary fillers (top, conjOfAtoms, …) all
+-- establish the role edge between parent and successor.
+-- Subsumes the previous ∃B-witness structure cleanly.
+-- ============================================================
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_atom_exist_top
+
+-- ============================================================
 -- §TREE SATISFIES O composition.   Single satisfaction theorem
 -- assembled by dispatching per-axiom to the tree-Herbrand lemmas.
 -- ============================================================
