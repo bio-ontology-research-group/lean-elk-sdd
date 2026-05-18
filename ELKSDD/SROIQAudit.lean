@@ -901,6 +901,17 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_treeTrueRHS_univ_conjOfAtoms
 
 -- ============================================================
+-- §TREE: exist-RHS with conj-of-atoms filler.   Generalises
+-- triggerAtomsOfAxiom and axiomTriggersRoleAtom via ConjMember so
+-- a single (atom A, ∃R.filler) axiom — where filler is a
+-- conj-of-atoms — populates the successor's initial atoms with
+-- every leaf-atom of the filler.   Subsumes single-atom filler.
+-- ============================================================
+#print axioms ALCHOIQContext.isConjOfAtoms_has_member
+#print axioms ALCHOIQContext.isConjOfAtoms_trigger_eval_succ
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_atom_exist_conjOfAtoms
+
+-- ============================================================
 -- §TREE SATISFIES O composition.   Single satisfaction theorem
 -- assembled by dispatching per-axiom to the tree-Herbrand lemmas.
 -- ============================================================

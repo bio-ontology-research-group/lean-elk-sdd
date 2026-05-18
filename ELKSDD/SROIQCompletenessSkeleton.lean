@@ -5436,19 +5436,21 @@ inductive HerbrandTree (O : Ontology) : Type
   | root : HerbrandTree O
   | succ : HerbrandTree O → (ax : ALCHOQ.Axiom) → ax ∈ O → HerbrandTree O
 
-/-- Decide whether an axiom's RHS is `∃R.(atom B)` for the given
-    role `R` and atom `B`.   Returns `true` iff the axiom has
-    that exact shape; the LHS is unconstrained. -/
+/-- Decide whether an axiom's RHS is `∃R.filler` with `B` a
+    `ConjMember` of the filler.   Generalises the previous shape:
+    for a single-atom filler `atom B'`, `ConjMember (atom B') B`
+    reduces to `B = B'` via `atom_self`. -/
 def axiomTriggersRoleAtom : ALCHOQ.Axiom → Nat → Nat → Prop
-  | (_, ALCHOQ.Concept.exist R' (ALCHOQ.Concept.atom B')), R, B =>
-      R' = R ∧ B' = B
+  | (_, ALCHOQ.Concept.exist R' filler), R, B =>
+      R' = R ∧ ConjMember filler B
   | _, _, _ => False
 
-/-- Atoms forced at a `succ p ax hAx` node.   These come from the
-    axiom's RHS shape `∃R.(atom B)`, contributing `B` as a trigger
-    atom; otherwise no contribution. -/
+/-- Atoms forced at a `succ p ax hAx` node.   For an axiom with
+    RHS `∃R.filler`, every leaf-atom of `filler` (via `ConjMember`)
+    is a trigger atom.   For an atom filler, this reduces to the
+    earlier `B' = B` shape via `ConjMember.atom_self`. -/
 def triggerAtomsOfAxiom : ALCHOQ.Axiom → Nat → Prop
-  | (_, ALCHOQ.Concept.exist _ (ALCHOQ.Concept.atom B)), B' => B' = B
+  | (_, ALCHOQ.Concept.exist _ filler), B => ConjMember filler B
   | _, _ => False
 
 /-- Role-only trigger: the axiom's RHS produces this role (with any
@@ -5546,7 +5548,7 @@ theorem elHerbrandInterpTree_sat_atom_exist_atom
   · -- ext_role at (p, succ p ax) reduces to `p = p ∧ ∃B', axiomTriggers...`
     refine ⟨rfl, B, ?_, ?_⟩
     · rfl
-    · rfl
+    · exact ConjMember.atom_self
   · -- B at succ node: trigger-atom branch of the initial-atom set.
     show ConceptDerivableEL O
       (treeNodeInitialAtoms Q
@@ -5554,7 +5556,7 @@ theorem elHerbrandInterpTree_sat_atom_exist_atom
           (ALCHOQ.Concept.atom A,
            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) hAx)) B
     apply ConceptDerivableEL.base
-    exact Or.inl rfl
+    exact Or.inl ConjMember.atom_self
 
 -- ============================================================
 -- §TREE HERBRAND: EL-SUBSTANTIVE AXIOM SATISFACTION
@@ -5883,14 +5885,14 @@ theorem elHerbrandInterpTree_sat_top_exist_atom
           ?_, ?_⟩
   · refine ⟨rfl, B, ?_, ?_⟩
     · rfl
-    · rfl
+    · exact ConjMember.atom_self
   · show ConceptDerivableEL O
       (treeNodeInitialAtoms Q
         (HerbrandTree.succ p
           (ALCHOQ.Concept.top,
            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) hAx)) B
     apply ConceptDerivableEL.base
-    exact Or.inl rfl
+    exact Or.inl ConjMember.atom_self
 
 /-- **Tree-Herbrand root-satisfaction for
     `(conj (atom A₁) (atom A₂), ∃R.(atom B))` axioms.**   The
@@ -5913,14 +5915,14 @@ theorem elHerbrandInterpTree_sat_conj_exist_atom
           ?_, ?_⟩
   · refine ⟨rfl, B, ?_, ?_⟩
     · rfl
-    · rfl
+    · exact ConjMember.atom_self
   · show ConceptDerivableEL O
       (treeNodeInitialAtoms Q
         (HerbrandTree.succ p
           (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂),
            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) hAx)) B
     apply ConceptDerivableEL.base
-    exact Or.inl rfl
+    exact Or.inl ConjMember.atom_self
 
 /-- **Tree-Herbrand root-satisfaction for
     `(disj (atom A₁) (atom A₂), ∃R.(atom B))` axioms.**   Like the
@@ -5943,25 +5945,99 @@ theorem elHerbrandInterpTree_sat_disj_exist_atom
           ?_, ?_⟩
   · refine ⟨rfl, B, ?_, ?_⟩
     · rfl
-    · rfl
+    · exact ConjMember.atom_self
   · show ConceptDerivableEL O
       (treeNodeInitialAtoms Q
         (HerbrandTree.succ p
           (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂),
            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) hAx)) B
     apply ConceptDerivableEL.base
-    exact Or.inl rfl
+    exact Or.inl ConjMember.atom_self
+
+/-- Filler-evaluation helper for trigger-atom successor nodes:
+    every atom-leaf of an `IsConjOfAtoms filler` evaluates true at
+    the successor introduced by axiom `ax` whose RHS contains
+    `filler` as `∃R.filler`. -/
+theorem isConjOfAtoms_trigger_eval_succ
+    (O : Ontology) (Q : QueryClause)
+    {R : Nat} {fillerWhole : ALCHOQ.Concept}
+    {ax : ALCHOQ.Axiom} (hAx : ax ∈ O)
+    (hAxShape : ax.2 = ALCHOQ.Concept.exist R fillerWhole) :
+    ∀ {C : ALCHOQ.Concept}, IsConjOfAtoms C →
+      (∀ B, ConjMember C B → ConjMember fillerWhole B) →
+      ∀ (p : HerbrandTree O),
+        (elHerbrandInterpTree O Q).eval C
+          (HerbrandTree.succ p ax hAx) := by
+  intro C hC
+  induction hC with
+  | @atom B =>
+      intro hSub p
+      have hMW : ConjMember fillerWhole B := hSub B ConjMember.atom_self
+      show ConceptDerivableEL O
+        (treeNodeInitialAtoms Q (HerbrandTree.succ p ax hAx)) B
+      apply ConceptDerivableEL.base
+      apply Or.inl
+      -- Goal: triggerAtomsOfAxiom ax B
+      -- ax.2 = exist R fillerWhole; ConjMember fillerWhole B
+      show triggerAtomsOfAxiom ax B
+      rcases ax with ⟨lhs, rhs⟩
+      simp only at hAxShape
+      subst hAxShape
+      exact hMW
+  | @conj C₁ C₂ _ _ ih₁ ih₂ =>
+      intro hSub p
+      have hSub₁ : ∀ B, ConjMember C₁ B → ConjMember fillerWhole B :=
+        fun B hM₁ => hSub B (ConjMember.left hM₁)
+      have hSub₂ : ∀ B, ConjMember C₂ B → ConjMember fillerWhole B :=
+        fun B hM₂ => hSub B (ConjMember.right hM₂)
+      exact ⟨ih₁ hSub₁ p, ih₂ hSub₂ p⟩
+
+/-- Any `IsConjOfAtoms` concept has at least one atom-member.
+    Used as the role-witness pick in exist-RHS proofs. -/
+theorem isConjOfAtoms_has_member :
+    ∀ {C : ALCHOQ.Concept}, IsConjOfAtoms C → ∃ B, ConjMember C B := by
+  intro C hC
+  induction hC with
+  | @atom A => exact ⟨A, ConjMember.atom_self⟩
+  | @conj C₁ C₂ _ _ ih₁ _ =>
+      obtain ⟨B, hB⟩ := ih₁
+      exact ⟨B, ConjMember.left hB⟩
+
+/-- **Tree-Herbrand root-satisfaction for `(atom A, ∃R.filler)`
+    axioms with `IsConjOfAtoms filler`.**   Generalises
+    `_sat_atom_exist_atom` to arbitrary n-ary conjunction fillers. -/
+theorem elHerbrandInterpTree_sat_atom_exist_conjOfAtoms
+    (O : Ontology) (Q : QueryClause)
+    (A R : Nat) (filler : ALCHOQ.Concept) (hF : IsConjOfAtoms filler)
+    (hAx : (ALCHOQ.Concept.atom A,
+            ALCHOQ.Concept.exist R filler) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval (ALCHOQ.Concept.atom A) p →
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.exist R filler) p := by
+  intro p _hA
+  obtain ⟨Bwit, hBwit⟩ := isConjOfAtoms_has_member hF
+  refine ⟨HerbrandTree.succ p
+            (ALCHOQ.Concept.atom A,
+             ALCHOQ.Concept.exist R filler) hAx,
+          ?_, ?_⟩
+  · refine ⟨rfl, Bwit, ?_, hBwit⟩
+    rfl
+  · exact isConjOfAtoms_trigger_eval_succ O Q hAx rfl hF
+      (fun _ hM => hM) p
 
 /-- `axiomTriggersRoleAtom` implies the role-only variant
-    `axiomTriggersRole`: the former demands the filler be exactly
-    `atom B`, the latter is filler-agnostic. -/
+    `axiomTriggersRole`.   Both predicates project the same `R' = R`
+    conjunct from the `exist R' filler` pattern; the conj-member
+    filler in `axiomTriggersRoleAtom` is filler-agnostic for the
+    role projection. -/
 theorem axiomTriggersRoleAtom_imp_axiomTriggersRole
     (ax : ALCHOQ.Axiom) (R B : Nat) :
     axiomTriggersRoleAtom ax R B → axiomTriggersRole ax R := by
   intro h
-  rcases ax with ⟨lhs, rhs⟩
+  rcases ax with ⟨_, rhs⟩
   match rhs, h with
-  | ALCHOQ.Concept.exist R' (ALCHOQ.Concept.atom B'), h => exact h.1
+  | ALCHOQ.Concept.exist _ _, h => exact h.1
 
 /-- **Tree-Herbrand root-satisfaction for `(top, ∀R.(atom B))` axioms.**
     At every node `p`, every `R`-successor `q` (i.e. every `succ p ax hAx`
@@ -6247,6 +6323,10 @@ def IsTreeFriendlyAxiom (ax : ALCHOQ.Axiom) : Prop :=
   (∃ A R B : Nat,
      ax = (ALCHOQ.Concept.atom A,
            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B))) ∨
+  -- (atom A, ∃R.conjOfAtoms-filler): generalises the atom-filler case.
+  (∃ A R : Nat, ∃ filler : ALCHOQ.Concept,
+     ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.exist R filler) ∧
+     IsConjOfAtoms filler) ∨
   (∃ R B : Nat,
      ax = (ALCHOQ.Concept.top,
            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B))) ∨
@@ -6293,7 +6373,7 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     (elHerbrandInterpTree O Q).satisfies O := by
   intro ax hax
   intro p hLHS
-  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hTopCM | hCJCM | hDJCM | hExLHS | hTopEx | hCJEx | hDJEx | hTopUniv | hTopUnivCM | hTTRHSUniv | hBotLHS | hTopRHS
+  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hTopCM | hCJCM | hDJCM | hExLHS | hExLHS_CM | hTopEx | hCJEx | hDJEx | hTopUniv | hTopUnivCM | hTTRHSUniv | hBotLHS | hTopRHS
   · obtain ⟨A, B, rfl⟩ := hAA
     exact elHerbrandInterpTree_sat_atom_atom O Q A B hax p hLHS
   · obtain ⟨A₁, A₂, B, rfl⟩ := hCJ
@@ -6320,6 +6400,8 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     exact elHerbrandInterpTree_sat_disj_conjOfAtoms O Q A₁ A₂ C hC hax p hLHS
   · obtain ⟨A, R, B, rfl⟩ := hExLHS
     exact elHerbrandInterpTree_sat_atom_exist_atom O Q A R B hax p hLHS
+  · obtain ⟨A, R, filler, rfl, hF⟩ := hExLHS_CM
+    exact elHerbrandInterpTree_sat_atom_exist_conjOfAtoms O Q A R filler hF hax p hLHS
   · obtain ⟨R, B, rfl⟩ := hTopEx
     exact elHerbrandInterpTree_sat_top_exist_atom O Q R B hax p hLHS
   · obtain ⟨A₁, A₂, R, B, rfl⟩ := hCJEx
