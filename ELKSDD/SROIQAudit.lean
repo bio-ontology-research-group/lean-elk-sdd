@@ -763,4 +763,16 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isConjOfAtoms_eval_helper_universal
 #print axioms ALCHOIQContext.elHerbrandInterpUniversal_satisfies_O_aux_full
 
+-- ============================================================
+-- §UNIFIED TWO-SLICE THEOREM.   Combines empty-role and
+-- universal-role slices into a single Theorem-2-style statement
+-- valid for ontologies + RBoxes in the disjoint union of both.
+-- ============================================================
+#print axioms ALCHOIQContext.elHerbrandInterpUniversal_body_holds
+#print axioms ALCHOIQContext.elHerbrandInterpUniversal_head_fails
+#print axioms ALCHOIQContext.herbrandPropertyAtomConjDisj_ELOrUniversalRoleVacuous_withRBox
+#print axioms ALCHOIQContext.theorem2_for_el_plus_universal_role_vacuous_plus_compatible_rbox
+#print axioms ALCHOIQContext.InUnifiedSlice
+#print axioms ALCHOIQContext.theorem2_unified_two_slices
+
 end ELKSDD
