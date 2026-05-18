@@ -862,5 +862,187 @@ theorem isCanonicalSeed_emptyO_of_propRefutable
   isCanonicalSeed_simplyTautological_of_propRefutable []
     simplyTautological_nil D_seed hVr hSound hAllUnsubsumedPropRefutable
 
+-- ============================================================
+-- §4 ATOM-ATOM SUBSUMPTION FRAGMENT (Item #1 from missing-list).
+--
+-- A genuine non-trivial slice of SROIQ: ontologies consisting
+-- *only* of atom-atom subsumptions `atom A ⊑ atom B`.   We build a
+-- concrete Herbrand interpretation over the `Unit` domain and prove
+-- both semantic obligations directly:
+--   - I.satisfies O : straight from the inductive ConceptDerivable
+--     closure under O's atom edges.
+--   - ¬ Q.eval I : when no head concept is derivable from the body's
+--     concepts via O's edges, the body holds while the head fails.
+--
+-- This extends the witness slice beyond `SimplyTautological` to a
+-- real non-trivial DL fragment.
+-- ============================================================
+
+/-- **Atom-atom subsumption only**: every axiom is of the form
+    `(atom A, atom B)` for some concept symbols `A`, `B`. -/
+def IsAtomicSubsumptionOnly (O : Ontology) : Prop :=
+  ∀ ax ∈ O, ∃ A B : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B)
+
+/-- Concept symbols appearing in body atom literals of `Q`. -/
+def queryBodyAtomConcepts (Q : QueryClause) (B : Nat) : Prop :=
+  ∃ t : ATerm, BLit.atomTrue (PTerm.atom B t) ∈ Q.Gamma
+
+/-- The **concept-derivability closure** under O's atom-atom edges,
+    starting from an initial set of concept symbols. -/
+inductive ConceptDerivable (O : Ontology) (initial : Nat → Prop) : Nat → Prop where
+  | base {B : Nat} : initial B → ConceptDerivable O initial B
+  | step {A B : Nat} : ConceptDerivable O initial A →
+                       (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) ∈ O →
+                       ConceptDerivable O initial B
+
+/-- The **atomic Herbrand interpretation**: `Unit` domain, ext_concept
+    tracks `ConceptDerivable`, ext_role := False. -/
+def atomicHerbrandInterp (O : Ontology) (Q : QueryClause) : Interp Unit where
+  ext_concept B _ := ConceptDerivable O (queryBodyAtomConcepts Q) B
+  ext_role _ _ _  := False
+  ext_ind _       := ()
+
+/-- The atomic-Herbrand assignment over `Unit`. -/
+def atomicAssign : CtxAssign Unit :=
+  ⟨fun _ => (), fun _ _ => (), (), ()⟩
+
+/-- The atomic Herbrand interpretation satisfies any atom-atom-only
+    ontology. -/
+theorem atomicHerbrandInterp_satisfies
+    (O : Ontology) (hO : IsAtomicSubsumptionOnly O) (Q : QueryClause) :
+    (atomicHerbrandInterp O Q).satisfies O := by
+  intro ax hax
+  obtain ⟨A, B, rfl⟩ := hO ax hax
+  intro x hxA
+  -- hxA : Interp.eval (atomicHerbrandInterp O Q) (.atom A) x
+  -- Goal: Interp.eval (atomicHerbrandInterp O Q) (.atom B) x
+  -- For Unit, x = (). And eval (atom A) () = ext_concept A () = ConceptDerivable A.
+  show (atomicHerbrandInterp O Q).ext_concept B x
+  show ConceptDerivable O (queryBodyAtomConcepts Q) B
+  have hA : ConceptDerivable O (queryBodyAtomConcepts Q) A := hxA
+  exact ConceptDerivable.step hA hax
+
+/-- An ATerm evaluated on the atomic interpretation always returns `()`. -/
+theorem atomicHerbrandInterp_aterm_eval
+    (O : Ontology) (Q : QueryClause) (t : ATerm) :
+    ATerm.eval (atomicHerbrandInterp O Q) atomicAssign t = () := by
+  cases t <;> rfl
+
+/-- **Body holds on `atomicHerbrandInterp`** for any query whose body
+    body literals satisfy the structural conditions: every BLit body
+    atom is either a concept atom (handled by `queryBodyAtomConcepts`)
+    or a `uequ` constant equality (trivially holds since `Unit`
+    identifies all individuals). -/
+theorem atomicHerbrandInterp_body_holds
+    (O : Ontology) (Q : QueryClause)
+    (hNoRoleBody : ∀ S t₁ t₂, BLit.atomTrue (PTerm.role S t₁ t₂) ∉ Q.Gamma) :
+    ∀ b ∈ Q.Gamma, BLit.eval (atomicHerbrandInterp O Q) atomicAssign b := by
+  intro b hb
+  cases b with
+  | atomTrue p =>
+    cases p with
+    | ttrue =>
+      -- ttrue evaluates to True.
+      show PTerm.eval (atomicHerbrandInterp O Q) atomicAssign PTerm.ttrue
+      exact trivial
+    | atom B t =>
+      -- Goal: PTerm.eval (atomicHerbrandInterp O Q) atomicAssign (atom B t)
+      --     = ext_concept B (t.eval atomicAssign)
+      --     = ConceptDerivable O (queryBodyAtomConcepts Q) B
+      show (atomicHerbrandInterp O Q).ext_concept B
+        (ATerm.eval (atomicHerbrandInterp O Q) atomicAssign t)
+      exact ConceptDerivable.base ⟨t, hb⟩
+    | role S t₁ t₂ =>
+      -- Role atom in body: ruled out by hNoRoleBody.
+      exact absurd hb (hNoRoleBody S t₁ t₂)
+  | uequ u₁ u₂ =>
+    -- uequ: γ u₁ = γ u₂ = () = () = True.
+    show atomicAssign.γ u₁ = atomicAssign.γ u₂
+    rfl
+
+/-- **Head fails on `atomicHerbrandInterp`** under structural
+    refutation conditions: no `ttrue` in head, no `eqL` in head, no
+    role atoms in head, and no head concept symbol is derivable from
+    body concept symbols via O's atom edges. -/
+theorem atomicHerbrandInterp_head_fails
+    (O : Ontology) (Q : QueryClause)
+    (hNoTtrueHead : CLit.atomTrue PTerm.ttrue ∉ Q.Delta)
+    (hNoEqLHead : ∀ s₁ s₂, CLit.aeq (AEq.eqL s₁ s₂) ∉ Q.Delta)
+    (hNoRoleHead : ∀ S t₁ t₂, CLit.atomTrue (PTerm.role S t₁ t₂) ∉ Q.Delta)
+    (hHeadNotDerivable :
+      ∀ B t, CLit.atomTrue (PTerm.atom B t) ∈ Q.Delta →
+        ¬ ConceptDerivable O (queryBodyAtomConcepts Q) B) :
+    ∀ h ∈ Q.Delta, ¬ CLit.eval (atomicHerbrandInterp O Q) atomicAssign h := by
+  intro h hh hEval
+  cases h with
+  | atomTrue p =>
+    cases p with
+    | ttrue =>
+      exact hNoTtrueHead hh
+    | atom B t =>
+      have hDeriv : ConceptDerivable O (queryBodyAtomConcepts Q) B := hEval
+      exact hHeadNotDerivable B t hh hDeriv
+    | role S t₁ t₂ =>
+      exact hNoRoleHead S t₁ t₂ hh
+  | aeq e =>
+    cases e with
+    | eqL s₁ s₂ =>
+      exact hNoEqLHead s₁ s₂ hh
+    | neqL s₁ s₂ =>
+      -- neqL eval: t₁.eval ≠ t₂.eval = () ≠ () = False.
+      apply hEval
+      rfl
+
+/-- **Atomic-refutability** structural conditions for `Q` to be
+    refuted by `atomicHerbrandInterp`. -/
+structure AtomicRefutable (O : Ontology) (Q : QueryClause) : Prop where
+  noRoleBody : ∀ S t₁ t₂, BLit.atomTrue (PTerm.role S t₁ t₂) ∉ Q.Gamma
+  noTtrueHead : CLit.atomTrue PTerm.ttrue ∉ Q.Delta
+  noEqLHead : ∀ s₁ s₂, CLit.aeq (AEq.eqL s₁ s₂) ∉ Q.Delta
+  noRoleHead : ∀ S t₁ t₂, CLit.atomTrue (PTerm.role S t₁ t₂) ∉ Q.Delta
+  headNotDerivable :
+    ∀ B t, CLit.atomTrue (PTerm.atom B t) ∈ Q.Delta →
+      ¬ ConceptDerivable O (queryBodyAtomConcepts Q) B
+
+/-- **Building-block discharge of `HerbrandProperty O`** for any
+    atom-atom subsumption ontology, given that the saturation
+    invariant produces `AtomicRefutable` for every unsubsumed `Q`. -/
+theorem herbrandProperty_atomicSubsumption
+    (O : Ontology) (hO : IsAtomicSubsumptionOnly O)
+    (D_seed : ContextStructure)
+    (hInvariant :
+      ∀ D : ContextStructure, FullDerivation D_seed D → FullSaturated D →
+      ∀ Q : QueryClause,
+        (∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        AtomicRefutable O Q) :
+    HerbrandProperty O D_seed := by
+  intro D hDeriv hSat Q hNoSub
+  have hAR := hInvariant D hDeriv hSat Q hNoSub
+  refine ⟨Unit, ⟨()⟩, atomicHerbrandInterp O Q, atomicAssign.γ,
+    atomicAssign.φ, atomicAssign.vx, atomicAssign.vy, ?_, ?_⟩
+  · exact atomicHerbrandInterp_satisfies O hO Q
+  · -- ¬ Q.eval via body-holds + head-fails.
+    intro hQEval
+    have hBody := atomicHerbrandInterp_body_holds O Q hAR.noRoleBody
+    have hHead := atomicHerbrandInterp_head_fails O Q hAR.noTtrueHead
+      hAR.noEqLHead hAR.noRoleHead hAR.headNotDerivable
+    obtain ⟨h, hMem, hEval⟩ := hQEval hBody
+    exact hHead h hMem hEval
+
+/-- **Convenience constructor**: assemble `IsCanonicalSeed O` for any
+    atom-atom subsumption ontology. -/
+theorem isCanonicalSeed_atomicSubsumption
+    (O : Ontology) (hO : IsAtomicSubsumptionOnly O)
+    (D_seed : ContextStructure)
+    (hVr : D_seed.vr ∈ D_seed.contexts)
+    (hSound : ∃ CD : DerivedClauses, isSound O D_seed CD)
+    (hInvariant :
+      ∀ D : ContextStructure, FullDerivation D_seed D → FullSaturated D →
+      ∀ Q : QueryClause,
+        (∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        AtomicRefutable O Q) :
+    IsCanonicalSeed O D_seed :=
+  ⟨hVr, hSound, herbrandProperty_atomicSubsumption O hO D_seed hInvariant⟩
+
 end ALCHOIQContext
 end ELKSDD

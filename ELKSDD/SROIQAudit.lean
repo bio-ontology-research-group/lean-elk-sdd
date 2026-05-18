@@ -356,4 +356,21 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isCanonicalSeed_simplyTautological_of_propRefutable
 #print axioms ALCHOIQContext.isCanonicalSeed_emptyO_of_propRefutable
 
+-- ============================================================
+-- Item #1: Atom-atom subsumption fragment — concrete Herbrand
+-- interpretation over the Unit domain via ConceptDerivable closure.
+-- ============================================================
+#print axioms ALCHOIQContext.IsAtomicSubsumptionOnly
+#print axioms ALCHOIQContext.queryBodyAtomConcepts
+#print axioms ALCHOIQContext.ConceptDerivable
+#print axioms ALCHOIQContext.atomicHerbrandInterp
+#print axioms ALCHOIQContext.atomicAssign
+#print axioms ALCHOIQContext.atomicHerbrandInterp_satisfies
+#print axioms ALCHOIQContext.atomicHerbrandInterp_aterm_eval
+#print axioms ALCHOIQContext.atomicHerbrandInterp_body_holds
+#print axioms ALCHOIQContext.atomicHerbrandInterp_head_fails
+#print axioms ALCHOIQContext.AtomicRefutable
+#print axioms ALCHOIQContext.herbrandProperty_atomicSubsumption
+#print axioms ALCHOIQContext.isCanonicalSeed_atomicSubsumption
+
 end ELKSDD
