@@ -757,41 +757,57 @@ theorem tenacucala_completeness_thm2_unconditional
 -- ============================================================
 -- §3 CONCRETE WITNESSES.
 --
--- The unconditional theorem above is dischargeable provided one can
+-- The unconditional theorem is dischargeable provided one can
 -- produce `IsCanonicalSeed` witnesses for concrete ontologies.   We
--- give a building-block discharge for the (O = []) + propositionally
--- refutable slice: given a seed whose saturation only produces
--- propositionally-refutable unsubsumed queries, the `HerbrandProperty`
--- conjunct is fully constructive via the Bool model (with extensions
--- depending on Q's body atoms).
+-- give a building-block discharge for the **simply-tautological**
+-- ontology slice: ontologies in which every axiom is universally
+-- satisfied by every interpretation.   Under this restriction, plus
+-- the propositional-saturation invariant on the seed, the
+-- `HerbrandProperty` conjunct is fully constructive via the Bool
+-- model.   The empty ontology is the prime example; ontologies
+-- consisting of `top ⊑ top` axioms are another.
 -- ============================================================
 
-/-- **Building-block discharge of `HerbrandProperty []`** via the
-    Bool model.   Given that the saturation of `D_seed` only produces
-    propositionally-refutable unsubsumed queries, `HerbrandProperty`
-    over the empty ontology is established constructively: the Bool
-    model `boolInterp Q` (with `boolAssign`) satisfies `[]` vacuously
-    and refutes `Q` via the existing `bool_body_holds` and
-    `bool_head_fails` lemmas.
+/-- An ontology is **simply tautological** iff every axiom is
+    universally satisfied by every interpretation over every type.
+    The empty ontology is trivially so; ontologies consisting of
+    `top ⊑ top`, `C ⊑ top`, or `bot ⊑ D` axioms also qualify.   For
+    such ontologies, the Bool Herbrand model satisfies `O` without
+    further argument. -/
+def SimplyTautological (O : Ontology) : Prop :=
+  ∀ ax ∈ O, ∀ {α : Type} (I : Interp α), I.satisfiesAxiom ax
+
+/-- The empty ontology is simply tautological. -/
+theorem simplyTautological_nil : SimplyTautological [] := by
+  intro ax hax
+  exact absurd hax (by intro h; exact List.not_mem_nil h)
+
+/-- **Building-block discharge of `HerbrandProperty O`** for any
+    simply-tautological `O`, via the Bool model.   Given that the
+    saturation of `D_seed` only produces propositionally-refutable
+    unsubsumed queries, `HerbrandProperty O` holds: the Bool model
+    `boolInterp Q` satisfies any simply-tautological `O` directly
+    and refutes `Q` via `bool_body_holds` + `bool_head_fails`.
 
     The substantive obligation `hAllUnsubsumedPropRefutable` is the
     propositional-saturation invariant — concrete seeds (with rules
     that derive every tautological clause) discharge it. -/
-theorem herbrandProperty_emptyO_of_propRefutable
+theorem herbrandProperty_simplyTautological_of_propRefutable
+    (O : Ontology) (hO : SimplyTautological O)
     (D_seed : ContextStructure)
     (hAllUnsubsumedPropRefutable :
       ∀ D : ContextStructure, FullDerivation D_seed D → FullSaturated D →
       ∀ Q : QueryClause,
         (∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
         Q.propRefutable) :
-    HerbrandProperty [] D_seed := by
+    HerbrandProperty O D_seed := by
   intro D hDeriv hSat Q hNoSub
   have hPR := hAllUnsubsumedPropRefutable D hDeriv hSat Q hNoSub
   refine ⟨Bool, ⟨false⟩, boolInterp Q, boolAssign.γ, boolAssign.φ,
           boolAssign.vx, boolAssign.vy, ?_, ?_⟩
-  · -- (boolInterp Q).satisfies [] is vacuously true.
+  · -- (boolInterp Q).satisfies O follows from O being simply tautological.
     intro ax hax
-    exact absurd hax (by intro h; exact List.not_mem_nil h)
+    exact hO ax hax (boolInterp Q)
   · -- ¬ Q.eval via bool_body_holds + bool_head_fails.
     intro hQEval
     have hBody : ∀ b ∈ Q.Gamma,
@@ -803,9 +819,36 @@ theorem herbrandProperty_emptyO_of_propRefutable
     obtain ⟨h, hMem, hEval⟩ := hQEval hBody
     exact hHead h hMem hEval
 
-/-- **Convenience constructor**: assemble `IsCanonicalSeed []` from its
-    three conjuncts, using `herbrandProperty_emptyO_of_propRefutable`
-    for the `HerbrandProperty` conjunct. -/
+/-- Specialisation to the empty ontology. -/
+theorem herbrandProperty_emptyO_of_propRefutable
+    (D_seed : ContextStructure)
+    (hAllUnsubsumedPropRefutable :
+      ∀ D : ContextStructure, FullDerivation D_seed D → FullSaturated D →
+      ∀ Q : QueryClause,
+        (∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        Q.propRefutable) :
+    HerbrandProperty [] D_seed :=
+  herbrandProperty_simplyTautological_of_propRefutable []
+    simplyTautological_nil D_seed hAllUnsubsumedPropRefutable
+
+/-- **Convenience constructor**: assemble `IsCanonicalSeed O` from its
+    three conjuncts, for simply-tautological `O`. -/
+theorem isCanonicalSeed_simplyTautological_of_propRefutable
+    (O : Ontology) (hO : SimplyTautological O)
+    (D_seed : ContextStructure)
+    (hVr : D_seed.vr ∈ D_seed.contexts)
+    (hSound : ∃ CD : DerivedClauses, isSound O D_seed CD)
+    (hAllUnsubsumedPropRefutable :
+      ∀ D : ContextStructure, FullDerivation D_seed D → FullSaturated D →
+      ∀ Q : QueryClause,
+        (∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        Q.propRefutable) :
+    IsCanonicalSeed O D_seed :=
+  ⟨hVr, hSound,
+    herbrandProperty_simplyTautological_of_propRefutable O hO D_seed
+      hAllUnsubsumedPropRefutable⟩
+
+/-- Specialisation to the empty ontology. -/
 theorem isCanonicalSeed_emptyO_of_propRefutable
     (D_seed : ContextStructure)
     (hVr : D_seed.vr ∈ D_seed.contexts)
@@ -816,9 +859,8 @@ theorem isCanonicalSeed_emptyO_of_propRefutable
         (∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
         Q.propRefutable) :
     IsCanonicalSeed [] D_seed :=
-  ⟨hVr, hSound,
-    herbrandProperty_emptyO_of_propRefutable D_seed
-      hAllUnsubsumedPropRefutable⟩
+  isCanonicalSeed_simplyTautological_of_propRefutable []
+    simplyTautological_nil D_seed hVr hSound hAllUnsubsumedPropRefutable
 
 end ALCHOIQContext
 end ELKSDD

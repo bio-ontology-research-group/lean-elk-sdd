@@ -346,10 +346,14 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.tenacucala_completeness_thm2_unconditional
 
 -- ============================================================
--- Concrete-witness building blocks: (O = []) + propositionally
--- refutable saturation slice, discharged via the Bool model.
+-- Concrete-witness building blocks: simply-tautological O +
+-- propositionally refutable saturation, discharged via Bool model.
 -- ============================================================
+#print axioms ALCHOIQContext.SimplyTautological
+#print axioms ALCHOIQContext.simplyTautological_nil
+#print axioms ALCHOIQContext.herbrandProperty_simplyTautological_of_propRefutable
 #print axioms ALCHOIQContext.herbrandProperty_emptyO_of_propRefutable
+#print axioms ALCHOIQContext.isCanonicalSeed_simplyTautological_of_propRefutable
 #print axioms ALCHOIQContext.isCanonicalSeed_emptyO_of_propRefutable
 
 end ELKSDD
