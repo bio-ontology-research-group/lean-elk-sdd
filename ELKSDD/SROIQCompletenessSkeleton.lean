@@ -5069,5 +5069,373 @@ theorem the_el_plus_vacuous_plus_compatible_rbox_slice
    herbrandPropertyAtomConjDisj_ELOrVacuous_withRBox
      (ontologyConceptSig O) O hO rbox hRBox⟩
 
+-- ============================================================
+-- §FINAL-FULL-VACUOUS.  Maximal SROIQ axiom-shape coverage
+-- attainable without successor-context introduction.
+--
+-- Define:
+--   `HerbrandFalseLHS C` — `C` evaluates to False everywhere in
+--      Unit Herbrand with empty roles.
+--   `HerbrandTrueRHS  D` — `D` evaluates to True everywhere in
+--      Unit Herbrand with empty roles (and single-element domain).
+--
+-- Every axiom `(C, D)` with `HerbrandFalseLHS C` or
+-- `HerbrandTrueRHS D` is vacuously satisfied — no seed clauses
+-- needed for it.
+--
+-- Concretely supported shapes (in arbitrary combination):
+--   LHS: bot, ∃R.C, hasSelf R, ≥(n+1) R.C   (any structure on RHS)
+--   RHS: top, ∀R.C, ≤n R.C, ≥0 R.C, nom i   (any structure on LHS)
+-- plus the previous EL+vacuous shapes (atom-atom, atom-bot,
+-- conj-atom, exist-LHS, univ-RHS, top-RHS).
+-- ============================================================
+
+/-- **A concept that evaluates to False everywhere in the
+    empty-role Unit Herbrand.** -/
+def HerbrandFalseLHS : ALCHOQ.Concept → Prop
+  | ALCHOQ.Concept.bot         => True
+  | ALCHOQ.Concept.exist _ _   => True
+  | ALCHOQ.Concept.hasSelf _   => True
+  | ALCHOQ.Concept.atLeast (_ + 1) _ _ => True
+  | _                          => False
+
+/-- **A concept that evaluates to True everywhere in the
+    empty-role Unit Herbrand with single-element domain.** -/
+def HerbrandTrueRHS : ALCHOQ.Concept → Prop
+  | ALCHOQ.Concept.top         => True
+  | ALCHOQ.Concept.univ _ _    => True
+  | ALCHOQ.Concept.atMost _ _ _ => True
+  | ALCHOQ.Concept.atLeast 0 _ _ => True
+  | ALCHOQ.Concept.nom _       => True
+  | _                          => False
+
+/-- **`elHerbrandInterp` falsifies any `HerbrandFalseLHS` concept.** -/
+theorem elHerbrandInterp_falsifies
+    (O : Ontology) (Q : QueryClause)
+    (C : ALCHOQ.Concept) (hC : HerbrandFalseLHS C) (x : Unit) :
+    ¬ (elHerbrandInterp O Q).eval C x := by
+  match C, hC with
+  | ALCHOQ.Concept.bot, _ =>
+    intro hEval
+    exact hEval
+  | ALCHOQ.Concept.exist R C', _ =>
+    intro hEval
+    obtain ⟨y, hRxy, _⟩ := hEval
+    exact absurd hRxy (elHerbrandInterp_ext_role_false O Q R x y)
+  | ALCHOQ.Concept.hasSelf R, _ =>
+    intro hEval
+    exact absurd hEval (elHerbrandInterp_ext_role_false O Q R x x)
+  | ALCHOQ.Concept.atLeast (n + 1) R C', _ =>
+    intro hEval
+    have hAt : ALCHOQ.Interp.atLeastCard
+             (fun y => (elHerbrandInterp O Q).ext_role R x y ∧
+                       (elHerbrandInterp O Q).eval C' y) (n + 1) := hEval
+    unfold ALCHOQ.Interp.atLeastCard at hAt
+    obtain ⟨y, ⟨hRxy, _⟩, _⟩ := hAt
+    exact absurd hRxy (elHerbrandInterp_ext_role_false O Q R x y)
+
+/-- **`elHerbrandInterp` satisfies (eval-to-True) any `HerbrandTrueRHS`
+    concept.** -/
+theorem elHerbrandInterp_trivialises
+    (O : Ontology) (Q : QueryClause)
+    (D : ALCHOQ.Concept) (hD : HerbrandTrueRHS D) (x : Unit) :
+    (elHerbrandInterp O Q).eval D x := by
+  cases D with
+  | atom _ => exact absurd hD (fun h => h)
+  | top => trivial
+  | bot => exact absurd hD (fun h => h)
+  | nom i =>
+    show x = (elHerbrandInterp O Q).ext_ind i
+    -- Both x : Unit and ext_ind i : Unit are (), so equal.
+    cases x; rfl
+  | neg _ => exact absurd hD (fun h => h)
+  | conj _ _ => exact absurd hD (fun h => h)
+  | disj _ _ => exact absurd hD (fun h => h)
+  | exist _ _ => exact absurd hD (fun h => h)
+  | univ R C' =>
+    intro y hRxy
+    exact absurd hRxy (elHerbrandInterp_ext_role_false O Q R x y)
+  | atLeast n R C' =>
+    cases n with
+    | zero =>
+      show ALCHOQ.Interp.atLeastCard
+        (fun y => (elHerbrandInterp O Q).ext_role R x y ∧
+                  (elHerbrandInterp O Q).eval C' y) 0
+      unfold ALCHOQ.Interp.atLeastCard
+      trivial
+    | succ _ => exact absurd hD (fun h => h)
+  | atMost n R C' =>
+    -- atMost n = ¬ atLeastCard (n+1).  With empty role,
+    -- atLeastCard (n+1) requires a witness y with ext_role R x y;
+    -- impossible, so ¬ holds vacuously.
+    show ALCHOQ.Interp.atMostCard
+      (fun y => (elHerbrandInterp O Q).ext_role R x y ∧
+                (elHerbrandInterp O Q).eval C' y) n
+    intro hAtLeast
+    unfold ALCHOQ.Interp.atLeastCard at hAtLeast
+    obtain ⟨y, ⟨hRxy, _⟩, _⟩ := hAtLeast
+    exact absurd hRxy (elHerbrandInterp_ext_role_false O Q R x y)
+  | hasSelf _ => exact absurd hD (fun h => h)
+
+/-- **Maximal Herbrand-friendly ontology shape.**  Strict extension
+    of `IsELOrVacuousOnly`. -/
+def IsELOrAllVacuousOnly (O : Ontology) : Prop :=
+  ∀ ax ∈ O,
+    -- EL-substantive shapes (contribute to closure):
+    (∃ A B : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B)) ∨
+    (∃ A : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot)) ∨
+    (∃ A₁ A₂ B : Nat,
+       ax = (ALCHOQ.Concept.conj
+              (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+             ALCHOQ.Concept.atom B)) ∨
+    -- Vacuous shapes (no closure needed):
+    HerbrandFalseLHS ax.1 ∨
+    HerbrandTrueRHS ax.2
+
+/-- `IsELOrVacuousOnly ⊆ IsELOrAllVacuousOnly`. -/
+theorem isELOrVacuousOnly_imp_isELOrAllVacuousOnly
+    (O : Ontology) (hO : IsELOrVacuousOnly O) :
+    IsELOrAllVacuousOnly O := by
+  intro ax hax
+  rcases hO ax hax with hAA | hAB | hCJ | hEx | hUn | hTop
+  · exact Or.inl hAA
+  · exact Or.inr (Or.inl hAB)
+  · exact Or.inr (Or.inr (Or.inl hCJ))
+  · -- (∃R.A, atom B): LHS is exist
+    right; right; right; left
+    obtain ⟨R, A, B, rfl⟩ := hEx
+    show HerbrandFalseLHS (ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom A))
+    trivial
+  · -- (atom A, ∀R.B): RHS is univ
+    right; right; right; right
+    obtain ⟨A, R, B, rfl⟩ := hUn
+    show HerbrandTrueRHS (ALCHOQ.Concept.univ R (ALCHOQ.Concept.atom B))
+    trivial
+  · -- (atom A, ⊤): RHS is top
+    right; right; right; right
+    obtain ⟨A, rfl⟩ := hTop
+    show HerbrandTrueRHS ALCHOQ.Concept.top
+    trivial
+
+/-- **The EL Herbrand model satisfies O under `IsELOrAllVacuousOnly`
+    and the unsubsumed-Q assumption.** -/
+theorem elHerbrandInterp_satisfies_O_aux_full
+    (sig : List Nat) (O : Ontology) (hO : IsELOrAllVacuousOnly O)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedELConj sig O) D)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature sig Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (hNoSub : ∀ c ∈ D.S D.vr,
+       ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) :
+    (elHerbrandInterp O Q).satisfies O := by
+  classical
+  obtain ⟨hBodyShape, _hHeadShape⟩ := hQAtom
+  have hNoSubSeed :
+      ∀ c ∈ (canonicalSeedELConj sig O).S
+              (canonicalSeedELConj sig O).vr,
+        ¬ subsumes c {body := Q.Gamma, head := Q.Delta} := by
+    intro c hc hSub
+    have hSubInv : SubsumerInvariant Q (canonicalSeedELConj sig O) :=
+      ⟨canonicalSeedELConj_vr_in_contexts sig O, c, hc, hSub⟩
+    have hSubInvD := fullDeriv_preserves_SubsumerInvariant hDeriv Q hSubInv
+    obtain ⟨_, c', hc'In, hc'Sub⟩ := hSubInvD
+    exact hNoSub c' hc'In hc'Sub
+  have hBodyAtomsInGamma : ∀ A : Nat, queryBodyAtomConcepts Q A →
+      BLit.atomTrue (PTerm.atom A ATerm.x) ∈ Q.Gamma := by
+    intro A hA
+    obtain ⟨t, ht⟩ := hA
+    have ht_eq : t = ATerm.x :=
+      atomConjDisj_bodyTerm_is_x Q hBodyShape A t ht
+    subst ht_eq; exact ht
+  have hNoBotInBody :
+      ∀ (S : List Nat) (A : Nat),
+        (∀ X, X ∈ S → queryBodyAtomConcepts Q X) →
+        ConceptDerivableEL O (fun X => X ∈ S) A →
+        (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O →
+        False := by
+    intro S A hSinit hSDer hABot
+    have hS_sub_sig : ∀ X, X ∈ S → X ∈ sig := by
+      intro X hX
+      have hXinit := hSinit X hX
+      obtain ⟨tX, hXmem⟩ := hXinit
+      have htX_eq : tX = ATerm.x :=
+        atomConjDisj_bodyTerm_is_x Q hBodyShape X tX hXmem
+      subst htX_eq
+      exact hQsig.1 X ATerm.x hXmem
+    set L := sig.filter (fun X => decide (X ∈ S)) with hLdef
+    have hLsig : L ∈ sig.sublists := filter_mem_sublists sig (· ∈ S)
+    have hL_eq_S : ∀ X, X ∈ L ↔ X ∈ S := by
+      intro X
+      rw [hLdef]
+      rw [mem_filter_iff sig (· ∈ S)]
+      constructor
+      · exact fun ⟨_, h⟩ => h
+      · intro h; exact ⟨hS_sub_sig X h, h⟩
+    have hDerL : ConceptDerivableEL O (fun X => X ∈ L) A := by
+      apply conceptDerivableEL_mono O (fun X => X ∈ S) (fun X => X ∈ L)
+        _ hSDer
+      intro X hXS
+      exact (hL_eq_S X).mpr hXS
+    have hBotL : ∃ A' : Nat,
+        ConceptDerivableEL O (fun X => X ∈ L) A' ∧
+        (ALCHOQ.Concept.atom A', ALCHOQ.Concept.bot) ∈ O :=
+      ⟨A, hDerL, hABot⟩
+    have hClauseIn :
+        multiBodyBotClause L ∈ (canonicalSeedELConj sig O).S
+                                (canonicalSeedELConj sig O).vr :=
+      canonicalSeedELConj_subsumes_elBot sig O L hLsig hBotL
+    have hSubs :
+        subsumes (multiBodyBotClause L)
+                 { body := Q.Gamma, head := Q.Delta } := by
+      refine ⟨?_, ?_⟩
+      · intro b hb
+        rcases List.mem_map.mp hb with ⟨X, hX, rfl⟩
+        have hXinS : X ∈ S := (hL_eq_S X).mp hX
+        have hXinit := hSinit X hXinS
+        exact hBodyAtomsInGamma X hXinit
+      · intro hLit hLitMem
+        exact absurd hLitMem List.not_mem_nil
+    exact hNoSubSeed _ hClauseIn hSubs
+  intro ax hax
+  rcases hO ax hax with hAA | hAB | hCJ | hFalseLHS | hTrueRHS
+  · obtain ⟨A, B, rfl⟩ := hAA
+    intro x hxA
+    show ConceptDerivableEL O (queryBodyAtomConcepts Q) B
+    have hA : ConceptDerivableEL O (queryBodyAtomConcepts Q) A := hxA
+    exact ConceptDerivableEL.step_atom hA hax
+  · obtain ⟨A, rfl⟩ := hAB
+    intro x hxA
+    have hDerA : ConceptDerivableEL O (queryBodyAtomConcepts Q) A := hxA
+    obtain ⟨S, hSinit, hSDer⟩ :=
+      conceptDerivableEL_multi_witness O _ hDerA
+    exact hNoBotInBody S A hSinit hSDer hax
+  · obtain ⟨A₁, A₂, B, rfl⟩ := hCJ
+    intro x hx
+    obtain ⟨hA1, hA2⟩ := hx
+    exact ConceptDerivableEL.step_conj hA1 hA2 hax
+  · -- HerbrandFalseLHS ax.1: LHS evaluates to False, axiom vacuous.
+    intro x hxLHS
+    exact absurd hxLHS (elHerbrandInterp_falsifies O Q ax.1 hFalseLHS x)
+  · -- HerbrandTrueRHS ax.2: RHS evaluates to True, axiom vacuous.
+    intro x _
+    exact elHerbrandInterp_trivialises O Q ax.2 hTrueRHS x
+
+/-- **HerbrandProperty for the maximally-Herbrand-friendly TBox.** -/
+theorem herbrandPropertyAtomConjDisj_ELOrAllVacuous
+    (sig : List Nat) (O : Ontology) (hO : IsELOrAllVacuousOnly O) :
+    HerbrandPropertyAtomConjDisj sig O (canonicalSeedELConj sig O) := by
+  classical
+  intro D hDeriv _hSat Q hQsig hQCD hNoSub
+  obtain ⟨hBodyShape, hHeadShape⟩ := hQCD
+  have hNoSubSeed :
+      ∀ c ∈ (canonicalSeedELConj sig O).S
+              (canonicalSeedELConj sig O).vr,
+        ¬ subsumes c {body := Q.Gamma, head := Q.Delta} := by
+    intro c hc hSub
+    have hSubInv : SubsumerInvariant Q (canonicalSeedELConj sig O) :=
+      ⟨canonicalSeedELConj_vr_in_contexts sig O, c, hc, hSub⟩
+    have hSubInvD := fullDeriv_preserves_SubsumerInvariant hDeriv Q hSubInv
+    obtain ⟨_, c', hc'In, hc'Sub⟩ := hSubInvD
+    exact hNoSub c' hc'In hc'Sub
+  have hBodyAtomsInGamma : ∀ A : Nat, queryBodyAtomConcepts Q A →
+      BLit.atomTrue (PTerm.atom A ATerm.x) ∈ Q.Gamma := by
+    intro A hA
+    obtain ⟨t, ht⟩ := hA
+    have ht_eq : t = ATerm.x :=
+      atomConjDisj_bodyTerm_is_x Q hBodyShape A t ht
+    subst ht_eq; exact ht
+  have hHeadNotDerivable_aux :
+      ∀ B t, CLit.atomTrue (PTerm.atom B t) ∈ Q.Delta →
+        ¬ ConceptDerivableEL O (queryBodyAtomConcepts Q) B := by
+    intro B t hMem hDer
+    have ht_eq : t = ATerm.x :=
+      atomConjDisj_headTerm_is_x Q hHeadShape B t hMem
+    subst ht_eq
+    have hB_sig : B ∈ sig := hQsig.2 B ATerm.x hMem
+    obtain ⟨S, hSinit, hSDer⟩ :=
+      conceptDerivableEL_multi_witness O _ hDer
+    have hS_sub_sig : ∀ A, A ∈ S → A ∈ sig := by
+      intro A hA
+      have hAinit := hSinit A hA
+      obtain ⟨tA, hAmem⟩ := hAinit
+      have htA_eq : tA = ATerm.x :=
+        atomConjDisj_bodyTerm_is_x Q hBodyShape A tA hAmem
+      subst htA_eq
+      exact hQsig.1 A ATerm.x hAmem
+    set L := sig.filter (fun X => decide (X ∈ S)) with hLdef
+    have hLsig : L ∈ sig.sublists := filter_mem_sublists sig (· ∈ S)
+    have hL_eq_S : ∀ A, A ∈ L ↔ A ∈ S := by
+      intro A
+      rw [hLdef]
+      rw [mem_filter_iff sig (· ∈ S)]
+      constructor
+      · exact fun ⟨_, h⟩ => h
+      · intro h; exact ⟨hS_sub_sig A h, h⟩
+    have hDerL : ConceptDerivableEL O (fun X => X ∈ L) B := by
+      apply conceptDerivableEL_mono O (fun X => X ∈ S) (fun X => X ∈ L)
+        _ hSDer
+      intro X hXS
+      exact (hL_eq_S X).mpr hXS
+    have hClauseIn :
+        multiBodyAtomClause L B ∈ (canonicalSeedELConj sig O).S
+                                   (canonicalSeedELConj sig O).vr :=
+      canonicalSeedELConj_subsumes_elDerivable sig O L hLsig B hB_sig hDerL
+    have hSubs :
+        subsumes (multiBodyAtomClause L B)
+                 { body := Q.Gamma, head := Q.Delta } := by
+      refine ⟨?_, ?_⟩
+      · intro b hb
+        rcases List.mem_map.mp hb with ⟨A, hA, rfl⟩
+        have hAinS : A ∈ S := (hL_eq_S A).mp hA
+        have hAinit := hSinit A hAinS
+        exact hBodyAtomsInGamma A hAinit
+      · intro hLit hLitMem
+        rcases List.mem_singleton.mp hLitMem with rfl
+        exact hMem
+    exact hNoSubSeed _ hClauseIn hSubs
+  refine ⟨Unit, ⟨()⟩, elHerbrandInterp O Q, atomicAssign.γ,
+          atomicAssign.φ, atomicAssign.vx, atomicAssign.vy, ?_, ?_⟩
+  · exact elHerbrandInterp_satisfies_O_aux_full sig O hO D hDeriv Q hQsig
+      ⟨hBodyShape, hHeadShape⟩ hNoSub
+  · intro hQEval
+    have hNoRoleBody : ∀ S t₁ t₂, BLit.atomTrue (PTerm.role S t₁ t₂) ∉ Q.Gamma := by
+      intro S t₁ t₂ hMem
+      obtain ⟨A, hEq⟩ := hBodyShape _ hMem
+      exact (by cases hEq)
+    have hNoTtrueHead : CLit.atomTrue PTerm.ttrue ∉ Q.Delta := by
+      intro hMem
+      obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+      exact (by cases hEq)
+    have hNoEqLHead : ∀ s₁ s₂, CLit.aeq (AEq.eqL s₁ s₂) ∉ Q.Delta := by
+      intro s₁ s₂ hMem
+      obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+      exact (by cases hEq)
+    have hNoRoleHead : ∀ S t₁ t₂, CLit.atomTrue (PTerm.role S t₁ t₂) ∉ Q.Delta := by
+      intro S t₁ t₂ hMem
+      obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+      exact (by cases hEq)
+    have hBody := elHerbrandInterp_body_holds O Q hNoRoleBody
+    have hHead := elHerbrandInterp_head_fails O Q hNoTtrueHead
+      hNoEqLHead hNoRoleHead hHeadNotDerivable_aux
+    obtain ⟨hh, hMem, hEval⟩ := hQEval hBody
+    exact hHead hh hMem hEval
+
+/-- **THE FINAL THEOREM** for the maximal SROIQ TBox shape coverage
+    attainable without successor-context introduction. -/
+theorem isCanonicalSeedAtomConjDisj_ELOrAllVacuous
+    (sig : List Nat) (O : Ontology) (hO : IsELOrAllVacuousOnly O) :
+    IsCanonicalSeedAtomConjDisj sig O (canonicalSeedELConj sig O) :=
+  ⟨canonicalSeedELConj_vr_in_contexts sig O,
+   canonicalSeedELConj_sound_anyO sig O,
+   herbrandPropertyAtomConjDisj_ELOrAllVacuous sig O hO⟩
+
+/-- Total function version. -/
+theorem isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology_allVacuous
+    (O : Ontology) (hO : IsELOrAllVacuousOnly O) :
+    IsCanonicalSeedAtomConjDisj (ontologyConceptSig O) O
+      (canonicalSeedELConjFromOntology O) :=
+  isCanonicalSeedAtomConjDisj_ELOrAllVacuous (ontologyConceptSig O) O hO
+
 end ALCHOIQContext
 end ELKSDD

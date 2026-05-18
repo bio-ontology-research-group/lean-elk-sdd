@@ -680,4 +680,23 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.herbrandPropertyAtomConjDisj_ELOrVacuous_withRBox
 #print axioms ALCHOIQContext.the_el_plus_vacuous_plus_compatible_rbox_slice
 
+-- ============================================================
+-- MAXIMAL HERBRAND-VACUOUS COVERAGE: all SROIQ axiom shapes
+-- whose LHS evaluates to False or RHS evaluates to True under
+-- the empty-role Unit Herbrand.  Covers in arbitrary combination:
+--   LHS: bot, ∃R.C, hasSelf R, ≥(n+1) R.C
+--   RHS: top, ∀R.C, ≤n R.C, ≥0 R.C, nom i
+-- Plus the EL-substantive shapes (atom-atom, atom-bot, conj-atom).
+-- ============================================================
+#print axioms ALCHOIQContext.HerbrandFalseLHS
+#print axioms ALCHOIQContext.HerbrandTrueRHS
+#print axioms ALCHOIQContext.elHerbrandInterp_falsifies
+#print axioms ALCHOIQContext.elHerbrandInterp_trivialises
+#print axioms ALCHOIQContext.IsELOrAllVacuousOnly
+#print axioms ALCHOIQContext.isELOrVacuousOnly_imp_isELOrAllVacuousOnly
+#print axioms ALCHOIQContext.elHerbrandInterp_satisfies_O_aux_full
+#print axioms ALCHOIQContext.herbrandPropertyAtomConjDisj_ELOrAllVacuous
+#print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_ELOrAllVacuous
+#print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology_allVacuous
+
 end ELKSDD
