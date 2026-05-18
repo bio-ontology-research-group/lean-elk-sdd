@@ -1028,4 +1028,12 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isConjOfAtomsOrTop_trigger_eval_succ_atLeast1
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_anyLHS_atLeast1_conjOfAtomsOrTop
 
+-- ============================================================
+-- §TREE: universal-RHS dual for IsConjOfAtomsOrTop fillers.
+-- (TreeTrueRHS-LHS, ∀R.IsConjOfAtomsOrTop) mirrors the exist
+-- IsConjOfAtomsOrTop case via universal propagation.
+-- ============================================================
+#print axioms ALCHOIQContext.isConjOfAtomsOrTop_univ_eval_helper_tree_treeTrueRHS
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_treeTrueRHS_univ_conjOfAtomsOrTop
+
 end ELKSDD

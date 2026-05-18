@@ -6289,6 +6289,60 @@ theorem isConjOfAtoms_univ_eval_helper_tree_treeTrueRHS
         fun B hM₂ => hSub B (ConjMember.right hM₂)
       exact ⟨ih₁ hSub₁ p' ax' hAx' hRole, ih₂ hSub₂ p' ax' hAx' hRole⟩
 
+/-- Universal-propagation helper for `IsConjOfAtomsOrTop` fillers.
+    Atoms get propagated via `universalPropagatedAtoms`; top leaves
+    trivially evaluate True. -/
+theorem isConjOfAtomsOrTop_univ_eval_helper_tree_treeTrueRHS
+    (O : Ontology) (Q : QueryClause)
+    {fillerWhole : ALCHOQ.Concept} {lhs : ALCHOQ.Concept} (R : Nat)
+    (hLhsTT : TreeTrueRHS lhs)
+    (hAx : (lhs, ALCHOQ.Concept.univ R fillerWhole) ∈ O) :
+    ∀ {C : ALCHOQ.Concept}, IsConjOfAtomsOrTop C →
+      (∀ B, ConjMember C B → ConjMember fillerWhole B) →
+      ∀ (p' : HerbrandTree O) (ax' : ALCHOQ.Axiom) (hAx' : ax' ∈ O),
+        axiomTriggersRole ax' R →
+        (elHerbrandInterpTree O Q).eval C
+          (HerbrandTree.succ p' ax' hAx') := by
+  intro C hC
+  induction hC with
+  | @atom B =>
+      intro hSub p' ax' hAx' hRole
+      have hMW : ConjMember fillerWhole B := hSub B ConjMember.atom_self
+      show ConceptDerivableEL O
+        (treeNodeInitialAtoms Q (HerbrandTree.succ p' ax' hAx')) B
+      apply ConceptDerivableEL.base
+      exact Or.inr ⟨R, hRole, fillerWhole, lhs, hAx, hLhsTT, hMW⟩
+  | top =>
+      intro _ _ _ _ _; trivial
+  | @conj C₁ C₂ _ _ ih₁ ih₂ =>
+      intro hSub p' ax' hAx' hRole
+      have hSub₁ : ∀ B, ConjMember C₁ B → ConjMember fillerWhole B :=
+        fun B hM₁ => hSub B (ConjMember.left hM₁)
+      have hSub₂ : ∀ B, ConjMember C₂ B → ConjMember fillerWhole B :=
+        fun B hM₂ => hSub B (ConjMember.right hM₂)
+      exact ⟨ih₁ hSub₁ p' ax' hAx' hRole, ih₂ hSub₂ p' ax' hAx' hRole⟩
+
+/-- **(TreeTrueRHS-LHS, ∀R.IsConjOfAtomsOrTop)** — mixed atom/top
+    filler in universal restrictions.   Universal-RHS dual of the
+    exist-RHS IsConjOfAtomsOrTop case. -/
+theorem elHerbrandInterpTree_sat_treeTrueRHS_univ_conjOfAtomsOrTop
+    (O : Ontology) (Q : QueryClause)
+    (lhs : ALCHOQ.Concept) (R : Nat) (filler : ALCHOQ.Concept)
+    (hLhsTT : TreeTrueRHS lhs) (hF : IsConjOfAtomsOrTop filler)
+    (hAx : (lhs, ALCHOQ.Concept.univ R filler) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval lhs p →
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.univ R filler) p := by
+  intro p _
+  intro y hRpy
+  cases y with
+  | root => exact absurd hRpy id
+  | succ p' ax' hAx' =>
+    obtain ⟨_, hRole⟩ := hRpy
+    exact isConjOfAtomsOrTop_univ_eval_helper_tree_treeTrueRHS O Q R
+      hLhsTT hAx hF (fun _ hM => hM) p' ax' hAx' hRole
+
 /-- **Tree-Herbrand root-satisfaction for `(lhs, ∀R.filler)` axioms
     with `TreeTrueRHS lhs` and `IsConjOfAtoms filler`.**
     Generalises `_sat_top_univ_conjOfAtoms` to arbitrary
@@ -6798,6 +6852,11 @@ def IsTreeFriendlyAxiom (ax : ALCHOQ.Axiom) : Prop :=
   (∃ lhs : ALCHOQ.Concept, ∃ R : Nat, ∃ filler : ALCHOQ.Concept,
      ax = (lhs, ALCHOQ.Concept.univ R filler) ∧
      TreeTrueRHS lhs ∧ IsConjOfAtoms filler) ∨
+  -- Universal-restriction RHS with TreeTrueRHS LHS and
+  -- IsConjOfAtomsOrTop filler (mixed atom/top leaves).
+  (∃ lhs : ALCHOQ.Concept, ∃ R : Nat, ∃ filler : ALCHOQ.Concept,
+     ax = (lhs, ALCHOQ.Concept.univ R filler) ∧
+     TreeTrueRHS lhs ∧ IsConjOfAtomsOrTop filler) ∨
   -- Tautologically vacuous LHS — structurally False at every tree
   -- node.   Strictly subsumes the narrow `(bot, D)` case via
   -- closure under conj/disj.
@@ -6820,7 +6879,7 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     (elHerbrandInterpTree O Q).satisfies O := by
   intro ax hax
   intro p hLHS
-  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hTopCM | hCJCM | hDJCM | hExLHS | hExLHS_CM | hExLHS_Top | hAnyExCM | hAnyExCMT | hAnyExTop | hAnyExTT | hAnyUnivTT | hAnyAtLeast1 | hAtLeast1Atom | hAtLeast1CM | hAtLeast1CMT | hTopEx | hCJEx | hDJEx | hTopUniv | hTopUnivCM | hTTRHSUniv | hBotLHS | hTopRHS
+  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hTopCM | hCJCM | hDJCM | hExLHS | hExLHS_CM | hExLHS_Top | hAnyExCM | hAnyExCMT | hAnyExTop | hAnyExTT | hAnyUnivTT | hAnyAtLeast1 | hAtLeast1Atom | hAtLeast1CM | hAtLeast1CMT | hTopEx | hCJEx | hDJEx | hTopUniv | hTopUnivCM | hTTRHSUniv | hTTRHSUnivCMT | hBotLHS | hTopRHS
   · obtain ⟨A, B, rfl⟩ := hAA
     exact elHerbrandInterpTree_sat_atom_atom O Q A B hax p hLHS
   · obtain ⟨A₁, A₂, B, rfl⟩ := hCJ
@@ -6881,6 +6940,8 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     exact elHerbrandInterpTree_sat_top_univ_conjOfAtoms O Q R filler hF hax p hLHS
   · obtain ⟨lhs, R, filler, rfl, hLhsTT, hF⟩ := hTTRHSUniv
     exact elHerbrandInterpTree_sat_treeTrueRHS_univ_conjOfAtoms O Q lhs R filler hLhsTT hF hax p hLHS
+  · obtain ⟨lhs, R, filler, rfl, hLhsTT, hF⟩ := hTTRHSUnivCMT
+    exact elHerbrandInterpTree_sat_treeTrueRHS_univ_conjOfAtomsOrTop O Q lhs R filler hLhsTT hF hax p hLHS
   · -- TreeFalseLHS: LHS evaluates to False at every node — vacuous.
     obtain ⟨C, D, rfl, hC⟩ := hBotLHS
     exact elHerbrandInterpTree_sat_treeFalseLHS O Q C D hC hax p hLHS
