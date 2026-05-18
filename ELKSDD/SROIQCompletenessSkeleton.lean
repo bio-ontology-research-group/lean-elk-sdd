@@ -10015,6 +10015,51 @@ theorem exampleELConj_in_unifiedSlice_emptyRBox :
   inUnifiedSlice_of_isELConjOnly_emptyRBox exampleELConj
     exampleELConj_isELConjOnly
 
+/-- **Third example ontology** exercising the vacuous-shape
+    cons-builders: mixes an atom-atom EL-substantive axiom with a
+    bot-LHS axiom (HerbrandFalseLHS) and a top-RHS axiom
+    (HerbrandTrueRHS).   Lives in the maximal `IsELOrAllVacuousOnly`
+    slice via the catch-all disjuncts. -/
+def exampleVacuous : Ontology :=
+  [(ALCHOQ.Concept.atom 0, ALCHOQ.Concept.atom 1),
+   (ALCHOQ.Concept.bot, ALCHOQ.Concept.atom 2),
+   (ALCHOQ.Concept.atom 3, ALCHOQ.Concept.top)]
+
+theorem exampleVacuous_isELOrAllVacuousOnly :
+    IsELOrAllVacuousOnly exampleVacuous :=
+  isELOrAllVacuousOnly_cons_atom_atom
+    (isELOrAllVacuousOnly_cons_falseLHS (C := ALCHOQ.Concept.bot)
+      (D := ALCHOQ.Concept.atom 2)
+      (by show True; trivial)
+      (isELOrAllVacuousOnly_cons_trueRHS (C := ALCHOQ.Concept.atom 3)
+        (D := ALCHOQ.Concept.top)
+        (by show True; trivial)
+        (by intro ax hax; exact absurd hax List.not_mem_nil)))
+
+theorem exampleVacuous_in_unifiedSlice_emptyRBox :
+    InUnifiedSlice exampleVacuous ([] : SROIQ.RBox) :=
+  Or.inl ⟨exampleVacuous_isELOrAllVacuousOnly, emptyRBox_compatible⟩
+
+theorem isCanonicalSeed_canonicalSeedOfFull_partial_exampleVacuous :
+    (canonicalSeedOfFull exampleVacuous).vr ∈
+      (canonicalSeedOfFull exampleVacuous).contexts ∧
+    (∃ CD : DerivedClauses,
+       isSound exampleVacuous (canonicalSeedOfFull exampleVacuous) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull exampleVacuous) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig exampleVacuous) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies exampleVacuous ∧
+          SROIQ.RBox.eval I ([] : SROIQ.RBox) ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  isCanonicalSeed_canonicalSeedOfFull_partial
+    exampleVacuous [] exampleVacuous_in_unifiedSlice_emptyRBox
+
 /-- **Partial-IsCanonicalSeed instance** for `exampleELConj`,
     hypothesis-free in the slice predicate via the empty-roles
     branch. -/
