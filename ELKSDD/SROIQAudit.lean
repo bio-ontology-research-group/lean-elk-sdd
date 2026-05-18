@@ -837,6 +837,15 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_disj_exist_atom
 
 -- ============================================================
+-- §TREE: top-LHS conj-of-atoms axioms.   New EL closure rule
+-- `step_top_conjmember` together with the tree-Herbrand helper
+-- `isConjOfAtoms_eval_helper_tree_top` extends the unconditional
+-- atom-LHS conjOfAtoms coverage to top-LHS.
+-- ============================================================
+#print axioms ALCHOIQContext.isConjOfAtoms_eval_helper_tree_top
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_top_conjOfAtoms
+
+-- ============================================================
 -- §TREE SATISFIES O composition.   Single satisfaction theorem
 -- assembled by dispatching per-axiom to the tree-Herbrand lemmas.
 -- ============================================================
