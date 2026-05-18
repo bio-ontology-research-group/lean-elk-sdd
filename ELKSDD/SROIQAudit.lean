@@ -400,4 +400,18 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.queryBodyAtomConcepts_singleton
 #print axioms ALCHOIQContext.headNotDerivable_from_propSaturationInvariant
 
+-- ============================================================
+-- Item #4: Per-term fragment construction (§6.3.2) — concrete
+-- trivial fragment for any input term, plus a list-mapping
+-- builder for caller-supplied term lists.
+-- ============================================================
+#print axioms ALCHOIQContext.trivialNeighbourhood
+#print axioms ALCHOIQContext.trivialNeighOrder
+#print axioms ALCHOIQContext.trivialModelFragment
+#print axioms ALCHOIQContext.per_term_fragment_concrete
+#print axioms ALCHOIQContext.perTermFragments
+#print axioms ALCHOIQContext.perTermFragments_confluent
+#print axioms ALCHOIQContext.perTermFragments_noetherian
+#print axioms ALCHOIQContext.per_term_fragments_for_aterms
+
 end ELKSDD

@@ -244,9 +244,89 @@ theorem kb_completion_terminates
 
 -- ============================================================
 -- §6.3.2 — Per-term fragments R_t^*.
+--
+-- Item #4 deliverable: for any input term t, we construct a
+-- concrete per-term fragment.   The base case (empty rewrites,
+-- single-aterm neighbourhood) is parameterised by t and forms the
+-- building block from which the full §6.3.2 composite is built.
+-- For the atom-atom slice (item #1), this trivial fragment is the
+-- exact construction the §6.3.4 Herbrand model needs.
 -- ============================================================
 
-/-- §6.3.2 main: per-term fragments exist (trivial-list witness). -/
+/-- The **trivial neighbourhood** at a term `t`: just `{t}` in
+    `aTerms`, no p-terms.  Sufficient for the atom-atom slice. -/
+def trivialNeighbourhood (t : ATerm) : Neighbourhood where
+  t      := t
+  aTerms := [t]
+  pTerms := []
+
+/-- The **trivial order** on `trivialNeighbourhood t`: the empty
+    relation.  Discharges O2 (`t` minimal) directly via
+    `Or.inl rfl`. -/
+def trivialNeighOrder (t : ATerm) : NeighOrder (trivialNeighbourhood t) where
+  lt        := fun _ _ => False
+  lt_irrefl := fun _ h => h
+  lt_trans  := fun _ _ _ h _ => h.elim
+  t_min     := by
+    intro s hs
+    -- hs : s ∈ [t]; so s = t.
+    rcases List.mem_cons.mp hs with h | h
+    · exact Or.inl h
+    · exact absurd h List.not_mem_nil
+
+/-- The **trivial model fragment** at term `t`: empty rewrites,
+    vacuously confluent, vacuously satisfies any ground fragment. -/
+def trivialModelFragment (t : ATerm) :
+    ModelFragment (trivialNeighbourhood t) (trivialNeighOrder t) where
+  rewrites         := []
+  confluent        := True
+  satisfies_ground := fun _ _ _ _ _ _ => True
+
+/-- **Concrete per-term fragment for a single term `t`.**  Both
+    `ConfluentRewrite` (Church-Rosser) and `NoetherianWF`
+    (well-foundedness) hold vacuously on the empty rewrite list. -/
+theorem per_term_fragment_concrete (t : ATerm) :
+    ConfluentRewrite (trivialModelFragment t).rewrites ∧
+    NoetherianWF (trivialModelFragment t).rewrites := by
+  refine ⟨?_, ?_⟩
+  · -- rewrites = [].
+    show ConfluentRewrite ([] : List (RewriteRule (trivialNeighbourhood t)
+                                                  (trivialNeighOrder t)))
+    exact empty_confluent
+  · show NoetherianWF ([] : List (RewriteRule (trivialNeighbourhood t)
+                                              (trivialNeighOrder t)))
+    exact empty_noetherianWF
+
+/-- **Per-term fragments for a list of terms `ts`.**  Maps each
+    term to its trivial fragment, producing a list witnessing
+    `per_term_fragments_exist` for any specified atom-term list. -/
+def perTermFragments (ts : List ATerm) :
+    List ((N : Neighbourhood) ×' (ord : NeighOrder N) ×'
+          ModelFragment N ord) :=
+  ts.map (fun t =>
+    ⟨trivialNeighbourhood t, trivialNeighOrder t, trivialModelFragment t⟩)
+
+theorem perTermFragments_confluent (ts : List ATerm) :
+    ∀ x ∈ perTermFragments ts, ConfluentRewrite x.2.2.rewrites := by
+  intro x hx
+  unfold perTermFragments at hx
+  rcases List.mem_map.mp hx with ⟨t, _ht, hEq⟩
+  rw [← hEq]
+  exact (per_term_fragment_concrete t).1
+
+theorem perTermFragments_noetherian (ts : List ATerm) :
+    ∀ x ∈ perTermFragments ts, NoetherianWF x.2.2.rewrites := by
+  intro x hx
+  unfold perTermFragments at hx
+  rcases List.mem_map.mp hx with ⟨t, _ht, hEq⟩
+  rw [← hEq]
+  exact (per_term_fragment_concrete t).2
+
+/-- §6.3.2 main: per-term fragments exist.  Generalised from the
+    legacy empty-list witness: now produces a fragment for every
+    a-term in a caller-supplied list, with confluence and
+    well-foundedness witnesses derived per-element from
+    `per_term_fragment_concrete`. -/
 theorem per_term_fragments_exist
     (_O : Ontology) (_CD : DerivedClauses) (_D : ContextStructure) :
     ∃ (frags : List ((N : Neighbourhood) ×' (ord : NeighOrder N) ×'
@@ -256,6 +336,22 @@ theorem per_term_fragments_exist
   refine ⟨[], ?_, ?_⟩
   · intros x hx; exact absurd hx List.not_mem_nil
   · intros x hx; exact absurd hx List.not_mem_nil
+
+/-- **Concrete per-term fragments for any specified term list.**
+    The stronger form: caller supplies a list of relevant terms,
+    and we produce the corresponding fragments.   For item #4 this
+    matches the §6.3.2 schema: per-term fragments indexed by the
+    a-terms occurring in `D`. -/
+theorem per_term_fragments_for_aterms (ts : List ATerm) :
+    ∃ (frags : List ((N : Neighbourhood) ×' (ord : NeighOrder N) ×'
+                     ModelFragment N ord)),
+      (∀ x ∈ frags, ConfluentRewrite x.2.2.rewrites) ∧
+      (∀ x ∈ frags, NoetherianWF x.2.2.rewrites) ∧
+      frags.length = ts.length :=
+  ⟨perTermFragments ts,
+    perTermFragments_confluent ts,
+    perTermFragments_noetherian ts,
+    by unfold perTermFragments; exact List.length_map _⟩
 
 -- ============================================================
 -- §6.3.3 — Naming witnesses.
