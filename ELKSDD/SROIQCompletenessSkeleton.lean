@@ -5675,5 +5675,43 @@ theorem the_el_plus_all_vacuous_plus_compatible_rbox_slice
    herbrandPropertyAtomConjDisj_ELOrAllVacuous_withRBox
      (ontologyConceptSig O) O hO rbox hRBox⟩
 
+/-- **TENA-CUCALA THEOREM 2 (direct form) for the maximal slice.**
+
+    Contrapositive of `the_el_plus_all_vacuous_plus_compatible_rbox_slice`'s
+    Herbrand-property conjunct.  States the canonical-seed completeness
+    directly:
+
+      If `O` (in the maximal Herbrand-friendly shape) plus a compatible
+      `rbox` together semantically entail an `AtomConjDisjQuery` `Q`
+      whose signature is contained in `ontologyConceptSig O`, then any
+      saturated extension of `canonicalSeedELConjFromOntology O`
+      contains a clause in `S(vr)` that subsumes `Q`.
+
+    Proof strategy: classical contradiction.  Suppose no clause
+    subsumes; by the slice we obtain a counter-model that satisfies
+    both `O` and `rbox` while refuting `Q`, contradicting the
+    semantic-entailment hypothesis. -/
+theorem theorem2_for_el_plus_all_vacuous_plus_compatible_rbox
+    (O : Ontology) (hO : IsELOrAllVacuousOnly O)
+    (rbox : SROIQ.RBox) (hRBox : RBoxCompatibleWithEmptyRoles rbox)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedELConjFromOntology O) D)
+    (hSat : FullSaturated D)
+    (hEntail : ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+              (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+              I.satisfies O → SROIQ.RBox.eval I rbox →
+              Q.eval I ⟨γ, φ, vx, vy⟩) :
+    ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} := by
+  classical
+  by_contra hNoSub
+  push_neg at hNoSub
+  have hSlice := herbrandPropertyAtomConjDisj_ELOrAllVacuous_withRBox
+    (ontologyConceptSig O) O hO rbox hRBox D hDeriv hSat Q hQsig hQAtom hNoSub
+  obtain ⟨α, inh, I, γ, φ, vx, vy, hSatO, hSatRBox, hQRefute⟩ := hSlice
+  exact hQRefute (hEntail α inh I γ φ vx vy hSatO hSatRBox)
+
 end ALCHOIQContext
 end ELKSDD

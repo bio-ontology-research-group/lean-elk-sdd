@@ -701,5 +701,6 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology_allVacuous
 #print axioms ALCHOIQContext.herbrandPropertyAtomConjDisj_ELOrAllVacuous_withRBox
 #print axioms ALCHOIQContext.the_el_plus_all_vacuous_plus_compatible_rbox_slice
+#print axioms ALCHOIQContext.theorem2_for_el_plus_all_vacuous_plus_compatible_rbox
 
 end ELKSDD
