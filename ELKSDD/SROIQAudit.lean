@@ -562,4 +562,20 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.herbrandPropertyOverAtomAtom_atomic
 #print axioms ALCHOIQContext.isCanonicalSeedOverAtomAtom_atomic
 
+-- ============================================================
+-- EXTENSION: atom-conjunctive/disjunctive queries over `x`.
+-- Widens Q from singleton atom-atom to arbitrary conjunctive
+-- bodies and disjunctive heads; same closure-extended seed, same
+-- atom-atom-O hypothesis, no extra assumptions.
+-- ============================================================
+#print axioms ALCHOIQContext.AtomConjDisjQuery
+#print axioms ALCHOIQContext.atomAtomQuery_imp_atomConjDisj
+#print axioms ALCHOIQContext.conceptDerivable_initial_singleton_witness
+#print axioms ALCHOIQContext.HerbrandPropertyAtomConjDisj
+#print axioms ALCHOIQContext.IsCanonicalSeedAtomConjDisj
+#print axioms ALCHOIQContext.atomConjDisj_bodyTerm_is_x
+#print axioms ALCHOIQContext.atomConjDisj_headTerm_is_x
+#print axioms ALCHOIQContext.herbrandPropertyAtomConjDisj_atomic
+#print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_atomic
+
 end ELKSDD

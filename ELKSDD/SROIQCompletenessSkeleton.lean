@@ -2977,5 +2977,202 @@ theorem isCanonicalSeedOverAtomAtom_atomic
    canonicalSeedOverClosed_sound sig O hO,
    herbrandPropertyOverAtomAtom_atomic sig O hO⟩
 
+-- ============================================================
+-- §FINAL-CONJDISJ.  Extension of Option-3 to atom-conjunctive /
+-- atom-disjunctive queries over the variable `x`.
+--
+-- This widens the query class beyond the singleton atom-atom case
+-- to multi-literal conjunctive bodies and disjunctive heads (both
+-- over `atomTrue (atom A x)` only), while keeping the same finite
+-- signature `sig` and the same closure-extended seed
+-- `canonicalSeedOverClosed sig O`.
+--
+-- The Herbrand model construction and atom-atom-only closure
+-- machinery transfer unchanged: a singleton-witness lemma reduces
+-- multi-source ConceptDerivable to single-source, after which the
+-- existing closure clauses subsume any unsubsumed query.
+-- ============================================================
+
+/-- A `QueryClause` is *atom-conjunctive/disjunctive* over the variable
+    `x` iff every body literal and every head literal is of the form
+    `atomTrue (atom A x)` for some concept symbol `A`. -/
+def AtomConjDisjQuery (Q : QueryClause) : Prop :=
+  (∀ l ∈ Q.Gamma, ∃ A : Nat, l = BLit.atomTrue (PTerm.atom A ATerm.x)) ∧
+  (∀ l ∈ Q.Delta, ∃ A : Nat, l = CLit.atomTrue (PTerm.atom A ATerm.x))
+
+/-- Every atom-atom query is atom-conjunctive/disjunctive. -/
+theorem atomAtomQuery_imp_atomConjDisj
+    (Q : QueryClause) (h : AtomAtomQuery Q) : AtomConjDisjQuery Q := by
+  obtain ⟨A, B, hG, hD⟩ := h
+  refine ⟨?_, ?_⟩
+  · intro l hl; rw [hG] at hl
+    rcases List.mem_singleton.mp hl with rfl
+    exact ⟨A, rfl⟩
+  · intro l hl; rw [hD] at hl
+    rcases List.mem_singleton.mp hl with rfl
+    exact ⟨B, rfl⟩
+
+/-- **Singleton-witness lemma for ConceptDerivable.**  If `B` is
+    derivable from a multi-source `initial` under `O`, then it is
+    derivable from a singleton initial `{A}` for some `A` with
+    `initial A`.  Proof: induction on the derivation. -/
+theorem conceptDerivable_initial_singleton_witness
+    (O : Ontology) (initial : Nat → Prop) :
+    ∀ {B : Nat}, ConceptDerivable O initial B →
+      ∃ A : Nat, initial A ∧ ConceptDerivable O (fun X => X = A) B := by
+  intro B hDer
+  induction hDer with
+  | @base B' hInit =>
+    exact ⟨B', hInit, ConceptDerivable.base rfl⟩
+  | @step A' B' _hDerA hAx ih =>
+    obtain ⟨A, hAinit, hDerA'⟩ := ih
+    exact ⟨A, hAinit, ConceptDerivable.step hDerA' hAx⟩
+
+/-- **HerbrandProperty over atom-conjunctive/disjunctive queries.**
+    For any fully saturated derivation `D` from `D_seed`, every
+    unsubsumed `Q` satisfying `AtomConjDisjQuery` and referencing
+    `sig` admits a counter-model. -/
+def HerbrandPropertyAtomConjDisj (sig : List Nat) (O : Ontology)
+    (D_seed : ContextStructure) : Prop :=
+  ∀ (D : ContextStructure),
+    FullDerivation D_seed D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      QueryReferencesSignature sig Q →
+      AtomConjDisjQuery Q →
+      (∀ c ∈ D.S D.vr,
+         ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+      ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+        (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+        I.satisfies O ∧ ¬ Q.eval I ⟨γ, φ, vx, vy⟩
+
+/-- **The refined IsCanonicalSeed for atom-conjunctive/disjunctive Q.** -/
+def IsCanonicalSeedAtomConjDisj (sig : List Nat) (O : Ontology)
+    (D_seed : ContextStructure) : Prop :=
+  D_seed.vr ∈ D_seed.contexts ∧
+  (∃ CD : DerivedClauses, isSound O D_seed CD) ∧
+  HerbrandPropertyAtomConjDisj sig O D_seed
+
+/-- **Auxiliary: extract `t = x` from `AtomConjDisjQuery` body shape.** -/
+theorem atomConjDisj_bodyTerm_is_x
+    (Q : QueryClause) (hShape : ∀ l ∈ Q.Gamma, ∃ A : Nat,
+        l = BLit.atomTrue (PTerm.atom A ATerm.x))
+    (A : Nat) (t : ATerm)
+    (hMem : BLit.atomTrue (PTerm.atom A t) ∈ Q.Gamma) :
+    t = ATerm.x := by
+  obtain ⟨_, hEq⟩ := hShape _ hMem
+  injection hEq with hP
+  injection hP
+
+/-- **Auxiliary: extract `t = x` from `AtomConjDisjQuery` head shape.** -/
+theorem atomConjDisj_headTerm_is_x
+    (Q : QueryClause) (hShape : ∀ l ∈ Q.Delta, ∃ A : Nat,
+        l = CLit.atomTrue (PTerm.atom A ATerm.x))
+    (B : Nat) (t : ATerm)
+    (hMem : CLit.atomTrue (PTerm.atom B t) ∈ Q.Delta) :
+    t = ATerm.x := by
+  obtain ⟨_, hEq⟩ := hShape _ hMem
+  injection hEq with hP
+  injection hP
+
+/-- **HerbrandPropertyAtomConjDisj discharge for atom-atom O.**
+    Unconditional, using `canonicalSeedOverClosed sig O`.  The proof
+    reduces multi-source `ConceptDerivable` to single-source via
+    `conceptDerivable_initial_singleton_witness`, then invokes the
+    existing closure-subsumption machinery. -/
+theorem herbrandPropertyAtomConjDisj_atomic
+    (sig : List Nat) (O : Ontology) (hO : IsAtomicSubsumptionOnly O) :
+    HerbrandPropertyAtomConjDisj sig O (canonicalSeedOverClosed sig O) := by
+  classical
+  intro D hDeriv _hSat Q hQsig hQCD hNoSub
+  obtain ⟨hBodyShape, hHeadShape⟩ := hQCD
+  -- Lift hNoSub from D to seed via SubsumerInvariant preservation.
+  have hNoSubSeed :
+      ∀ c ∈ (canonicalSeedOverClosed sig O).S
+              (canonicalSeedOverClosed sig O).vr,
+        ¬ subsumes c {body := Q.Gamma, head := Q.Delta} := by
+    intro c hc hSub
+    have hSubInv : SubsumerInvariant Q (canonicalSeedOverClosed sig O) :=
+      ⟨canonicalSeedOverClosed_vr_in_contexts sig O, c, hc, hSub⟩
+    have hSubInvD := fullDeriv_preserves_SubsumerInvariant hDeriv Q hSubInv
+    obtain ⟨_, c', hc'In, hc'Sub⟩ := hSubInvD
+    exact hNoSub c' hc'In hc'Sub
+  -- Build the Herbrand model.
+  refine ⟨Unit, ⟨()⟩, atomicHerbrandInterp O Q, atomicAssign.γ,
+          atomicAssign.φ, atomicAssign.vx, atomicAssign.vy, ?_, ?_⟩
+  · exact atomicHerbrandInterp_satisfies O hO Q
+  · intro hQeval
+    -- Build AtomicRefutable.
+    have hAR : AtomicRefutable O Q := by
+      refine ⟨?_, ?_, ?_, ?_, ?_⟩
+      · -- noRoleBody
+        intro S t₁ t₂ hMem
+        obtain ⟨A, hEq⟩ := hBodyShape _ hMem
+        exact (by cases hEq)
+      · -- noTtrueHead
+        intro hMem
+        obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+        exact (by cases hEq)
+      · -- noEqLHead
+        intro s₁ s₂ hMem
+        obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+        exact (by cases hEq)
+      · -- noRoleHead
+        intro S t₁ t₂ hMem
+        obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+        exact (by cases hEq)
+      · -- headNotDerivable
+        intro B' t hMem hDer
+        -- Step 1: t = ATerm.x in head.
+        have ht_eq : t = ATerm.x :=
+          atomConjDisj_headTerm_is_x Q hHeadShape B' t hMem
+        subst ht_eq
+        -- Step 2: singleton-witness reduction.
+        obtain ⟨A, hAinit, hDerA⟩ :=
+          conceptDerivable_initial_singleton_witness O _ hDer
+        obtain ⟨tA, hAmem⟩ := hAinit
+        have htA_eq : tA = ATerm.x :=
+          atomConjDisj_bodyTerm_is_x Q hBodyShape A tA hAmem
+        subst htA_eq
+        -- Now hAmem : BLit.atomTrue (PTerm.atom A ATerm.x) ∈ Q.Gamma.
+        have hAsig : A ∈ sig := hQsig.1 A ATerm.x hAmem
+        have hB'sig : B' ∈ sig := hQsig.2 B' ATerm.x hMem
+        -- Closure subsumes (A, B').
+        obtain ⟨c, hc, hcSub⟩ :=
+          canonicalSeedOverClosed_subsumes_derivable sig O A B' hAsig hB'sig hDerA
+        -- c subsumes Q since {A(x)} ⊆ Q.Gamma and {B'(x)} ⊆ Q.Delta.
+        have hQsubs : subsumes c {body := Q.Gamma, head := Q.Delta} := by
+          refine ⟨?_, ?_⟩
+          · intro b hb
+            have hbInAB := hcSub.1 b hb
+            rcases List.mem_singleton.mp hbInAB with rfl
+            exact hAmem
+          · intro h hh
+            have hhInAB := hcSub.2 h hh
+            rcases List.mem_singleton.mp hhInAB with rfl
+            exact hMem
+        exact hNoSubSeed c hc hQsubs
+    have hBody := atomicHerbrandInterp_body_holds O Q hAR.noRoleBody
+    have hHead := atomicHerbrandInterp_head_fails O Q hAR.noTtrueHead
+      hAR.noEqLHead hAR.noRoleHead hAR.headNotDerivable
+    obtain ⟨hh, hMem, hEval⟩ := hQeval hBody
+    exact hHead hh hMem hEval
+
+/-- **THE EXTENDED UNCONDITIONAL THEOREM (conj/disj query, atom-atom O).**
+    For every signature `sig` and every atom-atom-subsumption ontology
+    `O`, `canonicalSeedOverClosed sig O` satisfies
+    `IsCanonicalSeedAtomConjDisj sig O`.
+
+    Strictly stronger than `isCanonicalSeedOverAtomAtom_atomic`: the
+    query class is widened from singleton atom-atom to arbitrary
+    conjunctive bodies and disjunctive heads (over `atomTrue (atom _ x)`),
+    while keeping every other parameter identical.  No additional
+    hypotheses are required. -/
+theorem isCanonicalSeedAtomConjDisj_atomic
+    (sig : List Nat) (O : Ontology) (hO : IsAtomicSubsumptionOnly O) :
+    IsCanonicalSeedAtomConjDisj sig O (canonicalSeedOverClosed sig O) :=
+  ⟨canonicalSeedOverClosed_vr_in_contexts sig O,
+   canonicalSeedOverClosed_sound sig O hO,
+   herbrandPropertyAtomConjDisj_atomic sig O hO⟩
+
 end ALCHOIQContext
 end ELKSDD
