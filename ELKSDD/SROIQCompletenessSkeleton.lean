@@ -5623,6 +5623,104 @@ theorem elHerbrandInterpTree_sat_atom_conjOfAtoms
   intro p hA
   exact isConjOfAtoms_eval_helper_tree O Q hAx hC (fun _ hM => hM) p hA
 
+/-- **Tree-Herbrand root-satisfaction for `(top, ∃R.(atom B))` axioms.**
+    Structurally identical to `_sat_atom_exist_atom`: the LHS `top`
+    is vacuously satisfied at every node, and the `succ` constructor
+    introduces the required `R`-successor whose initial atoms include
+    `B`. -/
+theorem elHerbrandInterpTree_sat_top_exist_atom
+    (O : Ontology) (Q : QueryClause)
+    (R B : Nat)
+    (hAx : (ALCHOQ.Concept.top,
+            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval ALCHOQ.Concept.top p →
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) p := by
+  intro p _
+  refine ⟨HerbrandTree.succ p
+            (ALCHOQ.Concept.top,
+             ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) hAx,
+          ?_, ?_⟩
+  · refine ⟨rfl, B, ?_, ?_⟩
+    · rfl
+    · rfl
+  · show ConceptDerivableEL O
+      (treeNodeInitialAtoms Q
+        (HerbrandTree.succ p
+          (ALCHOQ.Concept.top,
+           ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) hAx)) B
+    apply ConceptDerivableEL.base
+    show triggerAtomsOfAxiom (ALCHOQ.Concept.top,
+            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) B
+    rfl
+
+/-- **Tree-Herbrand root-satisfaction for
+    `(conj (atom A₁) (atom A₂), ∃R.(atom B))` axioms.**   The
+    LHS evaluation is consumed by `succ`'s axiom-membership witness;
+    the LHS shape does not affect the successor mechanism. -/
+theorem elHerbrandInterpTree_sat_conj_exist_atom
+    (O : Ontology) (Q : QueryClause)
+    (A₁ A₂ R B : Nat)
+    (hAx : (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂),
+            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂)) p →
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) p := by
+  intro p _
+  refine ⟨HerbrandTree.succ p
+            (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂),
+             ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) hAx,
+          ?_, ?_⟩
+  · refine ⟨rfl, B, ?_, ?_⟩
+    · rfl
+    · rfl
+  · show ConceptDerivableEL O
+      (treeNodeInitialAtoms Q
+        (HerbrandTree.succ p
+          (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂),
+           ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) hAx)) B
+    apply ConceptDerivableEL.base
+    show triggerAtomsOfAxiom
+      (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂),
+       ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) B
+    rfl
+
+/-- **Tree-Herbrand root-satisfaction for
+    `(disj (atom A₁) (atom A₂), ∃R.(atom B))` axioms.**   Like the
+    other exist-RHS cases, the LHS shape is irrelevant to the
+    successor mechanism. -/
+theorem elHerbrandInterpTree_sat_disj_exist_atom
+    (O : Ontology) (Q : QueryClause)
+    (A₁ A₂ R B : Nat)
+    (hAx : (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂),
+            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂)) p →
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) p := by
+  intro p _
+  refine ⟨HerbrandTree.succ p
+            (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂),
+             ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) hAx,
+          ?_, ?_⟩
+  · refine ⟨rfl, B, ?_, ?_⟩
+    · rfl
+    · rfl
+  · show ConceptDerivableEL O
+      (treeNodeInitialAtoms Q
+        (HerbrandTree.succ p
+          (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂),
+           ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) hAx)) B
+    apply ConceptDerivableEL.base
+    show triggerAtomsOfAxiom
+      (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂),
+       ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) B
+    rfl
+
 -- Note: a tree-level analogue of the `(atom A, ⊥)` axiom case is
 -- NOT a pointwise statement — bot-closure on the tree must be
 -- handled at the canonical-seed + saturated-structure level (as in
@@ -5672,6 +5770,15 @@ def IsTreeFriendlyAxiom (ax : ALCHOQ.Axiom) : Prop :=
   (∃ A R B : Nat,
      ax = (ALCHOQ.Concept.atom A,
            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B))) ∨
+  (∃ R B : Nat,
+     ax = (ALCHOQ.Concept.top,
+           ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B))) ∨
+  (∃ A₁ A₂ R B : Nat,
+     ax = (ALCHOQ.Concept.conj (.atom A₁) (.atom A₂),
+           ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B))) ∨
+  (∃ A₁ A₂ R B : Nat,
+     ax = (ALCHOQ.Concept.disj (.atom A₁) (.atom A₂),
+           ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B))) ∨
   -- Tautologically vacuous: bot LHS.
   (∃ D : ALCHOQ.Concept, ax = (ALCHOQ.Concept.bot, D)) ∨
   -- Tautologically vacuous: top RHS.
@@ -5690,7 +5797,7 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     (elHerbrandInterpTree O Q).satisfies O := by
   intro ax hax
   intro p hLHS
-  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hExLHS | hBotLHS | hTopRHS
+  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hExLHS | hTopEx | hCJEx | hDJEx | hBotLHS | hTopRHS
   · obtain ⟨A, B, rfl⟩ := hAA
     exact elHerbrandInterpTree_sat_atom_atom O Q A B hax p hLHS
   · obtain ⟨A₁, A₂, B, rfl⟩ := hCJ
@@ -5711,6 +5818,12 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     exact elHerbrandInterpTree_sat_atom_conjOfAtoms O Q A C hC hax p hLHS
   · obtain ⟨A, R, B, rfl⟩ := hExLHS
     exact elHerbrandInterpTree_sat_atom_exist_atom O Q A R B hax p hLHS
+  · obtain ⟨R, B, rfl⟩ := hTopEx
+    exact elHerbrandInterpTree_sat_top_exist_atom O Q R B hax p hLHS
+  · obtain ⟨A₁, A₂, R, B, rfl⟩ := hCJEx
+    exact elHerbrandInterpTree_sat_conj_exist_atom O Q A₁ A₂ R B hax p hLHS
+  · obtain ⟨A₁, A₂, R, B, rfl⟩ := hDJEx
+    exact elHerbrandInterpTree_sat_disj_exist_atom O Q A₁ A₂ R B hax p hLHS
   · -- bot LHS: hLHS : eval bot p = False; absurd.
     obtain ⟨D, rfl⟩ := hBotLHS
     exact absurd hLHS (fun h => h)

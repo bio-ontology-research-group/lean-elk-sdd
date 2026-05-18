@@ -826,6 +826,17 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_atom_conjOfAtoms
 
 -- ============================================================
+-- §TREE: non-atom LHS / ∃R.atom B RHS axioms.   The successor
+-- mechanism is LHS-shape-agnostic for exist-RHS axioms; these
+-- three lemmas extend tree satisfaction to (top, ∃R.B),
+-- (conj A₁ A₂, ∃R.B), and (disj A₁ A₂, ∃R.B) by reusing the
+-- `succ` constructor with the axiom-membership witness.
+-- ============================================================
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_top_exist_atom
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_conj_exist_atom
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_disj_exist_atom
+
+-- ============================================================
 -- §TREE SATISFIES O composition.   Single satisfaction theorem
 -- assembled by dispatching per-axiom to the tree-Herbrand lemmas.
 -- ============================================================
