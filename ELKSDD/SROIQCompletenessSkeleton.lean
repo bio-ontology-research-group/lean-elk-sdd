@@ -9757,6 +9757,35 @@ theorem isELOrAllVacuousOnly_cons_top_atom
     exact ⟨B, rfl⟩
   · exact hTail ax hMem
 
+/-- **Vacuous-LHS cons-builder**: any axiom whose LHS satisfies
+    `HerbrandFalseLHS` extends an `IsELOrAllVacuousOnly` tail
+    (the LHS-vacuous catch-all branch). -/
+theorem isELOrAllVacuousOnly_cons_falseLHS
+    {C D : ALCHOQ.Concept} {O : Ontology}
+    (hLHS : HerbrandFalseLHS C)
+    (hTail : IsELOrAllVacuousOnly O) :
+    IsELOrAllVacuousOnly ((C, D) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · -- (C, D) — discharge via the HerbrandFalseLHS branch.
+    right; right; right; right; right; right; right; right; right; right; left
+    exact hLHS
+  · exact hTail ax hMem
+
+/-- **Vacuous-RHS cons-builder**: any axiom whose RHS satisfies
+    `HerbrandTrueRHS` extends an `IsELOrAllVacuousOnly` tail
+    (the RHS-vacuous catch-all branch). -/
+theorem isELOrAllVacuousOnly_cons_trueRHS
+    {C D : ALCHOQ.Concept} {O : Ontology}
+    (hRHS : HerbrandTrueRHS D)
+    (hTail : IsELOrAllVacuousOnly O) :
+    IsELOrAllVacuousOnly ((C, D) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · right; right; right; right; right; right; right; right; right; right; right
+    exact hRHS
+  · exact hTail ax hMem
+
 theorem isELOrUniversalRoleVacuousOnly_cons_atom_atom
     {A B : Nat} {O : Ontology}
     (hTail : IsELOrUniversalRoleVacuousOnly O) :

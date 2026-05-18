@@ -1111,6 +1111,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isELOrAllVacuousOnly_cons_atom_conj
 #print axioms ALCHOIQContext.isELOrAllVacuousOnly_cons_disj_atom
 #print axioms ALCHOIQContext.isELOrAllVacuousOnly_cons_top_atom
+#print axioms ALCHOIQContext.isELOrAllVacuousOnly_cons_falseLHS
+#print axioms ALCHOIQContext.isELOrAllVacuousOnly_cons_trueRHS
 #print axioms ALCHOIQContext.isELOrUniversalRoleVacuousOnly_cons_atom_atom
 #print axioms ALCHOIQContext.isELOrUniversalRoleVacuousOnly_cons_atom_bot
 #print axioms ALCHOIQContext.isELOrUniversalRoleVacuousOnly_cons_conj_atom
