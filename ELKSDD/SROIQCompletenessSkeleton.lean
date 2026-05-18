@@ -43,6 +43,7 @@
 import Mathlib.Tactic.ByContra
 import Mathlib.Tactic.SplitIfs
 import ELKSDD.ALCHOIQContext
+import ELKSDD.SROIQ
 
 namespace ELKSDD
 namespace ALCHOIQContext
@@ -1827,6 +1828,109 @@ theorem axiomToQuery_some_of_atomic (O : Ontology) (hO : IsAtomicSubsumptionOnly
     ∃ A B : Nat, axiomToQuery ax = some (atomSubsumptionQuery A B) := by
   obtain ⟨A, B, rfl⟩ := hO ax hax
   exact ⟨A, B, rfl⟩
+
+-- ============================================================
+-- Item #10: RBox integration.
+--
+-- The thesis SROIQ calculus handles role-box (RBox) axioms: role
+-- inclusion, chains, transitive/symmetric/asymmetric/reflexive/
+-- irreflexive/inverse/disjoint roles.   These axioms are
+-- defined in `ELKSDD.SROIQ.RAxiom` with semantic evaluation.
+--
+-- For the atom-atom slice (item #1), the Herbrand interpretation
+-- has `ext_role _ _ _ := False`, so every RAxiom whose premise
+-- references `ext_role` is vacuously satisfied.   We identify
+-- the *compatible* subset (everything except `.refl`) and show
+-- the atomic Herbrand model satisfies every compatible RBox.
+-- ============================================================
+
+/-- **An RAxiom is compatible with the empty-roles atomic Herbrand
+    model.**  This holds for every axiom shape *except* `.refl`
+    (which demands `ext_role R x x` for every `x`) and `.chain []`
+    (which similarly demands `ext_role S x x` via the trivial
+    holdsAlong). -/
+def RAxiomCompatibleWithEmptyRoles : SROIQ.RAxiom → Prop
+  | SROIQ.RAxiom.refl _      => False
+  | SROIQ.RAxiom.chain [] _  => False
+  | _                        => True
+
+/-- **Atomic Herbrand interpretation has empty `ext_role`.** -/
+theorem atomicHerbrandInterp_ext_role_false
+    (O : Ontology) (Q : QueryClause) (R : Nat) (x y : Unit) :
+    ¬ (atomicHerbrandInterp O Q).ext_role R x y := by
+  intro h; exact h
+
+/-- **Compatible RAxioms are vacuously satisfied by the atomic
+    Herbrand interpretation.**  Discharges each compatible shape
+    by appeal to `ext_role _ _ _ = False`. -/
+theorem atomicHerbrandInterp_satisfies_RAxiom
+    (O : Ontology) (Q : QueryClause)
+    (ax : SROIQ.RAxiom) (hCompat : RAxiomCompatibleWithEmptyRoles ax) :
+    ax.eval (atomicHerbrandInterp O Q) := by
+  cases ax with
+  | incl R S =>
+    intro x y hR
+    exact absurd hR (atomicHerbrandInterp_ext_role_false O Q R x y)
+  | chain rs S =>
+    intro x y hChain
+    cases rs with
+    | nil =>
+      -- Incompatible per hCompat: `.chain []` is excluded.
+      exact absurd hCompat (fun h => h)
+    | cons r rs' =>
+      obtain ⟨z, hRz, _⟩ := hChain
+      exact absurd hRz (atomicHerbrandInterp_ext_role_false O Q r x z)
+  | trans R =>
+    intro x y z hRxy _
+    exact absurd hRxy (atomicHerbrandInterp_ext_role_false O Q R x y)
+  | sym R =>
+    intro x y hR
+    exact absurd hR (atomicHerbrandInterp_ext_role_false O Q R x y)
+  | asym R =>
+    intro x y hR _
+    exact absurd hR (atomicHerbrandInterp_ext_role_false O Q R x y)
+  | refl R =>
+    -- Incompatible per hCompat = False.
+    exact absurd hCompat (fun h => h)
+  | irrefl R =>
+    intro x hR
+    exact absurd hR (atomicHerbrandInterp_ext_role_false O Q R x x)
+  | inv R S =>
+    intro x y
+    constructor
+    · intro hR
+      exact absurd hR (atomicHerbrandInterp_ext_role_false O Q R x y)
+    · intro hS
+      exact absurd hS (atomicHerbrandInterp_ext_role_false O Q S y x)
+  | disj R S =>
+    intro x y ⟨hR, _⟩
+    exact absurd hR (atomicHerbrandInterp_ext_role_false O Q R x y)
+
+/-- **RBox compatibility**: every axiom in the RBox is compatible
+    with the empty-roles atomic Herbrand model. -/
+def RBoxCompatibleWithEmptyRoles (rbox : SROIQ.RBox) : Prop :=
+  ∀ ax ∈ rbox, RAxiomCompatibleWithEmptyRoles ax
+
+/-- **The empty RBox is compatible.** -/
+theorem emptyRBox_compatible :
+    RBoxCompatibleWithEmptyRoles ([] : SROIQ.RBox) := by
+  intro ax hax
+  exact absurd hax List.not_mem_nil
+
+/-- **Atomic Herbrand interpretation satisfies any compatible RBox.** -/
+theorem atomicHerbrandInterp_satisfies_compatible_rbox
+    (O : Ontology) (Q : QueryClause)
+    (rbox : SROIQ.RBox) (hCompat : RBoxCompatibleWithEmptyRoles rbox) :
+    SROIQ.RBox.eval (atomicHerbrandInterp O Q) rbox := by
+  intro ax hax
+  exact atomicHerbrandInterp_satisfies_RAxiom O Q ax (hCompat ax hax)
+
+/-- **Atomic Herbrand satisfies the empty RBox.**  Direct corollary,
+    matching the §5.4 thesis approach for SROIQ → ALCHOIQ reduction. -/
+theorem atomicHerbrandInterp_satisfies_emptyRBox
+    (O : Ontology) (Q : QueryClause) :
+    SROIQ.RBox.eval (atomicHerbrandInterp O Q) ([] : SROIQ.RBox) :=
+  atomicHerbrandInterp_satisfies_compatible_rbox O Q [] emptyRBox_compatible
 
 end ALCHOIQContext
 end ELKSDD

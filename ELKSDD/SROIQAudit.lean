@@ -475,4 +475,18 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.axiomToQuery
 #print axioms ALCHOIQContext.axiomToQuery_some_of_atomic
 
+-- ============================================================
+-- Item #10: RBox integration — compatibility predicate for the
+-- atom-atom slice (excludes `.refl` and `.chain []`), satisfaction
+-- of each individual RAxiom shape, full RBox satisfaction, and
+-- the empty-RBox corollary.
+-- ============================================================
+#print axioms ALCHOIQContext.RAxiomCompatibleWithEmptyRoles
+#print axioms ALCHOIQContext.atomicHerbrandInterp_ext_role_false
+#print axioms ALCHOIQContext.atomicHerbrandInterp_satisfies_RAxiom
+#print axioms ALCHOIQContext.RBoxCompatibleWithEmptyRoles
+#print axioms ALCHOIQContext.emptyRBox_compatible
+#print axioms ALCHOIQContext.atomicHerbrandInterp_satisfies_compatible_rbox
+#print axioms ALCHOIQContext.atomicHerbrandInterp_satisfies_emptyRBox
+
 end ELKSDD
