@@ -8979,6 +8979,84 @@ theorem isELOrAllVacuousOnly_of_isAtomicSubsumptionOnly
   obtain ⟨A, B, hEq⟩ := hO ax hax
   exact Or.inl ⟨A, B, hEq⟩
 
+/-- **`IsAtomicOrBotOnly` ontologies embed into `IsELOrAllVacuousOnly`.**
+    Atom-atom and atom-bot are the first two EL-substantive
+    disjuncts of `IsELOrAllVacuousOnly`. -/
+theorem isELOrAllVacuousOnly_of_isAtomicOrBotOnly
+    (O : Ontology) (hO : IsAtomicOrBotOnly O) :
+    IsELOrAllVacuousOnly O := by
+  intro ax hax
+  rcases hO ax hax with ⟨A, B, hEq⟩ | ⟨A, hEq⟩
+  · exact Or.inl ⟨A, B, hEq⟩
+  · exact Or.inr (Or.inl ⟨A, hEq⟩)
+
+/-- **`IsELConjOnly` ontologies embed into `IsELOrAllVacuousOnly`.**
+    Atom-atom, atom-bot, and conj-atom are the first three
+    EL-substantive disjuncts of `IsELOrAllVacuousOnly`. -/
+theorem isELOrAllVacuousOnly_of_isELConjOnly
+    (O : Ontology) (hO : IsELConjOnly O) :
+    IsELOrAllVacuousOnly O := by
+  intro ax hax
+  rcases hO ax hax with ⟨A, B, hEq⟩ | ⟨A, hEq⟩ | ⟨A₁, A₂, B, hEq⟩
+  · exact Or.inl ⟨A, B, hEq⟩
+  · exact Or.inr (Or.inl ⟨A, hEq⟩)
+  · exact Or.inr (Or.inr (Or.inl ⟨A₁, A₂, B, hEq⟩))
+
+/-- **Concrete `InUnifiedSlice` instance** for any atom-or-bot-only
+    ontology paired with any empty-roles-compatible RBox. -/
+theorem inUnifiedSlice_of_isAtomicOrBotOnly
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : IsAtomicOrBotOnly O)
+    (hRBox : RBoxCompatibleWithEmptyRoles rbox) :
+    InUnifiedSlice O rbox :=
+  inUnifiedSlice_of_emptyRoleFamily O rbox
+    (isELOrAllVacuousOnly_of_isAtomicOrBotOnly O hO) hRBox
+
+/-- **Concrete `InUnifiedSlice` instance** for any atom-or-bot-only
+    ontology paired with the empty RBox. -/
+theorem inUnifiedSlice_of_isAtomicOrBotOnly_emptyRBox
+    (O : Ontology) (hO : IsAtomicOrBotOnly O) :
+    InUnifiedSlice O ([] : SROIQ.RBox) :=
+  inUnifiedSlice_of_isAtomicOrBotOnly O [] hO emptyRBox_compatible
+
+/-- **Concrete `InUnifiedSlice` instance** for any EL-conj-only
+    ontology paired with any empty-roles-compatible RBox. -/
+theorem inUnifiedSlice_of_isELConjOnly
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : IsELConjOnly O)
+    (hRBox : RBoxCompatibleWithEmptyRoles rbox) :
+    InUnifiedSlice O rbox :=
+  inUnifiedSlice_of_emptyRoleFamily O rbox
+    (isELOrAllVacuousOnly_of_isELConjOnly O hO) hRBox
+
+/-- **Concrete `InUnifiedSlice` instance** for any EL-conj-only
+    ontology paired with the empty RBox. -/
+theorem inUnifiedSlice_of_isELConjOnly_emptyRBox
+    (O : Ontology) (hO : IsELConjOnly O) :
+    InUnifiedSlice O ([] : SROIQ.RBox) :=
+  inUnifiedSlice_of_isELConjOnly O [] hO emptyRBox_compatible
+
+/-- **Fully unconditional `theorem2_canonicalSeedOfFull` instance**
+    for any EL-conj-only ontology with the empty RBox.   Strictly
+    larger than the atom-atom-only fragment: includes
+    `(atom A, ⊥)` axioms and conj-atom subsumptions. -/
+theorem theorem2_canonicalSeedOfFull_isELConjOnly_emptyRBox
+    (O : Ontology) (hO : IsELConjOnly O)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull O) D)
+    (hSat : FullSaturated D)
+    (hEntail : ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+              (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+              I.satisfies O → SROIQ.RBox.eval I ([] : SROIQ.RBox) →
+              Q.eval I ⟨γ, φ, vx, vy⟩) :
+    ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  theorem2_canonicalSeedOfFull_unifiedSlice O []
+    (inUnifiedSlice_of_isELConjOnly_emptyRBox O hO)
+    Q hQsig hQAtom D hDeriv hSat hEntail
+
 /-- **Concrete `InUnifiedSlice` instance** for any atom-atom-only
     ontology paired with any empty-roles-compatible RBox. -/
 theorem inUnifiedSlice_of_isAtomicSubsumptionOnly
