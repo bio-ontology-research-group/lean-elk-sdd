@@ -5454,11 +5454,13 @@ def triggerAtomsOfAxiom : ALCHOQ.Axiom → Nat → Prop
   | _, _ => False
 
 /-- Role-only trigger: the axiom's RHS produces this role (with any
-    filler).  Used by `universalPropagatedAtoms` to determine which
-    role label `R` the parent→child edge carries, independently of
-    the filler. -/
+    filler).   Both `∃R.filler` and `≥(n+1) R.filler` produce the
+    role edge — the latter is semantically `∃R.filler` for n=0 and
+    a stronger cardinality constraint for n≥1, but both demand
+    at least one R-successor. -/
 def axiomTriggersRole : ALCHOQ.Axiom → Nat → Prop
   | (_, ALCHOQ.Concept.exist R' _), R => R' = R
+  | (_, ALCHOQ.Concept.atLeast (_+1) R' _), R => R' = R
   | _, _ => False
 
 /-- **Tree-vacuity (LHS=False).**   Concepts whose evaluation under
@@ -6359,6 +6361,32 @@ theorem elHerbrandInterpTree_sat_anyLHS_exist_treeTrueRHS
   · exact ⟨rfl, rfl⟩
   · exact treeTrueRHS_eval_true O Q D hD _
 
+/-- **Number-restriction analogue: `(any-LHS, ≥1 R.D)` with
+    `TreeTrueRHS D`.**   `atLeast 1 R D` semantically equals
+    `∃R.D`.   With the extended `axiomTriggersRole` firing for
+    `atLeast (n+1) R' _`, the introducing successor establishes
+    the role edge directly. -/
+theorem elHerbrandInterpTree_sat_anyLHS_atLeast1_treeTrueRHS
+    (O : Ontology) (Q : QueryClause)
+    (LHS : ALCHOQ.Concept) (R : Nat) (D : ALCHOQ.Concept)
+    (hD : TreeTrueRHS D)
+    (hAx : (LHS, ALCHOQ.Concept.atLeast 1 R D) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval LHS p →
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.atLeast 1 R D) p := by
+  intro p _hLHS
+  -- Goal unfolds to: ∃ x, (R(p,x) ∧ eval D x) ∧ atLeastCard ... 0
+  refine ⟨HerbrandTree.succ p (LHS, ALCHOQ.Concept.atLeast 1 R D) hAx,
+          ⟨?_, ?_⟩, ?_⟩
+  · -- R(p, succ): need x = p ∧ axiomTriggersRole ax R
+    -- ax = (LHS, atLeast 1 R D), so axiomTriggersRole gives R = R = rfl
+    exact ⟨rfl, rfl⟩
+  · exact treeTrueRHS_eval_true O Q D hD _
+  · -- atLeastCard _ 0 = True
+    show Interp.atLeastCard _ 0
+    trivial
+
 /-- **Dual generalisation: `(any-LHS, ∀R.D)` with `TreeTrueRHS D`.**
     The filler is structurally True at every node (including all
     successors), so the universal restriction is vacuously
@@ -6379,6 +6407,7 @@ theorem elHerbrandInterpTree_sat_anyLHS_univ_treeTrueRHS
   intro p _hLHS
   intro y _hRpy
   exact treeTrueRHS_eval_true O Q D hD y
+
 
 -- ============================================================
 -- §TREE-FRIENDLY TBOX SHAPE PREDICATE.   Composes the per-axiom
@@ -6455,6 +6484,11 @@ def IsTreeFriendlyAxiom (ax : ALCHOQ.Axiom) : Prop :=
   -- universal is vacuously satisfied.
   (∃ LHS : ALCHOQ.Concept, ∃ R : Nat, ∃ D : ALCHOQ.Concept,
      ax = (LHS, ALCHOQ.Concept.univ R D) ∧ TreeTrueRHS D) ∨
+  -- (any-LHS, ≥1 R.D) with TreeTrueRHS D — number-restriction.
+  -- Semantically equivalent to ∃R.D, but the extended
+  -- axiomTriggersRole now fires for atLeast (n+1).
+  (∃ LHS : ALCHOQ.Concept, ∃ R : Nat, ∃ D : ALCHOQ.Concept,
+     ax = (LHS, ALCHOQ.Concept.atLeast 1 R D) ∧ TreeTrueRHS D) ∨
   (∃ R B : Nat,
      ax = (ALCHOQ.Concept.top,
            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B))) ∨
@@ -6501,7 +6535,7 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     (elHerbrandInterpTree O Q).satisfies O := by
   intro ax hax
   intro p hLHS
-  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hTopCM | hCJCM | hDJCM | hExLHS | hExLHS_CM | hExLHS_Top | hAnyExCM | hAnyExTop | hAnyExTT | hAnyUnivTT | hTopEx | hCJEx | hDJEx | hTopUniv | hTopUnivCM | hTTRHSUniv | hBotLHS | hTopRHS
+  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hTopCM | hCJCM | hDJCM | hExLHS | hExLHS_CM | hExLHS_Top | hAnyExCM | hAnyExTop | hAnyExTT | hAnyUnivTT | hAnyAtLeast1 | hTopEx | hCJEx | hDJEx | hTopUniv | hTopUnivCM | hTTRHSUniv | hBotLHS | hTopRHS
   · obtain ⟨A, B, rfl⟩ := hAA
     exact elHerbrandInterpTree_sat_atom_atom O Q A B hax p hLHS
   · obtain ⟨A₁, A₂, B, rfl⟩ := hCJ
@@ -6540,6 +6574,8 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     exact elHerbrandInterpTree_sat_anyLHS_exist_treeTrueRHS O Q LHS R D hD hax p hLHS
   · obtain ⟨LHS, R, D, rfl, hD⟩ := hAnyUnivTT
     exact elHerbrandInterpTree_sat_anyLHS_univ_treeTrueRHS O Q LHS R D hD hax p hLHS
+  · obtain ⟨LHS, R, D, rfl, hD⟩ := hAnyAtLeast1
+    exact elHerbrandInterpTree_sat_anyLHS_atLeast1_treeTrueRHS O Q LHS R D hD hax p hLHS
   · obtain ⟨R, B, rfl⟩ := hTopEx
     exact elHerbrandInterpTree_sat_top_exist_atom O Q R B hax p hLHS
   · obtain ⟨A₁, A₂, R, B, rfl⟩ := hCJEx

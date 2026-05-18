@@ -944,6 +944,13 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_anyLHS_univ_treeTrueRHS
 
 -- ============================================================
+-- §TREE: (any-LHS, ≥1 R.TreeTrueRHS-filler) — number-restriction.
+-- axiomTriggersRole extended to also fire for atLeast (n+1) R _.
+-- Semantically equivalent to ∃R.D for atLeast 1.
+-- ============================================================
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_anyLHS_atLeast1_treeTrueRHS
+
+-- ============================================================
 -- §TREE SATISFIES O composition.   Single satisfaction theorem
 -- assembled by dispatching per-axiom to the tree-Herbrand lemmas.
 -- ============================================================
