@@ -1127,5 +1127,11 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.universalSC_implies_restrictedSC
 #print axioms ALCHOIQContext.UnconditionalSCExtensionGap
 #print axioms ALCHOIQContext.universalSC_decomposed
+-- §SLICE-ELIGIBILITY EXISTENTIALS
+#print axioms ALCHOIQContext.inUnifiedSlice_exists_of_isELOrAllVacuousOnly
+#print axioms ALCHOIQContext.inUnifiedSlice_exists_of_isELOrUniversalRoleVacuousOnly
+#print axioms ALCHOIQContext.SliceEligibleOntology
+#print axioms ALCHOIQContext.inUnifiedSlice_exists_of_sliceEligible
+#print axioms ALCHOIQContext.unconditionalSCExtensionGap_vacuous_on_slice
 
 end ELKSDD

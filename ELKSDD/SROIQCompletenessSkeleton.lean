@@ -8930,6 +8930,51 @@ theorem universalSC_implies_restrictedSC :
   exact saturationCompletenessAtomConjDisjUnifiedSlice_holds
     O rbox hSlice D hDeriv hSat Q hQsig hQAtom hEntRBox
 
+/-- **Slice-eligibility existential**: any `IsELOrAllVacuousOnly`
+    ontology has some RBox (namely the empty one) for which the
+    `(O, rbox)` pair sits in the unified slice. -/
+theorem inUnifiedSlice_exists_of_isELOrAllVacuousOnly
+    (O : Ontology) (hO : IsELOrAllVacuousOnly O) :
+    ∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox :=
+  ⟨[], Or.inl ⟨hO, emptyRBox_compatible⟩⟩
+
+/-- **Slice-eligibility existential** (universal-role family). -/
+theorem inUnifiedSlice_exists_of_isELOrUniversalRoleVacuousOnly
+    (O : Ontology) (hO : IsELOrUniversalRoleVacuousOnly O) :
+    ∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox :=
+  ⟨[], Or.inr ⟨hO, emptyRBox_compatibleUniversal⟩⟩
+
+/-- **An ontology is *slice-eligible*** iff it lives in either
+    maximal slice (and thus admits at least one compatible RBox). -/
+def SliceEligibleOntology (O : Ontology) : Prop :=
+  IsELOrAllVacuousOnly O ∨ IsELOrUniversalRoleVacuousOnly O
+
+/-- Every slice-eligible ontology has some RBox in the unified
+    slice — by maximal-family choice followed by empty-RBox
+    discharge. -/
+theorem inUnifiedSlice_exists_of_sliceEligible
+    (O : Ontology) (hO : SliceEligibleOntology O) :
+    ∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox := by
+  rcases hO with hAll | hUni
+  · exact inUnifiedSlice_exists_of_isELOrAllVacuousOnly O hAll
+  · exact inUnifiedSlice_exists_of_isELOrUniversalRoleVacuousOnly O hUni
+
+/-- **Gap is vacuous on slice-eligible (O, Q) pairs.**   For any
+    slice-eligible ontology and any AtomConjDisj query referencing
+    its signature, the negation premise of `UnconditionalSCExtensionGap`
+    fails, so the gap predicate adds no extra obligation on that
+    slice.  This is the discharge of the gap on its covered cases. -/
+theorem unconditionalSCExtensionGap_vacuous_on_slice
+    (O : Ontology) (hO : SliceEligibleOntology O)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q) :
+    ∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox ∧
+      QueryReferencesSignature (ontologyConceptSig O) Q ∧
+      AtomConjDisjQuery Q := by
+  obtain ⟨rbox, hSlice⟩ := inUnifiedSlice_exists_of_sliceEligible O hO
+  exact ⟨rbox, hSlice, hQsig, hQAtom⟩
+
 /-- **The §6.3.4 gap as a Prop.**   The remaining content of the
     Tena-Cucala saturation completeness theorem after the
     restricted slice is the universal SC over (a) ontologies
