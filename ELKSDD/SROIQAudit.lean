@@ -334,18 +334,22 @@ namespace ELKSDD
 -- Proved by the thesis strategy: contraposition + Herbrand
 -- countermodel.   No `sorry` — the substantive §6.3.4 Herbrand
 -- content is captured by the `HerbrandProperty` conjunct of
--- `IsCanonicalSeed`.   A concrete canonical-seed construction
--- (the thesis's normalisation + trigger procedure, §5.1-§6.3)
--- discharges that property; the calculus-level theorem is
--- foundation-axiom-clean.
+-- `IsCanonicalSeed` (per-query form: model may depend on Q).
+-- The calculus-level theorem is foundation-axiom-clean.
 -- ============================================================
 #print axioms ALCHOIQContext.HerbrandProperty
 #print axioms ALCHOIQContext.IsCanonicalSeed
 #print axioms ALCHOIQContext.SaturatedFor
 #print axioms ALCHOIQContext.herbrand_from_composite_and_naming
-#print axioms ALCHOIQContext.herbrand_model_for_D
 #print axioms ALCHOIQContext.herbrand_countermodel_from_no_subsumer
 #print axioms ALCHOIQContext.tenacucala_thm2_via_contraposition
 #print axioms ALCHOIQContext.tenacucala_completeness_thm2_unconditional
+
+-- ============================================================
+-- Concrete-witness building blocks: (O = []) + propositionally
+-- refutable saturation slice, discharged via the Bool model.
+-- ============================================================
+#print axioms ALCHOIQContext.herbrandProperty_emptyO_of_propRefutable
+#print axioms ALCHOIQContext.isCanonicalSeed_emptyO_of_propRefutable
 
 end ELKSDD

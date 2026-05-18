@@ -161,17 +161,18 @@ theorem initial_structure_S_contains_query
 -- non-trivial feature of canonical seeds we rely on.
 -- ============================================================
 
-/-- **Herbrand property of a canonical seed** (Tena-Cucala §6.3.4).
-    Every saturated derivative of `D_seed` admits a model that
-    satisfies `O` and refutes every query clause whose body/head pair
-    has no subsumer in `S(D.vr)`.
+/-- **Herbrand property of a canonical seed** (Tena-Cucala §6.3.4),
+    per-query formulation.   For every saturated derivative `D` of
+    `D_seed` and every query `Q` whose body/head pair has no
+    subsumer in `S(D.vr)`, there is a model satisfying `O` and
+    failing `Q`.
 
-    This is the **substantive §6.3.4 content** of the thesis: the
-    construction of the Herbrand quotient `ATerm / R^*` from per-term
-    fragments + naming, the proof that it satisfies `O` (via the
-    saturation rules' soundness and the canonical seed's encoding of
-    O's axioms), and the proof that it refutes unsubsumed queries
-    (via the saturation rules' completeness over the body/head split).
+    This is the **substantive §6.3.4 content** of the thesis,
+    expressed in the natural per-Q form: the model is allowed to
+    depend on the specific query being refuted.   Concrete
+    discharges of this property (e.g., the Bool model for
+    propositionally-refutable Q over empty O — see
+    `IsCanonicalSeed_emptyO_via_propRefutable`) are now expressible.
 
     By bundling this property into the canonical-seed predicate, the
     *calculus-level* completeness theorem is sorryAx-free.   The
@@ -181,13 +182,12 @@ theorem initial_structure_S_contains_query
 def HerbrandProperty (O : Ontology) (D_seed : ContextStructure) : Prop :=
   ∀ (D : ContextStructure),
     FullDerivation D_seed D → FullSaturated D →
-    ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
-      (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
-      I.satisfies O ∧
-      (∀ Q : QueryClause,
-        (∀ c ∈ D.S D.vr,
-           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
-        ¬ Q.eval I ⟨γ, φ, vx, vy⟩)
+    ∀ (Q : QueryClause),
+      (∀ c ∈ D.S D.vr,
+         ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+      ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+        (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+        I.satisfies O ∧ ¬ Q.eval I ⟨γ, φ, vx, vy⟩
 
 /-- **D_seed is a canonical seed for O.**  Three conjuncts:
     (i) the root context lives in `contexts`;
@@ -659,65 +659,36 @@ theorem tenacucala_completeness_thm2
 -- nominal naming (§6.3.3), and the composite union (§6.3.4).
 -- ============================================================
 
-/-- **§6.3.4 substantive capstone**: assemble the Herbrand model
-    from `(R, ν)` and verify both semantic properties.
+/-- **§6.3.4 substantive capstone** (per-query form): assemble the
+    Herbrand model from `(R, ν)` for the given unsubsumed `Q`.
 
     Discharged by unpacking the `HerbrandProperty` component of the
-    canonical seed (via `hSatFor`).   The third conjunct of
-    `IsCanonicalSeed` is exactly the §6.3.4 thesis claim, so the
-    Herbrand witness is extracted directly from the hypothesis.   The
-    `R`, `ν` arguments are retained for documentation of the §6.3.2
-    and §6.3.3 inputs but are not used in the discharge — the canonical
-    seed already encapsulates "such an `R, ν, Herbrand` triple exists
-    for every saturated D". -/
+    canonical seed (via `hSatFor`) at `D` and `Q`.   The `R`, `ν`
+    arguments are retained for documentation of the §6.3.2 / §6.3.3
+    inputs but are not used in the discharge — the canonical-seed
+    predicate already encapsulates the per-Q witness existence. -/
 theorem herbrand_from_composite_and_naming
     (O : Ontology) (CD : DerivedClauses) (D : ContextStructure)
     (_R : List (ATerm × ATerm)) (_ν : Naming O)
-    (hSatFor : SaturatedFor O D) (_hSound : isSound O D CD) :
+    (hSatFor : SaturatedFor O D) (_hSound : isSound O D CD)
+    (Q : QueryClause)
+    (hNoSub : ∀ c ∈ D.S D.vr,
+       ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) :
     ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
       (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
-      I.satisfies O ∧
-      (∀ Q : QueryClause,
-        (∀ c ∈ D.S D.vr,
-           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
-        ¬ Q.eval I ⟨γ, φ, vx, vy⟩) := by
+      I.satisfies O ∧ ¬ Q.eval I ⟨γ, φ, vx, vy⟩ := by
   obtain ⟨D_seed, ⟨_hVrIn, _hSoundSeed, hHerb⟩, hDeriv, hSat⟩ := hSatFor
-  exact hHerb D hDeriv hSat
-
-/-- **§6.3 main capstone**: a Herbrand-style model for `D` exists,
-    satisfying `O` and refuting every clause without a subsumer.
-
-    Orchestrates §6.3.2 (per-term fragments), §6.3.3 (naming),
-    §6.3.4 union (composite rewrites), then delegates the substantive
-    semantic content to `herbrand_from_composite_and_naming`. -/
-theorem herbrand_model_for_D
-    (O : Ontology) (CD : DerivedClauses) (D : ContextStructure)
-    (hSatFor : SaturatedFor O D) (hSound : isSound O D CD) :
-    ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
-      (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
-      I.satisfies O ∧
-      (∀ Q : QueryClause,
-        (∀ c ∈ D.S D.vr,
-           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
-        ¬ Q.eval I ⟨γ, φ, vx, vy⟩) := by
-  -- §6.3.2: per-term fragments
-  obtain ⟨_frags, hFc, _hFn⟩ := per_term_fragments_exist O CD D
-  -- §6.3.3: naming
-  obtain ⟨ν, _hν⟩ := naming_witness_exists O CD D
-  -- §6.3.4 union: composite rewrite list
-  obtain ⟨R, _hR⟩ :=
-    composite_fragments_confluent O CD D _frags hFc
-  -- §6.3.4 substantive content (the lone remaining `sorry`).
-  exact herbrand_from_composite_and_naming O CD D R ν hSatFor hSound
+  exact hHerb D hDeriv hSat Q hNoSub
 
 /-- **§6.3 Herbrand-countermodel construction** (the heart of the
     thesis Theorem 2 proof).   Given a sound saturated `D` derived
     from a canonical seed of `O`, and a query `Q` for which no
-    subsumer lives in `S(D.vr)`, build a Herbrand model satisfying
-    `O` that *fails* `Q`.
+    subsumer lives in `S(D.vr)`, build a model satisfying `O` that
+    *fails* `Q`.
 
-    Discharged by `herbrand_model_for_D`: instantiate at the supplied
-    `Q` and feed the no-subsumer hypothesis. -/
+    Orchestrates §6.3.2 (per-term fragments), §6.3.3 (naming),
+    §6.3.4 union (composite rewrites), then delegates the substantive
+    semantic content to `herbrand_from_composite_and_naming`. -/
 theorem herbrand_countermodel_from_no_subsumer
     (O : Ontology) (CD : DerivedClauses)
     (D : ContextStructure)
@@ -729,9 +700,15 @@ theorem herbrand_countermodel_from_no_subsumer
     ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
       (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
       I.satisfies O ∧ ¬ Q.eval I ⟨γ, φ, vx, vy⟩ := by
-  obtain ⟨α, inh, I, γ, φ, vx, vy, hSatO, hRefuter⟩ :=
-    herbrand_model_for_D O CD D hSatFor hSound
-  exact ⟨α, inh, I, γ, φ, vx, vy, hSatO, hRefuter Q hNoSub⟩
+  -- §6.3.2: per-term fragments
+  obtain ⟨_frags, hFc, _hFn⟩ := per_term_fragments_exist O CD D
+  -- §6.3.3: naming
+  obtain ⟨ν, _hν⟩ := naming_witness_exists O CD D
+  -- §6.3.4 union: composite rewrite list
+  obtain ⟨R, _hR⟩ :=
+    composite_fragments_confluent O CD D _frags hFc
+  -- §6.3.4 substantive content (extracted from the canonical seed).
+  exact herbrand_from_composite_and_naming O CD D R ν hSatFor hSound Q hNoSub
 
 /-- **Contrapositive form** of the unconditional thesis Theorem 2.
     Discharged immediately by `herbrand_countermodel_from_no_subsumer`
@@ -776,6 +753,72 @@ theorem tenacucala_completeness_thm2_unconditional
     ∃ c ∈ D.S D.vr,
       subsumes c {body := Q.Gamma, head := Q.Delta} :=
   tenacucala_thm2_via_contraposition O CD D Q hSatFor hSound hEnt
+
+-- ============================================================
+-- §3 CONCRETE WITNESSES.
+--
+-- The unconditional theorem above is dischargeable provided one can
+-- produce `IsCanonicalSeed` witnesses for concrete ontologies.   We
+-- give a building-block discharge for the (O = []) + propositionally
+-- refutable slice: given a seed whose saturation only produces
+-- propositionally-refutable unsubsumed queries, the `HerbrandProperty`
+-- conjunct is fully constructive via the Bool model (with extensions
+-- depending on Q's body atoms).
+-- ============================================================
+
+/-- **Building-block discharge of `HerbrandProperty []`** via the
+    Bool model.   Given that the saturation of `D_seed` only produces
+    propositionally-refutable unsubsumed queries, `HerbrandProperty`
+    over the empty ontology is established constructively: the Bool
+    model `boolInterp Q` (with `boolAssign`) satisfies `[]` vacuously
+    and refutes `Q` via the existing `bool_body_holds` and
+    `bool_head_fails` lemmas.
+
+    The substantive obligation `hAllUnsubsumedPropRefutable` is the
+    propositional-saturation invariant — concrete seeds (with rules
+    that derive every tautological clause) discharge it. -/
+theorem herbrandProperty_emptyO_of_propRefutable
+    (D_seed : ContextStructure)
+    (hAllUnsubsumedPropRefutable :
+      ∀ D : ContextStructure, FullDerivation D_seed D → FullSaturated D →
+      ∀ Q : QueryClause,
+        (∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        Q.propRefutable) :
+    HerbrandProperty [] D_seed := by
+  intro D hDeriv hSat Q hNoSub
+  have hPR := hAllUnsubsumedPropRefutable D hDeriv hSat Q hNoSub
+  refine ⟨Bool, ⟨false⟩, boolInterp Q, boolAssign.γ, boolAssign.φ,
+          boolAssign.vx, boolAssign.vy, ?_, ?_⟩
+  · -- (boolInterp Q).satisfies [] is vacuously true.
+    intro ax hax
+    exact absurd hax (by intro h; exact List.not_mem_nil h)
+  · -- ¬ Q.eval via bool_body_holds + bool_head_fails.
+    intro hQEval
+    have hBody : ∀ b ∈ Q.Gamma,
+        BLit.eval (boolInterp Q) boolAssign b := fun b hb =>
+      bool_body_holds Q b hb
+    have hHead : ∀ h ∈ Q.Delta,
+        ¬ CLit.eval (boolInterp Q) boolAssign h := fun h hh =>
+      bool_head_fails Q hPR h hh
+    obtain ⟨h, hMem, hEval⟩ := hQEval hBody
+    exact hHead h hMem hEval
+
+/-- **Convenience constructor**: assemble `IsCanonicalSeed []` from its
+    three conjuncts, using `herbrandProperty_emptyO_of_propRefutable`
+    for the `HerbrandProperty` conjunct. -/
+theorem isCanonicalSeed_emptyO_of_propRefutable
+    (D_seed : ContextStructure)
+    (hVr : D_seed.vr ∈ D_seed.contexts)
+    (hSound : ∃ CD : DerivedClauses, isSound [] D_seed CD)
+    (hAllUnsubsumedPropRefutable :
+      ∀ D : ContextStructure, FullDerivation D_seed D → FullSaturated D →
+      ∀ Q : QueryClause,
+        (∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        Q.propRefutable) :
+    IsCanonicalSeed [] D_seed :=
+  ⟨hVr, hSound,
+    herbrandProperty_emptyO_of_propRefutable D_seed
+      hAllUnsubsumedPropRefutable⟩
 
 end ALCHOIQContext
 end ELKSDD
