@@ -1133,5 +1133,6 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.SliceEligibleOntology
 #print axioms ALCHOIQContext.inUnifiedSlice_exists_of_sliceEligible
 #print axioms ALCHOIQContext.unconditionalSCExtensionGap_vacuous_on_slice
+#print axioms ALCHOIQContext.partial_isCanonicalSeed_of_sliceEligible
 
 end ELKSDD

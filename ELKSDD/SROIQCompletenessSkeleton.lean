@@ -9871,6 +9871,41 @@ theorem isCanonicalSeed_canonicalSeedOfFull_partial_exampleELConj :
   isCanonicalSeed_canonicalSeedOfFull_partial
     exampleELConj [] exampleELConj_in_unifiedSlice_emptyRBox
 
+/-- **Consolidated partial-IsCanonicalSeed for any slice-eligible
+    ontology.**   Bundles the three IsCanonicalSeed conjuncts for
+    `canonicalSeedOfFull O`:
+    - Conjuncts (i)–(ii) are unconditional in `O`.
+    - Conjunct (iii) holds for the empty-RBox witness inherited
+      from `SliceEligibleOntology`, restricted to AtomConjDisj
+      signature queries.
+
+    This is the *single statement* form of the partial-IsCanonicalSeed
+    result, eliminating the per-branch case split. -/
+theorem partial_isCanonicalSeed_of_sliceEligible
+    (O : Ontology) (hO : SliceEligibleOntology O) :
+    (canonicalSeedOfFull O).vr ∈ (canonicalSeedOfFull O).contexts ∧
+    (∃ CD : DerivedClauses, isSound O (canonicalSeedOfFull O) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig O) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies O ∧ SROIQ.RBox.eval I ([] : SROIQ.RBox) ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) := by
+  obtain ⟨rbox, hSlice⟩ := inUnifiedSlice_exists_of_sliceEligible O hO
+  -- We have *some* RBox witnessing slice membership, but the
+  -- statement above is asked about the *empty* RBox.  Specialise
+  -- via the per-branch constructors using the empty RBox directly.
+  rcases hO with hAll | hUni
+  · exact isCanonicalSeed_canonicalSeedOfFull_partial_isELOrAllVacuousOnly
+      O [] hAll emptyRBox_compatible
+  · exact isCanonicalSeed_canonicalSeedOfFull_partial_isELOrUniversalRoleVacuousOnly
+      O [] hUni emptyRBox_compatibleUniversal
+
 /-- **Worked example instance**: the partial-IsCanonicalSeed bundle
     for `exampleAtomChain` + `exampleTransInclRBox`, fully discharged
     via the universal-role family branch. -/
