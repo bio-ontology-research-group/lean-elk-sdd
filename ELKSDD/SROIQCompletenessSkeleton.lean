@@ -5970,6 +5970,112 @@ theorem elHerbrandInterpTree_sat_top_univ_atom
 -- substantive shapes uniformly.
 
 -- ============================================================
+-- §TREE: RECURSIVE VACUITY PREDICATES.
+-- Concept shapes that are structurally False at every tree node
+-- (LHS-vacuous) or structurally True at every tree node
+-- (RHS-vacuous).   Closed under conj/disj duals.   Generalises
+-- the narrow `(bot, D)` and `(C, top)` cases.
+-- ============================================================
+
+/-- A concept whose evaluation under the tree Herbrand is `False` at
+    every node — purely on structural grounds (no derivability or
+    role-extension dependency).  Closed under conj/disj duals: any
+    conj with a False component is False; any disj is False only if
+    both components are False. -/
+def TreeFalseLHS : ALCHOQ.Concept → Prop
+  | .bot                       => True
+  | .conj C₁ C₂                => TreeFalseLHS C₁ ∨ TreeFalseLHS C₂
+  | .disj C₁ C₂                => TreeFalseLHS C₁ ∧ TreeFalseLHS C₂
+  | _                          => False
+
+/-- A concept whose evaluation under the tree Herbrand is `True` at
+    every node — purely on structural grounds.  Dual to
+    `TreeFalseLHS`: any disj with a True component is True; any
+    conj is True only if both components are True. -/
+def TreeTrueRHS : ALCHOQ.Concept → Prop
+  | .top                       => True
+  | .conj D₁ D₂                => TreeTrueRHS D₁ ∧ TreeTrueRHS D₂
+  | .disj D₁ D₂                => TreeTrueRHS D₁ ∨ TreeTrueRHS D₂
+  | _                          => False
+
+/-- **TreeFalseLHS evaluation lemma**: structurally-False concepts
+    evaluate to `False` at every tree node. -/
+theorem treeFalseLHS_eval_false (O : Ontology) (Q : QueryClause)
+    (C : ALCHOQ.Concept) (hC : TreeFalseLHS C) :
+    ∀ (p : HerbrandTree O), ¬ (elHerbrandInterpTree O Q).eval C p := by
+  induction C with
+  | bot =>
+      intro p h; exact h
+  | conj C₁ C₂ ih₁ ih₂ =>
+      intro p ⟨h₁, h₂⟩
+      cases hC with
+      | inl hF₁ => exact ih₁ hF₁ p h₁
+      | inr hF₂ => exact ih₂ hF₂ p h₂
+  | disj C₁ C₂ ih₁ ih₂ =>
+      intro p hOr
+      obtain ⟨hF₁, hF₂⟩ := hC
+      cases hOr with
+      | inl h₁ => exact ih₁ hF₁ p h₁
+      | inr h₂ => exact ih₂ hF₂ p h₂
+  | atom _ => exact absurd hC (by intro h; exact h)
+  | top => exact absurd hC (by intro h; exact h)
+  | nom _ => exact absurd hC (by intro h; exact h)
+  | neg _ _ => exact absurd hC (by intro h; exact h)
+  | exist _ _ _ => exact absurd hC (by intro h; exact h)
+  | univ _ _ _ => exact absurd hC (by intro h; exact h)
+  | atLeast _ _ _ _ => exact absurd hC (by intro h; exact h)
+  | atMost _ _ _ _ => exact absurd hC (by intro h; exact h)
+  | hasSelf _ => exact absurd hC (by intro h; exact h)
+
+/-- **TreeTrueRHS evaluation lemma**: structurally-True concepts
+    evaluate to `True` at every tree node. -/
+theorem treeTrueRHS_eval_true (O : Ontology) (Q : QueryClause)
+    (D : ALCHOQ.Concept) (hD : TreeTrueRHS D) :
+    ∀ (p : HerbrandTree O), (elHerbrandInterpTree O Q).eval D p := by
+  induction D with
+  | top => intro _; trivial
+  | conj D₁ D₂ ih₁ ih₂ =>
+      intro p
+      obtain ⟨hT₁, hT₂⟩ := hD
+      exact ⟨ih₁ hT₁ p, ih₂ hT₂ p⟩
+  | disj D₁ D₂ ih₁ ih₂ =>
+      intro p
+      cases hD with
+      | inl hT₁ => exact Or.inl (ih₁ hT₁ p)
+      | inr hT₂ => exact Or.inr (ih₂ hT₂ p)
+  | atom _ => exact absurd hD (by intro h; exact h)
+  | bot => exact absurd hD (by intro h; exact h)
+  | nom _ => exact absurd hD (by intro h; exact h)
+  | neg _ _ => exact absurd hD (by intro h; exact h)
+  | exist _ _ _ => exact absurd hD (by intro h; exact h)
+  | univ _ _ _ => exact absurd hD (by intro h; exact h)
+  | atLeast _ _ _ _ => exact absurd hD (by intro h; exact h)
+  | atMost _ _ _ _ => exact absurd hD (by intro h; exact h)
+  | hasSelf _ => exact absurd hD (by intro h; exact h)
+
+/-- An axiom whose LHS is `TreeFalseLHS` is satisfied at every node
+    of the tree Herbrand — vacuously. -/
+theorem elHerbrandInterpTree_sat_treeFalseLHS
+    (O : Ontology) (Q : QueryClause)
+    (C D : ALCHOQ.Concept) (hC : TreeFalseLHS C) (hAx : (C, D) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval C p →
+      (elHerbrandInterpTree O Q).eval D p := by
+  intro p hLHS
+  exact absurd hLHS (treeFalseLHS_eval_false O Q C hC p)
+
+/-- An axiom whose RHS is `TreeTrueRHS` is satisfied at every node
+    of the tree Herbrand — vacuously. -/
+theorem elHerbrandInterpTree_sat_treeTrueRHS
+    (O : Ontology) (Q : QueryClause)
+    (C D : ALCHOQ.Concept) (hD : TreeTrueRHS D) (hAx : (C, D) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval C p →
+      (elHerbrandInterpTree O Q).eval D p := by
+  intro p _
+  exact treeTrueRHS_eval_true O Q D hD p
+
+-- ============================================================
 -- §TREE-FRIENDLY TBOX SHAPE PREDICATE.   Composes the per-axiom
 -- tree-Herbrand satisfaction lemmas into a single statement:
 -- when every axiom of `O` falls in the tree-friendly catalogue,
@@ -6030,10 +6136,14 @@ def IsTreeFriendlyAxiom (ax : ALCHOQ.Axiom) : Prop :=
   (∃ R B : Nat,
      ax = (ALCHOQ.Concept.top,
            ALCHOQ.Concept.univ R (ALCHOQ.Concept.atom B))) ∨
-  -- Tautologically vacuous: bot LHS.
-  (∃ D : ALCHOQ.Concept, ax = (ALCHOQ.Concept.bot, D)) ∨
-  -- Tautologically vacuous: top RHS.
-  (∃ C : ALCHOQ.Concept, ax = (C, ALCHOQ.Concept.top))
+  -- Tautologically vacuous LHS — structurally False at every tree
+  -- node.   Strictly subsumes the narrow `(bot, D)` case via
+  -- closure under conj/disj.
+  (∃ C D : ALCHOQ.Concept, ax = (C, D) ∧ TreeFalseLHS C) ∨
+  -- Tautologically true RHS — structurally True at every tree
+  -- node.   Strictly subsumes the narrow `(C, top)` case via
+  -- closure under conj/disj.
+  (∃ C D : ALCHOQ.Concept, ax = (C, D) ∧ TreeTrueRHS D)
 
 /-- A TBox is tree-friendly iff all its axioms are. -/
 def IsTreeFriendlyTBox (O : Ontology) : Prop :=
@@ -6083,13 +6193,12 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     exact elHerbrandInterpTree_sat_disj_exist_atom O Q A₁ A₂ R B hax p hLHS
   · obtain ⟨R, B, rfl⟩ := hTopUniv
     exact elHerbrandInterpTree_sat_top_univ_atom O Q R B hax p hLHS
-  · -- bot LHS: hLHS : eval bot p = False; absurd.
-    obtain ⟨D, rfl⟩ := hBotLHS
-    exact absurd hLHS (fun h => h)
-  · -- top RHS: conclusion is `eval top p = True` — trivially.
-    obtain ⟨C, rfl⟩ := hTopRHS
-    show True
-    trivial
+  · -- TreeFalseLHS: LHS evaluates to False at every node — vacuous.
+    obtain ⟨C, D, rfl, hC⟩ := hBotLHS
+    exact elHerbrandInterpTree_sat_treeFalseLHS O Q C D hC hax p hLHS
+  · -- TreeTrueRHS: RHS evaluates to True at every node — vacuous.
+    obtain ⟨C, D, rfl, hD⟩ := hTopRHS
+    exact elHerbrandInterpTree_sat_treeTrueRHS O Q C D hD hax p hLHS
 
 -- ============================================================
 -- §UNIVERSAL-ROLE VACUITY PREDICATES.  Concept shapes whose

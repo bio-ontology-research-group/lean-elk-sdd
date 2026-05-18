@@ -868,6 +868,20 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_top_univ_atom
 
 -- ============================================================
+-- §TREE: recursive vacuity predicates.   `TreeFalseLHS` /
+-- `TreeTrueRHS` recursively close `bot` and `top` under conj/disj
+-- duals, generalising the narrow bot-LHS / top-RHS branches.
+-- The IsTreeFriendlyAxiom catalogue now covers ALL axioms with
+-- structurally-false LHS or structurally-true RHS.
+-- ============================================================
+#print axioms ALCHOIQContext.TreeFalseLHS
+#print axioms ALCHOIQContext.TreeTrueRHS
+#print axioms ALCHOIQContext.treeFalseLHS_eval_false
+#print axioms ALCHOIQContext.treeTrueRHS_eval_true
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_treeFalseLHS
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_treeTrueRHS
+
+-- ============================================================
 -- §TREE SATISFIES O composition.   Single satisfaction theorem
 -- assembled by dispatching per-axiom to the tree-Herbrand lemmas.
 -- ============================================================
