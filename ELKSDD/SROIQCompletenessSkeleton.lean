@@ -5474,12 +5474,15 @@ def TreeFalseLHS : ALCHOQ.Concept → Prop
 /-- **Tree-vacuity (RHS=True).**   Concepts whose evaluation under
     the tree Herbrand is `True` at every node.  Dual to
     `TreeFalseLHS`: disj-with-True is True; conj is True iff both
-    sides are.   `atLeast 0 _ _` is structurally `top`. -/
+    sides are.   `atLeast 0 _ _` is structurally `top`; `univ R D`
+    is True iff the filler is True at every successor (i.e.,
+    structurally True). -/
 def TreeTrueRHS : ALCHOQ.Concept → Prop
   | .top                       => True
   | .atLeast 0 _ _             => True
   | .conj D₁ D₂                => TreeTrueRHS D₁ ∧ TreeTrueRHS D₂
   | .disj D₁ D₂                => TreeTrueRHS D₁ ∨ TreeTrueRHS D₂
+  | .univ _ D                  => TreeTrueRHS D
   | _                          => False
 
 /-- Atoms forced at a `succ _ ax _` node by **universal-restriction
@@ -6300,7 +6303,9 @@ theorem treeTrueRHS_eval_true (O : Ontology) (Q : QueryClause)
   | nom _ => exact absurd hD (by intro h; exact h)
   | neg _ _ => exact absurd hD (by intro h; exact h)
   | exist _ _ _ => exact absurd hD (by intro h; exact h)
-  | univ _ _ _ => exact absurd hD (by intro h; exact h)
+  | univ _ D' ihD =>
+      intro p y _hRpy
+      exact ihD hD y
   | atLeast n _ _ _ =>
       intro p
       cases n with
