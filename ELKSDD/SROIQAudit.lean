@@ -593,4 +593,24 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.in_ontologyConceptSig_of_atomAxiom_lhs
 #print axioms ALCHOIQContext.in_ontologyConceptSig_of_atomAxiom_rhs
 
+-- ============================================================
+-- ATOM-BOT EXTENSION: concept-disjointness `(atom A, ⊥)` axioms.
+-- First non-atom-atom shape supported.
+-- ============================================================
+#print axioms ALCHOIQContext.IsAtomicOrBotOnly
+#print axioms ALCHOIQContext.isAtomicSubsumptionOnly_imp_isAtomicOrBotOnly
+#print axioms ALCHOIQContext.isBotConsequence
+#print axioms ALCHOIQContext.atomBotClosureClauses
+#print axioms ALCHOIQContext.atomBotClosureClause_sound
+#print axioms ALCHOIQContext.canonicalSeedAtomBot
+#print axioms ALCHOIQContext.canonicalSeedAtomBot_vr_in_contexts
+#print axioms ALCHOIQContext.canonicalSeedAtomBot_sound
+#print axioms ALCHOIQContext.canonicalSeedAtomBot_subsumes_bot
+#print axioms ALCHOIQContext.canonicalSeedAtomBot_subsumes_derivable
+#print axioms ALCHOIQContext.herbrandPropertyAtomConjDisj_atomOrBot
+#print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_atomOrBot
+#print axioms ALCHOIQContext.canonicalSeedAtomBotFromOntology
+#print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_canonicalSeedAtomBotFromOntology
+#print axioms ALCHOIQContext.atomAtomClosureClause_sound_noHyp
+
 end ELKSDD

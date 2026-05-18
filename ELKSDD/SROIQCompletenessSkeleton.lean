@@ -2792,6 +2792,26 @@ theorem atomAtomClosureClause_sound
   · exact List.mem_singleton.mpr rfl
   · exact hBEval
 
+/-- **Variant of `atomAtomClosureClause_sound` without the
+    `IsAtomicSubsumptionOnly` hypothesis.**  The original lemma's
+    `_hO` argument is unused; this version exposes the same content
+    free of that hypothesis so it can be reused for richer ontology
+    classes (e.g., atom-or-bot ontologies). -/
+theorem atomAtomClosureClause_sound_noHyp
+    {α : Type} (I : Interp α) (γ : Indu → α) (φ : FunSym → α → α)
+    (O : Ontology) (hIO : I.satisfies O)
+    (A B : Nat) (hDer : ConceptDerivable O (fun X => X = A) B)
+    (vx vy : α) :
+    CClause.eval I ⟨γ, φ, vx, vy⟩ (atomAtomSubsumptionClause A B) := by
+  intro hBody
+  have hAEval : I.ext_concept A vx :=
+    hBody _ (List.mem_singleton.mpr rfl)
+  have hBEval : I.ext_concept B vx :=
+    conceptDerivable_eval_transport I O hIO A vx hAEval hDer
+  refine ⟨CLit.atomTrue (PTerm.atom B ATerm.x), ?_, ?_⟩
+  · exact List.mem_singleton.mpr rfl
+  · exact hBEval
+
 /-- Soundness of `canonicalSeedOverClosed`. -/
 theorem canonicalSeedOverClosed_sound
     (sig : List Nat) (O : Ontology) (hO : IsAtomicSubsumptionOnly O) :
@@ -3297,6 +3317,389 @@ theorem in_ontologyConceptSig_of_atomAxiom_rhs
   apply List.mem_append.mpr; right
   show A ∈ conceptSymbols (ALCHOQ.Concept.atom A)
   exact List.mem_singleton.mpr rfl
+
+-- ============================================================
+-- §FINAL-BOT.  Extension to atom-bot axioms `(atom A, ⊥)`.
+--
+-- Adds *concept-disjointness* axioms to the ontology shape
+-- recognised by the canonical seed.  An axiom `(atom A, ⊥)`
+-- declares `A` empty in every model of `O`.   The corresponding
+-- context clause is `{A(x)} → {}` (empty head encodes
+-- inconsistency).
+--
+-- The closure adds `{B(x)} → {}` for every `B ∈ sig` that reaches
+-- a bot atom via the atom-atom edges of `O`.  This subsumes any
+-- query whose body atoms force unsatisfiability — such queries
+-- are vacuously entailed by `O`.
+--
+-- Strictly broader axiom class than `IsAtomicSubsumptionOnly`:
+-- this is the first non-atom-atom shape supported with no
+-- additional Herbrand-model machinery.
+-- ============================================================
+
+/-- **Ontologies whose axioms are atom-atom or atom-bot.** -/
+def IsAtomicOrBotOnly (O : Ontology) : Prop :=
+  ∀ ax ∈ O,
+    (∃ A B : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B)) ∨
+    (∃ A : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot))
+
+/-- `IsAtomicSubsumptionOnly` is a special case of `IsAtomicOrBotOnly`. -/
+theorem isAtomicSubsumptionOnly_imp_isAtomicOrBotOnly
+    (O : Ontology) (hO : IsAtomicSubsumptionOnly O) :
+    IsAtomicOrBotOnly O := by
+  intro ax hax
+  obtain ⟨A, B, rfl⟩ := hO ax hax
+  exact Or.inl ⟨A, B, rfl⟩
+
+/-- **A bot consequence of A**: there is a `B` derivable from `A`
+    via atom-atom edges such that `(atom B, ⊥) ∈ O`. -/
+def isBotConsequence (O : Ontology) (A : Nat) : Prop :=
+  ∃ B : Nat, ConceptDerivable O (fun X => X = A) B ∧
+             (ALCHOQ.Concept.atom B, ALCHOQ.Concept.bot) ∈ O
+
+/-- **Bot-closure clauses**: for each `A ∈ sig` that has a bot
+    consequence, add `{A(x)} → {}`. -/
+noncomputable def atomBotClosureClauses (sig : List Nat) (O : Ontology) :
+    List CClause := by
+  classical
+  exact sig.filterMap (fun A =>
+    if isBotConsequence O A then
+      some ({ body := [BLit.atomTrue (PTerm.atom A ATerm.x)], head := [] } : CClause)
+    else none)
+
+/-- **Soundness of a single bot-closure clause.**  Given
+    `isBotConsequence O A` and any model `I` of `O`, the clause
+    `{A(x)} → {}` is satisfied at every assignment. -/
+theorem atomBotClosureClause_sound
+    {α : Type} (I : Interp α) (γ : Indu → α) (φ : FunSym → α → α)
+    (O : Ontology) (hIO : I.satisfies O)
+    (A : Nat) (hBot : isBotConsequence O A)
+    (vx vy : α) :
+    CClause.eval I ⟨γ, φ, vx, vy⟩
+      ({ body := [BLit.atomTrue (PTerm.atom A ATerm.x)], head := [] } : CClause) := by
+  intro hBody
+  have hAEval : I.ext_concept A vx := hBody _ (List.mem_singleton.mpr rfl)
+  obtain ⟨B, hDer, hBBot⟩ := hBot
+  have hBEval : I.ext_concept B vx :=
+    conceptDerivable_eval_transport I O hIO A vx hAEval hDer
+  -- hIO : I.satisfies O, so I.satisfies (atom B, bot).
+  have hAx : I.satisfiesAxiom (ALCHOQ.Concept.atom B, ALCHOQ.Concept.bot) :=
+    hIO _ hBBot
+  -- I.eval (atom B) vx = I.ext_concept B vx (True).
+  -- I.eval bot vx = False.
+  have hFalse : False := hAx vx hBEval
+  exact hFalse.elim
+
+/-- **The canonical seed including atom-bot axioms.**  Extends
+    `canonicalSeedOverClosed sig O` with bot-closure clauses. -/
+noncomputable def canonicalSeedAtomBot (sig : List Nat) (O : Ontology) :
+    ContextStructure where
+  contexts := [0]
+  vr       := 0
+  edges    := []
+  core     := fun _ => { atoms := [] }
+  S        := fun v => if v = 0 then
+                          ontologyToClauses O ++ sig.map reflexiveClause
+                          ++ atomAtomClosureClauses sig O
+                          ++ atomBotClosureClauses sig O
+                       else []
+  m        := trivialAdmissibleOrder
+  θ        := fun _ => trivialContextOrder
+
+theorem canonicalSeedAtomBot_vr_in_contexts (sig : List Nat) (O : Ontology) :
+    (canonicalSeedAtomBot sig O).vr ∈ (canonicalSeedAtomBot sig O).contexts := by
+  show (0 : CtxId) ∈ [0]
+  exact List.mem_singleton.mpr rfl
+
+/-- Soundness of `canonicalSeedAtomBot` under the atom-or-bot restriction. -/
+theorem canonicalSeedAtomBot_sound
+    (sig : List Nat) (O : Ontology) (hO : IsAtomicOrBotOnly O) :
+    ∃ CD : DerivedClauses, isSound O (canonicalSeedAtomBot sig O) CD := by
+  classical
+  refine ⟨{ clauses := [] }, ?_, ?_⟩
+  · intro v hv c hc α I γ φ hIO _ vx vy _
+    have hv0 : v = 0 := by
+      rcases List.mem_cons.mp hv with h | h
+      · exact h
+      · exact absurd h List.not_mem_nil
+    subst hv0
+    have hS0 : (canonicalSeedAtomBot sig O).S 0 =
+               ontologyToClauses O ++ sig.map reflexiveClause
+               ++ atomAtomClosureClauses sig O
+               ++ atomBotClosureClauses sig O := by
+      show (if (0 : CtxId) = 0 then
+              ontologyToClauses O ++ sig.map reflexiveClause
+              ++ atomAtomClosureClauses sig O
+              ++ atomBotClosureClauses sig O
+            else []) = _
+      simp
+    rw [hS0] at hc
+    rcases List.mem_append.mp hc with hL | hBotC
+    · -- hL : in atomAtom-stage clauses
+      rcases List.mem_append.mp hL with hL2 | hAAC
+      · rcases List.mem_append.mp hL2 with hAx | hReflex
+        · -- ontologyToClauses
+          obtain ⟨A, B, hAxO, hCEq⟩ := mem_ontologyToClauses O c hAx
+          rw [hCEq]
+          exact atomAtom_clause_sound I γ φ A B vx vy (hIO _ hAxO)
+        · -- reflexive
+          rcases List.mem_map.mp hReflex with ⟨A, _hA, hCEq⟩
+          rw [← hCEq]
+          exact reflexiveClause_sound I γ φ A vx vy
+      · -- atomAtomClosure
+        have hClosureUnfold :
+            atomAtomClosureClauses sig O =
+            sig.flatMap (fun A =>
+              sig.filterMap (fun B =>
+                if ConceptDerivable O (fun X => X = A) B then
+                  some (atomAtomSubsumptionClause A B)
+                else none)) := rfl
+        rw [hClosureUnfold] at hAAC
+        rcases List.mem_flatMap.mp hAAC with ⟨A, _hA, hInner⟩
+        rcases List.mem_filterMap.mp hInner with ⟨B, _hB, hCEq⟩
+        by_cases h : ConceptDerivable O (fun X => X = A) B
+        · have hSimp :
+              (if ConceptDerivable O (fun X => X = A) B then
+                some (atomAtomSubsumptionClause A B) else none) =
+              some (atomAtomSubsumptionClause A B) := if_pos h
+          rw [hSimp] at hCEq
+          have : c = atomAtomSubsumptionClause A B :=
+            (Option.some.inj hCEq).symm
+          rw [this]
+          exact atomAtomClosureClause_sound_noHyp I γ φ O hIO A B h vx vy
+        · have hSimp :
+              (if ConceptDerivable O (fun X => X = A) B then
+                some (atomAtomSubsumptionClause A B) else none) =
+              none := if_neg h
+          rw [hSimp] at hCEq
+          exact absurd hCEq (by intro h'; cases h')
+    · -- atomBotClosure
+      have hBotUnfold :
+          atomBotClosureClauses sig O =
+          sig.filterMap (fun A =>
+            if isBotConsequence O A then
+              some ({ body := [BLit.atomTrue (PTerm.atom A ATerm.x)], head := [] } : CClause)
+            else none) := rfl
+      rw [hBotUnfold] at hBotC
+      rcases List.mem_filterMap.mp hBotC with ⟨A, _hA, hCEq⟩
+      by_cases h : isBotConsequence O A
+      · have hSimp :
+            (if isBotConsequence O A then
+              some ({ body := [BLit.atomTrue (PTerm.atom A ATerm.x)], head := [] } : CClause)
+            else none) =
+            some ({ body := [BLit.atomTrue (PTerm.atom A ATerm.x)], head := [] } : CClause) :=
+          if_pos h
+        rw [hSimp] at hCEq
+        have : c = ({ body := [BLit.atomTrue (PTerm.atom A ATerm.x)], head := [] } : CClause) :=
+          (Option.some.inj hCEq).symm
+        rw [this]
+        exact atomBotClosureClause_sound I γ φ O hIO A h vx vy
+      · have hSimp :
+            (if isBotConsequence O A then
+              some ({ body := [BLit.atomTrue (PTerm.atom A ATerm.x)], head := [] } : CClause)
+            else none) = none := if_neg h
+        rw [hSimp] at hCEq
+        exact absurd hCEq (by intro h'; cases h')
+  · intro v w f hEdge _
+    unfold ContextStructure.hasEdge at hEdge
+    exact absurd hEdge List.not_mem_nil
+
+/-- **Closure for atom-bot subsumption.**  When `A ∈ sig` has a bot
+    consequence in `O`, the seed contains `{A(x)} → {}`. -/
+theorem canonicalSeedAtomBot_subsumes_bot
+    (sig : List Nat) (O : Ontology)
+    (A : Nat) (hA : A ∈ sig) (hBot : isBotConsequence O A) :
+    ({ body := [BLit.atomTrue (PTerm.atom A ATerm.x)], head := [] } : CClause)
+      ∈ (canonicalSeedAtomBot sig O).S (canonicalSeedAtomBot sig O).vr := by
+  classical
+  show ({ body := [BLit.atomTrue (PTerm.atom A ATerm.x)], head := [] } : CClause) ∈
+    (if (0 : CtxId) = 0 then
+       ontologyToClauses O ++ sig.map reflexiveClause
+       ++ atomAtomClosureClauses sig O ++ atomBotClosureClauses sig O
+     else [])
+  rw [if_pos rfl]
+  apply List.mem_append.mpr; right
+  show ({ body := [BLit.atomTrue (PTerm.atom A ATerm.x)], head := [] } : CClause) ∈
+    sig.filterMap (fun A' =>
+      if isBotConsequence O A' then
+        some ({ body := [BLit.atomTrue (PTerm.atom A' ATerm.x)], head := [] } : CClause)
+      else none)
+  apply List.mem_filterMap.mpr
+  refine ⟨A, hA, ?_⟩
+  exact if_pos hBot
+
+/-- **Same closure-subsumption fact for atom-atom in `canonicalSeedAtomBot`.** -/
+theorem canonicalSeedAtomBot_subsumes_derivable
+    (sig : List Nat) (O : Ontology)
+    (A B : Nat) (hA : A ∈ sig) (hB : B ∈ sig)
+    (hDer : ConceptDerivable O (fun X => X = A) B) :
+    ∃ c ∈ (canonicalSeedAtomBot sig O).S (canonicalSeedAtomBot sig O).vr,
+      subsumes c (atomAtomSubsumptionClause A B) := by
+  classical
+  refine ⟨atomAtomSubsumptionClause A B, ?_, subsumes_refl _⟩
+  show atomAtomSubsumptionClause A B ∈
+    (if (0 : CtxId) = 0 then
+       ontologyToClauses O ++ sig.map reflexiveClause
+       ++ atomAtomClosureClauses sig O ++ atomBotClosureClauses sig O
+     else [])
+  rw [if_pos rfl]
+  apply List.mem_append.mpr; left
+  apply List.mem_append.mpr; right
+  show atomAtomSubsumptionClause A B ∈
+    sig.flatMap (fun A' =>
+      sig.filterMap (fun B' =>
+        if ConceptDerivable O (fun X => X = A') B' then
+          some (atomAtomSubsumptionClause A' B') else none))
+  apply List.mem_flatMap.mpr
+  refine ⟨A, hA, ?_⟩
+  apply List.mem_filterMap.mpr
+  refine ⟨B, hB, ?_⟩
+  exact if_pos hDer
+
+/-- **HerbrandPropertyAtomConjDisj for atom-or-bot ontologies.**
+    Strict extension of `herbrandPropertyAtomConjDisj_atomic`: the
+    ontology may now contain atom-bot axioms `(atom A, ⊥)` in
+    addition to atom-atom ones, and the Herbrand model is shown to
+    satisfy the bot axioms as well via the bot-closure subsumption. -/
+theorem herbrandPropertyAtomConjDisj_atomOrBot
+    (sig : List Nat) (O : Ontology) (hO : IsAtomicOrBotOnly O) :
+    HerbrandPropertyAtomConjDisj sig O (canonicalSeedAtomBot sig O) := by
+  classical
+  intro D hDeriv _hSat Q hQsig hQCD hNoSub
+  obtain ⟨hBodyShape, hHeadShape⟩ := hQCD
+  -- Lift unsubsumed from D to seed.
+  have hNoSubSeed :
+      ∀ c ∈ (canonicalSeedAtomBot sig O).S
+              (canonicalSeedAtomBot sig O).vr,
+        ¬ subsumes c {body := Q.Gamma, head := Q.Delta} := by
+    intro c hc hSub
+    have hSubInv : SubsumerInvariant Q (canonicalSeedAtomBot sig O) :=
+      ⟨canonicalSeedAtomBot_vr_in_contexts sig O, c, hc, hSub⟩
+    have hSubInvD := fullDeriv_preserves_SubsumerInvariant hDeriv Q hSubInv
+    obtain ⟨_, c', hc'In, hc'Sub⟩ := hSubInvD
+    exact hNoSub c' hc'In hc'Sub
+  -- For every body atom A' of Q (with A' ∈ sig): A' is NOT a bot consequence.
+  have hNoBotInBody :
+      ∀ A', BLit.atomTrue (PTerm.atom A' ATerm.x) ∈ Q.Gamma →
+            ¬ isBotConsequence O A' := by
+    intro A' hA'mem hBot
+    have hA'sig : A' ∈ sig := hQsig.1 A' ATerm.x hA'mem
+    -- {A'(x)} → {} ∈ seed, subsumes Q (body subset, empty head trivially).
+    have hClauseIn := canonicalSeedAtomBot_subsumes_bot sig O A' hA'sig hBot
+    have hSubs : subsumes
+                   ({ body := [BLit.atomTrue (PTerm.atom A' ATerm.x)], head := [] }
+                     : CClause)
+                   { body := Q.Gamma, head := Q.Delta } := by
+      refine ⟨?_, ?_⟩
+      · intro b hb
+        rcases List.mem_singleton.mp hb with rfl
+        exact hA'mem
+      · intro h hh; exact absurd hh List.not_mem_nil
+    exact hNoSubSeed _ hClauseIn hSubs
+  -- Build the Herbrand model.
+  refine ⟨Unit, ⟨()⟩, atomicHerbrandInterp O Q, atomicAssign.γ,
+          atomicAssign.φ, atomicAssign.vx, atomicAssign.vy, ?_, ?_⟩
+  · -- Herbrand satisfies O (atom-atom + atom-bot).
+    intro ax hax
+    rcases hO ax hax with ⟨A, B, hAxEq⟩ | ⟨A, hAxEq⟩
+    · -- Atom-atom: existing argument.
+      subst hAxEq
+      intro x hxA
+      show (atomicHerbrandInterp O Q).ext_concept B x
+      show ConceptDerivable O (queryBodyAtomConcepts Q) B
+      have hA : ConceptDerivable O (queryBodyAtomConcepts Q) A := hxA
+      exact ConceptDerivable.step hA hax
+    · -- Atom-bot: need ConceptDerivable initial A = False.
+      subst hAxEq
+      intro x hxA
+      -- hxA : ConceptDerivable O (queryBodyAtomConcepts Q) A.
+      have hDerA : ConceptDerivable O (queryBodyAtomConcepts Q) A := hxA
+      -- Singleton-witness: ∃ A', initial A' ∧ ConceptDerivable {A'} A.
+      obtain ⟨A', hA'init, hA'der⟩ :=
+        conceptDerivable_initial_singleton_witness O _ hDerA
+      -- isBotConsequence O A' (witness B = A from `(atom A, bot) ∈ O`).
+      have hBotA' : isBotConsequence O A' := ⟨A, hA'der, hax⟩
+      -- hA'init says A' appears in Q.Gamma at some term tA'.
+      obtain ⟨tA', hA'mem⟩ := hA'init
+      have htA'_eq : tA' = ATerm.x :=
+        atomConjDisj_bodyTerm_is_x Q hBodyShape A' tA' hA'mem
+      subst htA'_eq
+      exact hNoBotInBody A' hA'mem hBotA'
+  · -- Refute Q via AtomicRefutable.
+    intro hQeval
+    have hAR : AtomicRefutable O Q := by
+      refine ⟨?_, ?_, ?_, ?_, ?_⟩
+      · intro S t₁ t₂ hMem
+        obtain ⟨A, hEq⟩ := hBodyShape _ hMem
+        exact (by cases hEq)
+      · intro hMem
+        obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+        exact (by cases hEq)
+      · intro s₁ s₂ hMem
+        obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+        exact (by cases hEq)
+      · intro S t₁ t₂ hMem
+        obtain ⟨A, hEq⟩ := hHeadShape _ hMem
+        exact (by cases hEq)
+      · intro B' t hMem hDer
+        have ht_eq : t = ATerm.x :=
+          atomConjDisj_headTerm_is_x Q hHeadShape B' t hMem
+        subst ht_eq
+        obtain ⟨A, hAinit, hDerA⟩ :=
+          conceptDerivable_initial_singleton_witness O _ hDer
+        obtain ⟨tA, hAmem⟩ := hAinit
+        have htA_eq : tA = ATerm.x :=
+          atomConjDisj_bodyTerm_is_x Q hBodyShape A tA hAmem
+        subst htA_eq
+        have hAsig : A ∈ sig := hQsig.1 A ATerm.x hAmem
+        have hB'sig : B' ∈ sig := hQsig.2 B' ATerm.x hMem
+        obtain ⟨c, hc, hcSub⟩ :=
+          canonicalSeedAtomBot_subsumes_derivable sig O A B' hAsig hB'sig hDerA
+        have hQsubs : subsumes c {body := Q.Gamma, head := Q.Delta} := by
+          refine ⟨?_, ?_⟩
+          · intro b hb
+            have hbInAB := hcSub.1 b hb
+            rcases List.mem_singleton.mp hbInAB with rfl
+            exact hAmem
+          · intro h hh
+            have hhInAB := hcSub.2 h hh
+            rcases List.mem_singleton.mp hhInAB with rfl
+            exact hMem
+        exact hNoSubSeed c hc hQsubs
+    have hBody := atomicHerbrandInterp_body_holds O Q hAR.noRoleBody
+    have hHead := atomicHerbrandInterp_head_fails O Q hAR.noTtrueHead
+      hAR.noEqLHead hAR.noRoleHead hAR.headNotDerivable
+    obtain ⟨hh, hMem, hEval⟩ := hQeval hBody
+    exact hHead hh hMem hEval
+
+/-- **CLOSEST RESULT (atom-or-bot O).**  For every signature `sig`
+    and every atom-or-bot ontology `O`, the canonical seed
+    `canonicalSeedAtomBot sig O` is canonical for `O` in the
+    `IsCanonicalSeedAtomConjDisj` sense.
+
+    Strictly extends `isCanonicalSeedAtomConjDisj_atomic`: the
+    ontology now admits concept-disjointness axioms
+    `(atom A, ⊥)` in addition to atom-atom subsumptions. -/
+theorem isCanonicalSeedAtomConjDisj_atomOrBot
+    (sig : List Nat) (O : Ontology) (hO : IsAtomicOrBotOnly O) :
+    IsCanonicalSeedAtomConjDisj sig O (canonicalSeedAtomBot sig O) :=
+  ⟨canonicalSeedAtomBot_vr_in_contexts sig O,
+   canonicalSeedAtomBot_sound sig O hO,
+   herbrandPropertyAtomConjDisj_atomOrBot sig O hO⟩
+
+/-- **Total function version (atom-or-bot).**  No caller-supplied
+    parameters; the signature is extracted from `O`.  This is the
+    closest unconditional analogue of the literal §6.3.4 goal
+    available without further axiom-shape normalisation. -/
+noncomputable def canonicalSeedAtomBotFromOntology (O : Ontology) :
+    ContextStructure :=
+  canonicalSeedAtomBot (ontologyConceptSig O) O
+
+theorem isCanonicalSeedAtomConjDisj_canonicalSeedAtomBotFromOntology
+    (O : Ontology) (hO : IsAtomicOrBotOnly O) :
+    IsCanonicalSeedAtomConjDisj (ontologyConceptSig O) O
+      (canonicalSeedAtomBotFromOntology O) :=
+  isCanonicalSeedAtomConjDisj_atomOrBot (ontologyConceptSig O) O hO
 
 end ALCHOIQContext
 end ELKSDD
