@@ -489,4 +489,30 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.atomicHerbrandInterp_satisfies_compatible_rbox
 #print axioms ALCHOIQContext.atomicHerbrandInterp_satisfies_emptyRBox
 
+-- ============================================================
+-- FINAL GOAL: canonicalSeedOf : Ontology → ContextStructure with
+-- IsCanonicalSeed O (canonicalSeedOf O) for every SROIQ O + RBox.
+--
+-- Currently landed:
+--   * canonicalSeedOf : Ontology → ContextStructure (total)
+--   * canonicalSeedOf_vr_in_contexts (unconditional)
+--   * canonicalSeedOf_sound (unconditional)
+--   * canonicalSeedOf_herbrandProperty_atomic_modulo (conditional on
+--     hSatComplete + hAtomShape)
+--   * isCanonicalSeed_canonicalSeedOf_atomic_modulo (conditional)
+--
+-- Gap: discharging hSatComplete (saturation procedure) and
+-- hAtomShape (general Herbrand model) — see §FINAL-GAP comment
+-- in SROIQCompletenessSkeleton.lean.
+-- ============================================================
+#print axioms ALCHOIQContext.axiomToCClause
+#print axioms ALCHOIQContext.ontologyToClauses
+#print axioms ALCHOIQContext.canonicalSeedOf
+#print axioms ALCHOIQContext.canonicalSeedOf_vr_in_contexts
+#print axioms ALCHOIQContext.mem_ontologyToClauses
+#print axioms ALCHOIQContext.atomAtom_clause_sound
+#print axioms ALCHOIQContext.canonicalSeedOf_sound
+#print axioms ALCHOIQContext.canonicalSeedOf_herbrandProperty_atomic_modulo
+#print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOf_atomic_modulo
+
 end ELKSDD

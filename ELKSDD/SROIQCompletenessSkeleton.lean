@@ -2138,5 +2138,35 @@ theorem isCanonicalSeed_canonicalSeedOf_atomic_modulo
    canonicalSeedOf_sound O,
    canonicalSeedOf_herbrandProperty_atomic_modulo O hO hSatComplete hAtomShape⟩
 
+-- ============================================================
+-- §FINAL-GAP.  Remaining work for unconditional IsCanonicalSeed.
+--
+-- The two hypotheses required by
+-- `isCanonicalSeed_canonicalSeedOf_atomic_modulo`
+-- (`hSatComplete` and `hAtomShape`) capture the substantive
+-- remaining work — *not* discharged here:
+--
+--   * `hSatComplete` requires a real saturation procedure deriving
+--     transitive closure under the Join rule.   For finite atom-atom
+--     O of length n, the closure has at most n² entries, but
+--     computing it in Lean (with decidability of `ConceptDerivable`)
+--     remains future work.   In addition, `PropSaturationInvariantAtomic`
+--     universally quantifies over `(A, B) : Nat × Nat` — including
+--     the reflexive case `B = A` via `ConceptDerivable.base` — so
+--     the seed must contain a subsumer of every reflexive clause
+--     `{A(x)} → {A(x)}`.   Since `A` ranges unboundedly, we cannot
+--     enumerate such reflexives in the seed.   A refined invariant
+--     restricting `(A, B)` to concepts actually referenced is
+--     required.
+--
+--   * `hAtomShape` requires every unsubsumed Q to have atom-atom
+--     shape.   For arbitrary Q this fails; removing the restriction
+--     needs a Q-parameterised Herbrand model handling role literals,
+--     compound heads, and propositional shapes beyond atom-atom.
+--
+-- These are flagged as the next concrete deliverables on the path
+-- to the unconditional theorem.
+-- ============================================================
+
 end ALCHOIQContext
 end ELKSDD
