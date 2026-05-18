@@ -5643,7 +5643,9 @@ theorem elHerbrandInterpTree_sat_atom_conjOfAtoms
     whose tree satisfaction is established by the per-axiom lemmas
     above (#142 successor introduction; #143 atom-atom, conj-atom,
     atom-conj, disj-atom, top-atom, conj-conj, disj-conj, top-conj;
-    #145 n-ary RHS conjunction). -/
+    #145 n-ary RHS conjunction).  Adds bot-LHS axioms `(⊥, _)`
+    which are tautologically satisfied because `eval ⊥ p` is
+    `False` at every tree node. -/
 def IsTreeFriendlyAxiom (ax : ALCHOQ.Axiom) : Prop :=
   (∃ A B : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B)) ∨
   (∃ A₁ A₂ B : Nat,
@@ -5669,7 +5671,9 @@ def IsTreeFriendlyAxiom (ax : ALCHOQ.Axiom) : Prop :=
      ax = (ALCHOQ.Concept.atom A, C) ∧ IsConjOfAtoms C) ∨
   (∃ A R B : Nat,
      ax = (ALCHOQ.Concept.atom A,
-           ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)))
+           ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B))) ∨
+  -- Tautologically vacuous: bot LHS.
+  (∃ D : ALCHOQ.Concept, ax = (ALCHOQ.Concept.bot, D))
 
 /-- A TBox is tree-friendly iff all its axioms are. -/
 def IsTreeFriendlyTBox (O : Ontology) : Prop :=
@@ -5684,7 +5688,7 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     (elHerbrandInterpTree O Q).satisfies O := by
   intro ax hax
   intro p hLHS
-  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hExLHS
+  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hExLHS | hBotLHS
   · obtain ⟨A, B, rfl⟩ := hAA
     exact elHerbrandInterpTree_sat_atom_atom O Q A B hax p hLHS
   · obtain ⟨A₁, A₂, B, rfl⟩ := hCJ
@@ -5705,6 +5709,9 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     exact elHerbrandInterpTree_sat_atom_conjOfAtoms O Q A C hC hax p hLHS
   · obtain ⟨A, R, B, rfl⟩ := hExLHS
     exact elHerbrandInterpTree_sat_atom_exist_atom O Q A R B hax p hLHS
+  · -- bot LHS: hLHS : eval bot p = False; absurd.
+    obtain ⟨D, rfl⟩ := hBotLHS
+    exact absurd hLHS (fun h => h)
 
 -- ============================================================
 -- §UNIVERSAL-ROLE VACUITY PREDICATES.  Concept shapes whose
