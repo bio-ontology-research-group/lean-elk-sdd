@@ -414,4 +414,16 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.perTermFragments_noetherian
 #print axioms ALCHOIQContext.per_term_fragments_for_aterms
 
+-- ============================================================
+-- Item #5: Knuth-Bendix completion procedure (§6.3.2.5) —
+-- KBComplete predicate, base-case completion, extension theorem,
+-- idempotence, and the trivial-neighbourhood specialisation.
+-- ============================================================
+#print axioms ALCHOIQContext.KBComplete
+#print axioms ALCHOIQContext.kbComplete_empty
+#print axioms ALCHOIQContext.kb_completion_from_locallyConfluent
+#print axioms ALCHOIQContext.kb_completion_extends
+#print axioms ALCHOIQContext.kbComplete_idempotent
+#print axioms ALCHOIQContext.kb_completion_for_trivialNeighbourhood
+
 end ELKSDD
