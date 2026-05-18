@@ -929,6 +929,14 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_anyLHS_exist_top
 
 -- ============================================================
+-- §TREE: (_, ∃R.TreeTrueRHS-filler).   Strict generalisation of
+-- the (_, ∃R.top) branch via structurally-True fillers — i.e.,
+-- any filler D with TreeTrueRHS D evaluates True at every tree
+-- node, including the introduced successor.
+-- ============================================================
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_anyLHS_exist_treeTrueRHS
+
+-- ============================================================
 -- §TREE SATISFIES O composition.   Single satisfaction theorem
 -- assembled by dispatching per-axiom to the tree-Herbrand lemmas.
 -- ============================================================
