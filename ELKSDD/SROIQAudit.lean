@@ -1151,6 +1151,15 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.inUnifiedSlice_exists_of_isELOrUniversalRoleVacuousOnly
 #print axioms ALCHOIQContext.SliceEligibleOntology
 #print axioms ALCHOIQContext.inUnifiedSlice_exists_of_sliceEligible
+-- §SliceEligibleBoth: ontology in both maximal slices
+#print axioms ALCHOIQContext.SliceEligibleBoth
+#print axioms ALCHOIQContext.sliceEligibleOntology_of_sliceEligibleBoth
+#print axioms ALCHOIQContext.sliceEligibleBoth_all
+#print axioms ALCHOIQContext.sliceEligibleBoth_universal
+#print axioms ALCHOIQContext.sliceEligibleBoth_nil
+#print axioms ALCHOIQContext.sliceEligibleBoth_of_isAtomicSubsumptionOnly
+#print axioms ALCHOIQContext.inUnifiedSlice_of_sliceEligibleBoth_emptyFamily
+#print axioms ALCHOIQContext.inUnifiedSlice_of_sliceEligibleBoth_universalFamily
 #print axioms ALCHOIQContext.unconditionalSCExtensionGap_vacuous_on_slice
 #print axioms ALCHOIQContext.partial_isCanonicalSeed_of_sliceEligible
 -- §RBOX BOTH-FAMILIES

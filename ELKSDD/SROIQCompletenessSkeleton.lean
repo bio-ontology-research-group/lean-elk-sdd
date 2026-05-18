@@ -8949,6 +8949,62 @@ theorem inUnifiedSlice_exists_of_isELOrUniversalRoleVacuousOnly
 def SliceEligibleOntology (O : Ontology) : Prop :=
   IsELOrAllVacuousOnly O ∨ IsELOrUniversalRoleVacuousOnly O
 
+/-- **An ontology is *both-slice-eligible*** iff it lives in *both*
+    maximal slices — strictly stronger than `SliceEligibleOntology`,
+    which only requires one. -/
+def SliceEligibleBoth (O : Ontology) : Prop :=
+  IsELOrAllVacuousOnly O ∧ IsELOrUniversalRoleVacuousOnly O
+
+/-- A both-slice-eligible ontology is in particular slice-eligible. -/
+theorem sliceEligibleOntology_of_sliceEligibleBoth
+    {O : Ontology} (h : SliceEligibleBoth O) :
+    SliceEligibleOntology O :=
+  Or.inl h.1
+
+theorem sliceEligibleBoth_all
+    {O : Ontology} (h : SliceEligibleBoth O) :
+    IsELOrAllVacuousOnly O := h.1
+
+theorem sliceEligibleBoth_universal
+    {O : Ontology} (h : SliceEligibleBoth O) :
+    IsELOrUniversalRoleVacuousOnly O := h.2
+
+/-- The empty ontology is both-slice-eligible. -/
+theorem sliceEligibleBoth_nil :
+    SliceEligibleBoth ([] : Ontology) := by
+  refine ⟨?_, ?_⟩ <;> · intro ax hax; exact absurd hax List.not_mem_nil
+
+/-- Atom-atom-only ontologies are both-slice-eligible: atom-atom is
+    the first EL-substantive disjunct of *both* maximal slice
+    predicates. -/
+theorem sliceEligibleBoth_of_isAtomicSubsumptionOnly
+    (O : Ontology) (hO : IsAtomicSubsumptionOnly O) :
+    SliceEligibleBoth O := by
+  refine ⟨?_, ?_⟩
+  · intro ax hax
+    obtain ⟨A, B, rfl⟩ := hO ax hax
+    exact Or.inl ⟨A, B, rfl⟩
+  · intro ax hax
+    obtain ⟨A, B, rfl⟩ := hO ax hax
+    exact Or.inl ⟨A, B, rfl⟩
+
+/-- For a both-slice-eligible ontology, *any* compatible RBox from
+    either family delivers a unified-slice membership — no
+    case-split on the family is needed. -/
+theorem inUnifiedSlice_of_sliceEligibleBoth_emptyFamily
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : SliceEligibleBoth O)
+    (hRBox : RBoxCompatibleWithEmptyRoles rbox) :
+    InUnifiedSlice O rbox :=
+  Or.inl ⟨hO.1, hRBox⟩
+
+theorem inUnifiedSlice_of_sliceEligibleBoth_universalFamily
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : SliceEligibleBoth O)
+    (hRBox : RBoxCompatibleWithUniversalRoles rbox) :
+    InUnifiedSlice O rbox :=
+  Or.inr ⟨hO.2, hRBox⟩
+
 /-- Every slice-eligible ontology has some RBox in the unified
     slice — by maximal-family choice followed by empty-RBox
     discharge. -/
