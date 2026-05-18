@@ -3725,6 +3725,28 @@ theorem isCanonicalSeedAtomConjDisj_canonicalSeedAtomBotFromOntology
 -- subsumption argument) — left for follow-up.
 -- ============================================================
 
+/-- **Conjunction membership**: `ConjMember C B` says that atom `B` can
+    be extracted from concept `C` by zero or more left/right projections
+    through `conj`-of-atoms.  Concretely, `C` is a binary tree whose
+    leaves are `atom _`, and `B` is one such leaf. -/
+inductive ConjMember : ALCHOQ.Concept → Nat → Prop where
+  | atom_self {A : Nat} : ConjMember (ALCHOQ.Concept.atom A) A
+  | left {C₁ C₂ : ALCHOQ.Concept} {A : Nat} :
+      ConjMember C₁ A → ConjMember (ALCHOQ.Concept.conj C₁ C₂) A
+  | right {C₁ C₂ : ALCHOQ.Concept} {A : Nat} :
+      ConjMember C₂ A → ConjMember (ALCHOQ.Concept.conj C₁ C₂) A
+
+/-- Semantic transport for `ConjMember`: at any point, evaluation of
+    `C` implies evaluation of each member atom. -/
+theorem ConjMember.eval_proj {α : Type} (I : Interp α) :
+    ∀ {C : ALCHOQ.Concept} {B : Nat}, ConjMember C B →
+      ∀ x, I.eval C x → I.ext_concept B x := by
+  intro C B hM
+  induction hM with
+  | atom_self => intro x hx; exact hx
+  | left _ ih => intro x ⟨hL, _⟩; exact ih x hL
+  | right _ ih => intro x ⟨_, hR⟩; exact ih x hR
+
 /-- **EL-style derivation closure**: atom-atom, atom-bot, and
     conjunctive (atom ⊓ atom ⊑ atom) axioms.   Strictly richer
     than `ConceptDerivable` (atom-atom only). -/
@@ -3821,6 +3843,11 @@ inductive ConceptDerivableEL (O : Ontology) (initial : Nat → Prop) : Nat → P
        ALCHOQ.Concept.conj
          (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C)) ∈ O →
       ConceptDerivableEL O initial C
+  | step_atom_conjmember {A B : Nat} {C : ALCHOQ.Concept} :
+      ConceptDerivableEL O initial A →
+      (ALCHOQ.Concept.atom A, C) ∈ O →
+      ConjMember C B →
+      ConceptDerivableEL O initial B
 
 /-- Every `ConceptDerivable` derivation is a `ConceptDerivableEL`
     derivation. -/
@@ -3868,6 +3895,8 @@ theorem conceptDerivableEL_mono
     exact ConceptDerivableEL.step_top_conj_L hAx
   | @step_top_conj_R B' C' hAx =>
     exact ConceptDerivableEL.step_top_conj_R hAx
+  | @step_atom_conjmember A' B' C' _ hAx hM ih =>
+    exact ConceptDerivableEL.step_atom_conjmember ih hAx hM
 
 /-- **Multi-source witness lemma.**  Every `ConceptDerivableEL`
     derivation of `B` from `initial` factors through a finite
@@ -3969,6 +3998,9 @@ theorem conceptDerivableEL_multi_witness
   | @step_top_conj_R B' C' hAx =>
     exact ⟨[], fun _ h => (List.not_mem_nil h).elim,
            ConceptDerivableEL.step_top_conj_R hAx⟩
+  | @step_atom_conjmember A' B' C' _ hAx hM ih =>
+    obtain ⟨S, hSinit, hSDer⟩ := ih
+    exact ⟨S, hSinit, ConceptDerivableEL.step_atom_conjmember hSDer hAx hM⟩
 
 /-- **EL-aware semantic transport lemma**: a model `I` satisfying
     `O` and the initial atoms also satisfies any
@@ -4054,6 +4086,11 @@ theorem conceptDerivableEL_eval_transport
     have hConj : I.eval (ALCHOQ.Concept.conj (.atom B') (.atom C')) vx :=
       hAxEval vx trivial
     exact hConj.2
+  | @step_atom_conjmember A' B' C' _ hAx hM ih =>
+    have hAxEval := hIO _ hAx
+    -- hAxEval : ∀ x, I.eval (atom A') x → I.eval C' x
+    have hCeval : I.eval C' vx := hAxEval vx ih
+    exact ConjMember.eval_proj I hM vx hCeval
 
 /-- **The EL fragment predicate**: atom-atom, atom-bot, and
     conjunctive-atom axioms only. -/
@@ -5480,6 +5517,14 @@ theorem elHerbrandInterp_trivialises
     (elHerbrandInterp O Q).eval D x :=
   (elHerbrandInterp_falseLHS_trueRHS_aux O Q D).2 hD x
 
+/-- **Conjunction of atoms shape**: a concept whose leaves are all
+    `atom _`.  Captures nested conjunctions like `conj A (conj B C)`. -/
+inductive IsConjOfAtoms : ALCHOQ.Concept → Prop where
+  | atom {A : Nat} : IsConjOfAtoms (ALCHOQ.Concept.atom A)
+  | conj {C₁ C₂ : ALCHOQ.Concept} :
+      IsConjOfAtoms C₁ → IsConjOfAtoms C₂ →
+      IsConjOfAtoms (ALCHOQ.Concept.conj C₁ C₂)
+
 /-- **Maximal Herbrand-friendly ontology shape.**  Strict extension
     of `IsELOrVacuousOnly`.  Covers (in addition to the previous
     shapes):
@@ -5487,7 +5532,10 @@ theorem elHerbrandInterp_trivialises
       · conj-RHS axioms `(atom A, conj (atom B) (atom C))` via
         `step_conj_RHS_left` / `step_conj_RHS_right`;
       · disj-LHS axioms `(disj (atom A₁) (atom A₂), atom B)` via
-        `step_disj_LHS_left` / `step_disj_LHS_right`. -/
+        `step_disj_LHS_left` / `step_disj_LHS_right`;
+      · n-ary RHS-conjunction axioms `(atom A, C)` with `C` an
+        arbitrary nested conjunction of atoms, via
+        `step_atom_conjmember`. -/
 def IsELOrAllVacuousOnly (O : Ontology) : Prop :=
   ∀ ax ∈ O,
     -- EL-substantive shapes (contribute to closure):
@@ -5520,6 +5568,9 @@ def IsELOrAllVacuousOnly (O : Ontology) : Prop :=
        ax = (ALCHOQ.Concept.top,
              ALCHOQ.Concept.conj
                (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C))) ∨
+    -- General atom-to-conj-of-atoms shape (n-ary RHS conjunction):
+    (∃ A : Nat, ∃ C : ALCHOQ.Concept,
+       ax = (ALCHOQ.Concept.atom A, C) ∧ IsConjOfAtoms C) ∨
     -- Vacuous shapes (no closure needed):
     HerbrandFalseLHS ax.1 ∨
     HerbrandTrueRHS ax.2
@@ -5534,20 +5585,47 @@ theorem isELOrVacuousOnly_imp_isELOrAllVacuousOnly
   · exact Or.inr (Or.inl hAB)
   · exact Or.inr (Or.inr (Or.inl hCJ))
   · -- (∃R.A, atom B): LHS is exist — HerbrandFalseLHS
-    right; right; right; right; right; right; right; right; right; left
+    right; right; right; right; right; right; right; right; right; right; left
     obtain ⟨R, A, B, rfl⟩ := hEx
     show HerbrandFalseLHS (ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom A))
     trivial
   · -- (atom A, ∀R.B): RHS is univ — HerbrandTrueRHS
-    right; right; right; right; right; right; right; right; right; right
+    right; right; right; right; right; right; right; right; right; right; right
     obtain ⟨A, R, B, rfl⟩ := hUn
     show HerbrandTrueRHS (ALCHOQ.Concept.univ R (ALCHOQ.Concept.atom B))
     trivial
   · -- (atom A, ⊤): RHS is top — HerbrandTrueRHS
-    right; right; right; right; right; right; right; right; right; right
+    right; right; right; right; right; right; right; right; right; right; right
     obtain ⟨A, rfl⟩ := hTop
     show HerbrandTrueRHS ALCHOQ.Concept.top
     trivial
+
+/-- Helper: a concept whose leaves are `atom _` evaluates in the
+    Herbrand interpretation to a conjunction of derivability claims.
+    Given `(atom A, Cwhole) ∈ O` with `A` derivable, for any sub-shape
+    `C` of `Cwhole` (witnessed via `ConjMember Cwhole _`), the eval at
+    `vx` holds. -/
+theorem isConjOfAtoms_eval_helper (O : Ontology) (Q : QueryClause)
+    {Cwhole : ALCHOQ.Concept} {A : Nat}
+    (hAx : (ALCHOQ.Concept.atom A, Cwhole) ∈ O)
+    (hA : ConceptDerivableEL O (queryBodyAtomConcepts Q) A) :
+    ∀ {C : ALCHOQ.Concept}, IsConjOfAtoms C →
+      (∀ B, ConjMember C B → ConjMember Cwhole B) →
+      ∀ x, (elHerbrandInterp O Q).eval C x := by
+  intro C hC
+  induction hC with
+  | @atom B =>
+      intro hSub x
+      have hMW : ConjMember Cwhole B := hSub B ConjMember.atom_self
+      show ConceptDerivableEL O (queryBodyAtomConcepts Q) B
+      exact ConceptDerivableEL.step_atom_conjmember hA hAx hMW
+  | @conj C₁ C₂ _ _ ih₁ ih₂ =>
+      intro hSub x
+      have hSub₁ : ∀ B, ConjMember C₁ B → ConjMember Cwhole B :=
+        fun B hM₁ => hSub B (ConjMember.left hM₁)
+      have hSub₂ : ∀ B, ConjMember C₂ B → ConjMember Cwhole B :=
+        fun B hM₂ => hSub B (ConjMember.right hM₂)
+      exact ⟨ih₁ hSub₁ x, ih₂ hSub₂ x⟩
 
 /-- **The EL Herbrand model satisfies O under `IsELOrAllVacuousOnly`
     and the unsubsumed-Q assumption.** -/
@@ -5630,7 +5708,7 @@ theorem elHerbrandInterp_satisfies_O_aux_full
         exact absurd hLitMem List.not_mem_nil
     exact hNoSubSeed _ hClauseIn hSubs
   intro ax hax
-  rcases hO ax hax with hAA | hAB | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hFalseLHS | hTrueRHS
+  rcases hO ax hax with hAA | hAB | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hFalseLHS | hTrueRHS
   · obtain ⟨A, B, rfl⟩ := hAA
     intro x hxA
     show ConceptDerivableEL O (queryBodyAtomConcepts Q) B
@@ -5702,6 +5780,11 @@ theorem elHerbrandInterp_satisfies_O_aux_full
       exact ConceptDerivableEL.step_top_conj_L hax
     · show ConceptDerivableEL O (queryBodyAtomConcepts Q) C
       exact ConceptDerivableEL.step_top_conj_R hax
+  · -- (atom A, C) with `IsConjOfAtoms C`: n-ary RHS conjunction.
+    obtain ⟨A, C, rfl, hC⟩ := hCM
+    intro x hxA
+    have hA : ConceptDerivableEL O (queryBodyAtomConcepts Q) A := hxA
+    exact isConjOfAtoms_eval_helper O Q hax hA hC (fun _ hM => hM) x
   · -- HerbrandFalseLHS ax.1: LHS evaluates to False, axiom vacuous.
     intro x hxLHS
     exact absurd hxLHS (elHerbrandInterp_falsifies O Q ax.1 hFalseLHS x)

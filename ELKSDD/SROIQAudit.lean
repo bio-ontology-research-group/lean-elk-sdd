@@ -714,4 +714,14 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.conceptDerivableEL_multi_witness
 #print axioms ALCHOIQContext.conceptDerivableEL_eval_transport
 
+-- ============================================================
+-- N-ary RHS-conjunction extraction: `(atom A, C)` with `C` an
+-- arbitrary nested conjunction of atoms.  Uses ConjMember and
+-- IsConjOfAtoms; the semantic projection lemma must stay clean.
+-- ============================================================
+#print axioms ALCHOIQContext.ConjMember
+#print axioms ALCHOIQContext.IsConjOfAtoms
+#print axioms ALCHOIQContext.ConjMember.eval_proj
+#print axioms ALCHOIQContext.isConjOfAtoms_eval_helper
+
 end ELKSDD
