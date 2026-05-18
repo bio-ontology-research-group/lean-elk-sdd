@@ -703,4 +703,15 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.the_el_plus_all_vacuous_plus_compatible_rbox_slice
 #print axioms ALCHOIQContext.theorem2_for_el_plus_all_vacuous_plus_compatible_rbox
 
+-- ============================================================
+-- EL closure extension: axioms `(conj (atom A₁) (atom A₂),
+--   conj (atom B) (atom C))`.  Re-checking all downstream
+-- theorems with the strictly-larger ConceptDerivableEL closure
+-- ensures the new constructors stay foundation-only.
+-- ============================================================
+#print axioms ALCHOIQContext.ConceptDerivableEL
+#print axioms ALCHOIQContext.conceptDerivableEL_mono
+#print axioms ALCHOIQContext.conceptDerivableEL_multi_witness
+#print axioms ALCHOIQContext.conceptDerivableEL_eval_transport
+
 end ELKSDD
