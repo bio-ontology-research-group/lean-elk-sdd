@@ -6354,6 +6354,27 @@ theorem elHerbrandInterpTree_sat_anyLHS_exist_treeTrueRHS
   · exact ⟨rfl, rfl⟩
   · exact treeTrueRHS_eval_true O Q D hD _
 
+/-- **Dual generalisation: `(any-LHS, ∀R.D)` with `TreeTrueRHS D`.**
+    The filler is structurally True at every node (including all
+    successors), so the universal restriction is vacuously
+    satisfied at every parent: every R-successor q satisfies
+    `eval D q = True`, hence the implication `R(p,q) → eval D q`
+    holds.   This handles e.g. `(_, ∀R.top)`, `(_, ∀R.conj top top)`,
+    `(_, ∀R.disj top D)`, etc., for arbitrary LHS shapes — and as
+    of the previous extension, also `(_, ∀R.atLeast 0 _ _)`. -/
+theorem elHerbrandInterpTree_sat_anyLHS_univ_treeTrueRHS
+    (O : Ontology) (Q : QueryClause)
+    (LHS : ALCHOQ.Concept) (R : Nat) (D : ALCHOQ.Concept)
+    (hD : TreeTrueRHS D)
+    (hAx : (LHS, ALCHOQ.Concept.univ R D) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval LHS p →
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.univ R D) p := by
+  intro p _hLHS
+  intro y _hRpy
+  exact treeTrueRHS_eval_true O Q D hD y
+
 -- ============================================================
 -- §TREE-FRIENDLY TBOX SHAPE PREDICATE.   Composes the per-axiom
 -- tree-Herbrand satisfaction lemmas into a single statement:
@@ -6424,6 +6445,11 @@ def IsTreeFriendlyAxiom (ax : ALCHOQ.Axiom) : Prop :=
   -- the (_, ∃R.top) branch.   D is structurally True at every node.
   (∃ LHS : ALCHOQ.Concept, ∃ R : Nat, ∃ D : ALCHOQ.Concept,
      ax = (LHS, ALCHOQ.Concept.exist R D) ∧ TreeTrueRHS D) ∨
+  -- (any-LHS, ∀R.D) with TreeTrueRHS D — universal-restriction
+  -- dual.   D is structurally True at every successor, so the
+  -- universal is vacuously satisfied.
+  (∃ LHS : ALCHOQ.Concept, ∃ R : Nat, ∃ D : ALCHOQ.Concept,
+     ax = (LHS, ALCHOQ.Concept.univ R D) ∧ TreeTrueRHS D) ∨
   (∃ R B : Nat,
      ax = (ALCHOQ.Concept.top,
            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B))) ∨
@@ -6470,7 +6496,7 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     (elHerbrandInterpTree O Q).satisfies O := by
   intro ax hax
   intro p hLHS
-  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hTopCM | hCJCM | hDJCM | hExLHS | hExLHS_CM | hExLHS_Top | hAnyExCM | hAnyExTop | hAnyExTT | hTopEx | hCJEx | hDJEx | hTopUniv | hTopUnivCM | hTTRHSUniv | hBotLHS | hTopRHS
+  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hTopCM | hCJCM | hDJCM | hExLHS | hExLHS_CM | hExLHS_Top | hAnyExCM | hAnyExTop | hAnyExTT | hAnyUnivTT | hTopEx | hCJEx | hDJEx | hTopUniv | hTopUnivCM | hTTRHSUniv | hBotLHS | hTopRHS
   · obtain ⟨A, B, rfl⟩ := hAA
     exact elHerbrandInterpTree_sat_atom_atom O Q A B hax p hLHS
   · obtain ⟨A₁, A₂, B, rfl⟩ := hCJ
@@ -6507,6 +6533,8 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     exact elHerbrandInterpTree_sat_anyLHS_exist_top O Q LHS R hax p hLHS
   · obtain ⟨LHS, R, D, rfl, hD⟩ := hAnyExTT
     exact elHerbrandInterpTree_sat_anyLHS_exist_treeTrueRHS O Q LHS R D hD hax p hLHS
+  · obtain ⟨LHS, R, D, rfl, hD⟩ := hAnyUnivTT
+    exact elHerbrandInterpTree_sat_anyLHS_univ_treeTrueRHS O Q LHS R D hD hax p hLHS
   · obtain ⟨R, B, rfl⟩ := hTopEx
     exact elHerbrandInterpTree_sat_top_exist_atom O Q R B hax p hLHS
   · obtain ⟨A₁, A₂, R, B, rfl⟩ := hCJEx

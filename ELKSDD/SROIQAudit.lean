@@ -937,6 +937,13 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_anyLHS_exist_treeTrueRHS
 
 -- ============================================================
+-- §TREE: (any-LHS, ∀R.TreeTrueRHS-filler) — universal-restriction
+-- dual.   Filler is structurally True at every successor, so the
+-- universal is vacuously satisfied at every parent.
+-- ============================================================
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_anyLHS_univ_treeTrueRHS
+
+-- ============================================================
 -- §TREE SATISFIES O composition.   Single satisfaction theorem
 -- assembled by dispatching per-axiom to the tree-Herbrand lemmas.
 -- ============================================================
