@@ -5673,7 +5673,9 @@ def IsTreeFriendlyAxiom (ax : ALCHOQ.Axiom) : Prop :=
      ax = (ALCHOQ.Concept.atom A,
            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B))) ∨
   -- Tautologically vacuous: bot LHS.
-  (∃ D : ALCHOQ.Concept, ax = (ALCHOQ.Concept.bot, D))
+  (∃ D : ALCHOQ.Concept, ax = (ALCHOQ.Concept.bot, D)) ∨
+  -- Tautologically vacuous: top RHS.
+  (∃ C : ALCHOQ.Concept, ax = (C, ALCHOQ.Concept.top))
 
 /-- A TBox is tree-friendly iff all its axioms are. -/
 def IsTreeFriendlyTBox (O : Ontology) : Prop :=
@@ -5688,7 +5690,7 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     (elHerbrandInterpTree O Q).satisfies O := by
   intro ax hax
   intro p hLHS
-  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hExLHS | hBotLHS
+  rcases hO ax hax with hAA | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hExLHS | hBotLHS | hTopRHS
   · obtain ⟨A, B, rfl⟩ := hAA
     exact elHerbrandInterpTree_sat_atom_atom O Q A B hax p hLHS
   · obtain ⟨A₁, A₂, B, rfl⟩ := hCJ
@@ -5712,6 +5714,10 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
   · -- bot LHS: hLHS : eval bot p = False; absurd.
     obtain ⟨D, rfl⟩ := hBotLHS
     exact absurd hLHS (fun h => h)
+  · -- top RHS: conclusion is `eval top p = True` — trivially.
+    obtain ⟨C, rfl⟩ := hTopRHS
+    show True
+    trivial
 
 -- ============================================================
 -- §UNIVERSAL-ROLE VACUITY PREDICATES.  Concept shapes whose
