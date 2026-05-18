@@ -5184,6 +5184,245 @@ theorem elHerbrandInterpUniversal_satisfies_compatible_rbox
   intro ax hax
   exact elHerbrandInterpUniversal_satisfies_RAxiom O Q ax (hCompat ax hax)
 
+-- ============================================================
+-- §UNIVERSAL-ROLE VACUITY PREDICATES.  Concept shapes whose
+-- evaluation under `elHerbrandInterpUniversal` reduces to a
+-- fixed `True`/`False` value (modulo derivability through inner
+-- atom subterms).  These are the LHS/RHS classifications that
+-- justify the corresponding `IsELOrUniversalRoleVacuousOnly`
+-- slice.
+-- ============================================================
+
+mutual
+/-- Concept shapes that always evaluate to `False` under the
+    universal-role Unit Herbrand.  Mutually recursive with
+    `HerbrandTrueRHS_universal` because `neg` flips polarity. -/
+def HerbrandFalseLHS_universal : ALCHOQ.Concept → Prop
+  | .bot                       => True
+  | .atLeast (n + 2) _ _       => True   -- can't fit n+2 distinct elts in Unit
+  | .conj C₁ C₂                =>
+      HerbrandFalseLHS_universal C₁ ∨ HerbrandFalseLHS_universal C₂
+  | .disj C₁ C₂                =>
+      HerbrandFalseLHS_universal C₁ ∧ HerbrandFalseLHS_universal C₂
+  | .neg C                     => HerbrandTrueRHS_universal C
+  | .exist _ C                 => HerbrandFalseLHS_universal C
+  | .univ _ C                  => HerbrandFalseLHS_universal C
+  | .atLeast 1 _ C             => HerbrandFalseLHS_universal C
+  | .atMost 0 _ C              => HerbrandTrueRHS_universal C
+  | _                          => False
+
+/-- Concept shapes that always evaluate to `True` under the
+    universal-role Unit Herbrand.  Mutually recursive with
+    `HerbrandFalseLHS_universal`. -/
+def HerbrandTrueRHS_universal : ALCHOQ.Concept → Prop
+  | .top                       => True
+  | .nom _                     => True
+  | .hasSelf _                 => True
+  | .atLeast 0 _ _             => True
+  | .atMost (_ + 1) _ _        => True
+  | .conj D₁ D₂                =>
+      HerbrandTrueRHS_universal D₁ ∧ HerbrandTrueRHS_universal D₂
+  | .disj D₁ D₂                =>
+      HerbrandTrueRHS_universal D₁ ∨ HerbrandTrueRHS_universal D₂
+  | .neg D                     => HerbrandFalseLHS_universal D
+  | .exist _ D                 => HerbrandTrueRHS_universal D
+  | .univ _ D                  => HerbrandTrueRHS_universal D
+  | .atLeast 1 _ D             => HerbrandTrueRHS_universal D
+  | .atMost 0 _ D              => HerbrandFalseLHS_universal D
+  | _                          => False
+end
+
+/-- Helper: the only element of `Unit` is `()`. -/
+private theorem Unit.eq_unit (x : Unit) : x = () := by cases x; rfl
+
+/-- Helper: `atLeastCard S (n+2)` on `Unit` is `False`, because two
+    distinct witnesses can never both have type `Unit`. -/
+private theorem atLeastCard_unit_two_false
+    (S : Unit → Prop) (n : Nat) : ¬ Interp.atLeastCard S (n + 2) := by
+  intro h
+  -- atLeastCard S (n+2) = ∃ x, S x ∧ atLeastCard (fun y => S y ∧ y ≠ x) (n+1)
+  show False
+  obtain ⟨x, _, hRest⟩ := h
+  -- atLeastCard (fun y => S y ∧ y ≠ x) (n+1) = ∃ y, (S y ∧ y ≠ x) ∧ ...
+  obtain ⟨y, ⟨_, hYNE⟩, _⟩ := hRest
+  exact hYNE (by cases x; cases y; rfl)
+
+/-- Helper: `atLeastCard S 1 ↔ S ()` on Unit. -/
+private theorem atLeastCard_unit_one_iff
+    (S : Unit → Prop) : Interp.atLeastCard S 1 ↔ S () := by
+  show (∃ x : Unit, S x ∧ Interp.atLeastCard
+        (fun y => S y ∧ y ≠ x) 0) ↔ _
+  constructor
+  · rintro ⟨x, hSx, _⟩
+    cases x; exact hSx
+  · intro h
+    refine ⟨(), h, ?_⟩
+    show True; trivial
+
+/-- **Combined Herbrand-vacuity correctness lemma** for the
+    universal-role Herbrand.  Proven by simultaneous structural
+    induction on the concept because `neg` swaps the two judgements. -/
+theorem elHerbrandInterpUniversal_falseLHS_trueRHS_aux
+    (O : Ontology) (Q : QueryClause) (C : ALCHOQ.Concept) :
+    (HerbrandFalseLHS_universal C →
+       ∀ x, ¬ (elHerbrandInterpUniversal O Q).eval C x) ∧
+    (HerbrandTrueRHS_universal C →
+       ∀ x, (elHerbrandInterpUniversal O Q).eval C x) := by
+  induction C with
+  | atom A => exact ⟨fun h => h.elim, fun h => h.elim⟩
+  | top    =>
+      refine ⟨?_, ?_⟩
+      · intro h; exact h.elim
+      · intro _ _; exact trivial
+  | bot    =>
+      refine ⟨?_, ?_⟩
+      · intro _ _; exact fun h => h
+      · intro h; exact h.elim
+  | nom i  =>
+      refine ⟨?_, ?_⟩
+      · intro h; exact h.elim
+      · intro _ x
+        show x = (elHerbrandInterpUniversal O Q).ext_ind i
+        cases x; rfl
+  | neg C ih =>
+      refine ⟨?_, ?_⟩
+      · intro hF x hxNeg
+        -- hF : HerbrandFalseLHS_universal (neg C) = HerbrandTrueRHS_universal C
+        -- hxNeg : ¬ eval C x
+        have hEval : (elHerbrandInterpUniversal O Q).eval C x := ih.2 hF x
+        exact hxNeg hEval
+      · intro hT x
+        -- hT : HerbrandTrueRHS_universal (neg C) = HerbrandFalseLHS_universal C
+        intro hEval
+        exact ih.1 hT x hEval
+  | conj C₁ C₂ ih₁ ih₂ =>
+      refine ⟨?_, ?_⟩
+      · intro hF x hC
+        rcases hF with h | h
+        · exact ih₁.1 h x hC.1
+        · exact ih₂.1 h x hC.2
+      · intro hT x
+        exact ⟨ih₁.2 hT.1 x, ih₂.2 hT.2 x⟩
+  | disj C₁ C₂ ih₁ ih₂ =>
+      refine ⟨?_, ?_⟩
+      · intro hF x hC
+        rcases hC with h | h
+        · exact ih₁.1 hF.1 x h
+        · exact ih₂.1 hF.2 x h
+      · intro hT x
+        rcases hT with h | h
+        · exact Or.inl (ih₁.2 h x)
+        · exact Or.inr (ih₂.2 h x)
+  | exist R C ih =>
+      refine ⟨?_, ?_⟩
+      · intro hF x hxEx
+        obtain ⟨y, _, hCy⟩ := hxEx
+        exact ih.1 hF y hCy
+      · intro hT x
+        exact ⟨(), trivial, ih.2 hT ()⟩
+  | univ R C ih =>
+      refine ⟨?_, ?_⟩
+      · intro hF x hxUn
+        have : (elHerbrandInterpUniversal O Q).eval C () :=
+          hxUn () trivial
+        exact ih.1 hF () this
+      · intro hT x y _
+        exact ih.2 hT y
+  | atLeast n R C ih =>
+      refine ⟨?_, ?_⟩
+      · -- HerbrandFalseLHS for atLeast:
+        --   n = 0          → False  (so vacuous)
+        --   n = 1          → HerbrandFalseLHS C
+        --   n = k+2        → True
+        match n with
+        | 0 => intro h _; exact h.elim
+        | 1 =>
+            intro hF x hAL
+            -- atLeast 1 R C at x = atLeastCard (R ∧ eval C) 1
+            -- under universal-role: ↔ eval C () (Lemma atLeastCard_unit_one_iff)
+            show False
+            have hCAt : (elHerbrandInterpUniversal O Q).eval C () := by
+              have : Interp.atLeastCard
+                  (fun y => True ∧
+                    (elHerbrandInterpUniversal O Q).eval C y) 1 := hAL
+              rcases (atLeastCard_unit_one_iff
+                (fun y => True ∧
+                  (elHerbrandInterpUniversal O Q).eval C y)).mp this
+                with ⟨_, hC⟩
+              exact hC
+            exact ih.1 hF () hCAt
+        | k + 2 =>
+            intro _ x hAL
+            exact atLeastCard_unit_two_false _ k hAL
+      · -- HerbrandTrueRHS for atLeast:
+        --   n = 0          → True
+        --   otherwise      → False  (not in the predicate by default)
+        match n with
+        | 0 =>
+            intro _ x
+            show Interp.atLeastCard _ 0
+            trivial
+        | 1 =>
+            intro hT x
+            -- HerbrandTrueRHS_universal (atLeast 1 R C) = HerbrandTrueRHS_universal C
+            show Interp.atLeastCard
+              (fun y => True ∧
+                (elHerbrandInterpUniversal O Q).eval C y) 1
+            rw [atLeastCard_unit_one_iff]
+            exact ⟨trivial, ih.2 hT ()⟩
+        | k + 2 =>
+            intro h _; exact h.elim
+  | atMost n R C ih =>
+      refine ⟨?_, ?_⟩
+      · -- HerbrandFalseLHS for atMost:
+        --   n = 0          → HerbrandTrueRHS_universal C
+        --   otherwise      → False
+        match n with
+        | 0 =>
+            intro hF x hAM
+            -- atMost 0 R C at x = ¬ atLeastCard (R∧eval C) 1
+            -- Want a contradiction.  Build atLeastCard 1.
+            show False
+            apply hAM
+            rw [atLeastCard_unit_one_iff]
+            exact ⟨trivial, ih.2 hF ()⟩
+        | _ + 1 => intro h _; exact h.elim
+      · -- HerbrandTrueRHS for atMost:
+        --   n = 0          → HerbrandFalseLHS_universal C
+        --   otherwise      → True
+        match n with
+        | 0 =>
+            intro hT x
+            -- atMost 0 R C at x = ¬ atLeastCard 1
+            intro hAL
+            rw [atLeastCard_unit_one_iff] at hAL
+            obtain ⟨_, hC⟩ := hAL
+            exact ih.1 hT () hC
+        | k + 1 =>
+            intro _ x hAL
+            -- atMost (k+1) R C at x = ¬ atLeastCard (k+2)
+            exact atLeastCard_unit_two_false _ k hAL
+  | hasSelf R =>
+      refine ⟨?_, ?_⟩
+      · intro h; exact h.elim
+      · intro _ x
+        show (elHerbrandInterpUniversal O Q).ext_role R x x
+        trivial
+
+/-- Projection: `HerbrandFalseLHS_universal C` falsifies eval. -/
+theorem elHerbrandInterpUniversal_falsifies
+    (O : Ontology) (Q : QueryClause) (C : ALCHOQ.Concept)
+    (hC : HerbrandFalseLHS_universal C) (x : Unit) :
+    ¬ (elHerbrandInterpUniversal O Q).eval C x :=
+  (elHerbrandInterpUniversal_falseLHS_trueRHS_aux O Q C).1 hC x
+
+/-- Projection: `HerbrandTrueRHS_universal D` trivialises eval. -/
+theorem elHerbrandInterpUniversal_trivialises
+    (O : Ontology) (Q : QueryClause) (D : ALCHOQ.Concept)
+    (hD : HerbrandTrueRHS_universal D) (x : Unit) :
+    (elHerbrandInterpUniversal O Q).eval D x :=
+  (elHerbrandInterpUniversal_falseLHS_trueRHS_aux O Q D).2 hD x
+
 /-- **The EL Herbrand model satisfies O under the unsubsumed-Q
     assumption.**  This is the "satisfies O" content of
     `herbrandPropertyAtomConjDisj_ELOrVacuous` factored out as a

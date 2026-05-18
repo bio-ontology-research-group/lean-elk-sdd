@@ -739,4 +739,18 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpUniversal_satisfies_RAxiom
 #print axioms ALCHOIQContext.elHerbrandInterpUniversal_satisfies_compatible_rbox
 
+-- ============================================================
+-- §UNIVERSAL-ROLE VACUITY PREDICATES.  Mutually recursive
+-- HerbrandFalseLHS_universal / HerbrandTrueRHS_universal that
+-- classify which SROIQ concept shapes evaluate to a fixed
+-- True/False under the universal-role Unit Herbrand.  These
+-- enlarge the slice with hasSelf R, ∃R.⊤, ≥0 R.C, ≤(n+1) R.C,
+-- etc., including their recursive conj/disj/neg combinations.
+-- ============================================================
+#print axioms ALCHOIQContext.HerbrandFalseLHS_universal
+#print axioms ALCHOIQContext.HerbrandTrueRHS_universal
+#print axioms ALCHOIQContext.elHerbrandInterpUniversal_falseLHS_trueRHS_aux
+#print axioms ALCHOIQContext.elHerbrandInterpUniversal_falsifies
+#print axioms ALCHOIQContext.elHerbrandInterpUniversal_trivialises
+
 end ELKSDD
