@@ -9840,6 +9840,35 @@ theorem isELOrUniversalRoleVacuousOnly_cons_disj_atom
   · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨A₁, A₂, B, rfl⟩))))
   · exact hTail ax hMem
 
+/-- **Universal-vacuous-LHS cons-builder**: any axiom whose LHS
+    satisfies `HerbrandFalseLHS_universal` extends an
+    `IsELOrUniversalRoleVacuousOnly` tail (LHS-vacuous catch-all
+    for the universal-role family). -/
+theorem isELOrUniversalRoleVacuousOnly_cons_falseLHS_universal
+    {C D : ALCHOQ.Concept} {O : Ontology}
+    (hLHS : HerbrandFalseLHS_universal C)
+    (hTail : IsELOrUniversalRoleVacuousOnly O) :
+    IsELOrUniversalRoleVacuousOnly ((C, D) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · right; right; right; right; right; right; right; right; right; right; left
+    exact hLHS
+  · exact hTail ax hMem
+
+/-- **Universal-vacuous-RHS cons-builder**: any axiom whose RHS
+    satisfies `HerbrandTrueRHS_universal` extends an
+    `IsELOrUniversalRoleVacuousOnly` tail. -/
+theorem isELOrUniversalRoleVacuousOnly_cons_trueRHS_universal
+    {C D : ALCHOQ.Concept} {O : Ontology}
+    (hRHS : HerbrandTrueRHS_universal D)
+    (hTail : IsELOrUniversalRoleVacuousOnly O) :
+    IsELOrUniversalRoleVacuousOnly ((C, D) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · right; right; right; right; right; right; right; right; right; right; right
+    exact hRHS
+  · exact hTail ax hMem
+
 -- ============================================================
 -- §CONCRETE NON-TRIVIAL WORKED EXAMPLES.   To show the slice
 -- machinery composes on real input, we exhibit explicit
