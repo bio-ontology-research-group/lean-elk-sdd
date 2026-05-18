@@ -2476,13 +2476,43 @@ theorem canonicalSeedOver_subsumes_reflexive_tautology
       subsumes c { body := (atomSubsumptionQuery A A).Gamma
                  , head := (atomSubsumptionQuery A A).Delta } := by
   refine ⟨reflexiveClause A, ?_, reflexiveClause_subsumes_tautology A⟩
-  -- reflexiveClause A ∈ S(0) of canonicalSeedOver
   show reflexiveClause A ∈
     (if (0 : CtxId) = 0 then
        ontologyToClauses O ++ sig.map reflexiveClause
      else [])
   rw [if_pos rfl]
   exact List.mem_append.mpr (Or.inr (List.mem_map.mpr ⟨A, hA, rfl⟩))
+
+-- ============================================================
+-- §FINAL-REFINED-IS-CANONICAL.  The refined IsCanonicalSeed with
+-- signature-restricted HerbrandProperty.
+-- ============================================================
+
+/-- **Q references only concepts in the signature `sig`.** -/
+def QueryReferencesSignature (sig : List Nat) (Q : QueryClause) : Prop :=
+  (∀ A t, BLit.atomTrue (PTerm.atom A t) ∈ Q.Gamma → A ∈ sig) ∧
+  (∀ A t, CLit.atomTrue (PTerm.atom A t) ∈ Q.Delta → A ∈ sig)
+
+/-- **Signature-restricted HerbrandProperty.**  Quantifies only
+    over `Q` referencing concepts in `sig`. -/
+def HerbrandPropertyOver (sig : List Nat) (O : Ontology)
+    (D_seed : ContextStructure) : Prop :=
+  ∀ (D : ContextStructure),
+    FullDerivation D_seed D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      QueryReferencesSignature sig Q →
+      (∀ c ∈ D.S D.vr,
+         ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+      ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+        (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+        I.satisfies O ∧ ¬ Q.eval I ⟨γ, φ, vx, vy⟩
+
+/-- **Refined `IsCanonicalSeed`**: parameterised by a finite signature. -/
+def IsCanonicalSeedOver (sig : List Nat) (O : Ontology)
+    (D_seed : ContextStructure) : Prop :=
+  D_seed.vr ∈ D_seed.contexts ∧
+  (∃ CD : DerivedClauses, isSound O D_seed CD) ∧
+  HerbrandPropertyOver sig O D_seed
 
 end ALCHOIQContext
 end ELKSDD

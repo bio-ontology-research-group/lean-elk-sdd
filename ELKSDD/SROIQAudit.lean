@@ -540,5 +540,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.canonicalSeedOver_sound
 #print axioms ALCHOIQContext.reflexiveClause_subsumes_tautology
 #print axioms ALCHOIQContext.canonicalSeedOver_subsumes_reflexive_tautology
+#print axioms ALCHOIQContext.QueryReferencesSignature
+#print axioms ALCHOIQContext.HerbrandPropertyOver
+#print axioms ALCHOIQContext.IsCanonicalSeedOver
 
 end ELKSDD
