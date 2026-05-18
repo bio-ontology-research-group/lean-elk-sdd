@@ -5242,7 +5242,97 @@ theorem elHerbrandInterpUniversal_head_fails
       apply hEval; rfl
 
 -- ============================================================
--- §UNIVERSAL-ROLE VACUITY PREDICATES.  Concept shapes whose
+-- §TWO-POINT TREE HERBRAND.  First concrete §6.3.4 construction
+-- piece: a Herbrand domain with `root` and a single `child`
+-- successor, with a non-self-loop role edge from root to child.
+-- This lets axioms of shape `(atom A, ∃R.B)` get a *successor*
+-- witness for `B` rather than collapsing onto the same point.
+--
+-- At root, atom-derivability is the standard `ConceptDerivableEL`.
+-- At child, atoms are derivable from the "exist-RHS triggers"
+-- set { B | ∃ A R, A derivable ∧ (atom A, ∃R.(atom B)) ∈ O },
+-- closed under the EL closure rules.
+-- ============================================================
+
+/-- Two-point Herbrand domain. -/
+inductive TwoPoint : Type
+  | root  : TwoPoint
+  | child : TwoPoint
+  deriving DecidableEq
+
+/-- Trigger atoms: atoms forced at the child point by some
+    `(atom A, ∃R.(atom B)) ∈ O` whose LHS is derivable at root. -/
+def childTriggerAtoms (O : Ontology) (initial : Nat → Prop) : Nat → Prop :=
+  fun B => ∃ A R : Nat, ConceptDerivableEL O initial A ∧
+                         (ALCHOQ.Concept.atom A,
+                          ALCHOQ.Concept.exist R
+                            (ALCHOQ.Concept.atom B)) ∈ O
+
+/-- Two-point Herbrand interpretation.   Concept extension is
+    point-dependent: root tracks `ConceptDerivableEL` from the
+    query's initial atoms; child tracks the EL closure of the
+    trigger atoms above. -/
+def elHerbrandInterp2Point (O : Ontology) (Q : QueryClause) :
+    Interp TwoPoint where
+  ext_concept B p :=
+    match p with
+    | TwoPoint.root  =>
+        ConceptDerivableEL O (queryBodyAtomConcepts Q) B
+    | TwoPoint.child =>
+        ConceptDerivableEL O
+          (childTriggerAtoms O (queryBodyAtomConcepts Q)) B
+  ext_role _ x y :=
+    match x, y with
+    | TwoPoint.root,  TwoPoint.child => True
+    | _,              _              => False
+  ext_ind _ := TwoPoint.root
+
+/-- Single edge: `R(root, child)` holds for every role. -/
+theorem elHerbrandInterp2Point_role_root_child
+    (O : Ontology) (Q : QueryClause) (R : Nat) :
+    (elHerbrandInterp2Point O Q).ext_role R TwoPoint.root TwoPoint.child := by
+  trivial
+
+/-- No edge: `R(root, root)`. -/
+theorem elHerbrandInterp2Point_no_root_self
+    (O : Ontology) (Q : QueryClause) (R : Nat) :
+    ¬ (elHerbrandInterp2Point O Q).ext_role R TwoPoint.root TwoPoint.root := by
+  intro h; exact h
+
+/-- No edge: `R(child, _)`. -/
+theorem elHerbrandInterp2Point_no_child_out
+    (O : Ontology) (Q : QueryClause) (R : Nat) (y : TwoPoint) :
+    ¬ (elHerbrandInterp2Point O Q).ext_role R TwoPoint.child y := by
+  intro h
+  cases y <;> exact h
+
+/-- **Root-satisfaction**: every axiom `(atom A, ∃R.(atom B)) ∈ O`
+    is *satisfied at the root point* of the two-point Herbrand.
+    Witness: the unique `R(root, child)` edge; `B` holds at child
+    because A is derivable (so triggers `B` via
+    `childTriggerAtoms`) and `ConceptDerivableEL.base` promotes it
+    to the child's extension.
+
+    Note: the 2-point model only certifies root-satisfaction; full
+    `satisfies O` requires also satisfying the axiom at child,
+    which needs another successor — the §6.3.4 tree recursion. -/
+theorem elHerbrandInterp2Point_root_sat_atom_exist_atom
+    (O : Ontology) (Q : QueryClause)
+    (A R B : Nat)
+    (hAx : (ALCHOQ.Concept.atom A,
+            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) ∈ O)
+    (hA : (elHerbrandInterp2Point O Q).eval
+            (ALCHOQ.Concept.atom A) TwoPoint.root) :
+    (elHerbrandInterp2Point O Q).eval
+      (ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) TwoPoint.root := by
+  refine ⟨TwoPoint.child, ?_, ?_⟩
+  · -- R(root, child) holds by definition
+    show True
+    trivial
+  · -- B at child = ConceptDerivableEL O (childTriggerAtoms ...) B
+    have hTrig : childTriggerAtoms O (queryBodyAtomConcepts Q) B :=
+      ⟨A, R, hA, hAx⟩
+    exact ConceptDerivableEL.base hTrig
 -- evaluation under `elHerbrandInterpUniversal` reduces to a
 -- fixed `True`/`False` value (modulo derivability through inner
 -- atom subterms).  These are the LHS/RHS classifications that

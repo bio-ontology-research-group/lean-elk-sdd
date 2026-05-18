@@ -775,4 +775,20 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.InUnifiedSlice
 #print axioms ALCHOIQContext.theorem2_unified_two_slices
 
+-- ============================================================
+-- §TWO-POINT TREE HERBRAND.  First concrete §6.3.4 piece: a
+-- Herbrand interpretation with two domain points (root + child)
+-- and a non-self-loop role edge from root to child.  Justifies
+-- *root-satisfaction* of `(atom A, ∃R.(atom B))` axioms — child
+-- atoms come from a "trigger" set seeded by derivable atoms at
+-- root.  Full multi-level recursion remains for the §6.3.4 tree.
+-- ============================================================
+#print axioms ALCHOIQContext.TwoPoint
+#print axioms ALCHOIQContext.childTriggerAtoms
+#print axioms ALCHOIQContext.elHerbrandInterp2Point
+#print axioms ALCHOIQContext.elHerbrandInterp2Point_role_root_child
+#print axioms ALCHOIQContext.elHerbrandInterp2Point_no_root_self
+#print axioms ALCHOIQContext.elHerbrandInterp2Point_no_child_out
+#print axioms ALCHOIQContext.elHerbrandInterp2Point_root_sat_atom_exist_atom
+
 end ELKSDD
