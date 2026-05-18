@@ -5054,6 +5054,136 @@ theorem elHerbrandInterp_satisfies_emptyRBox
     SROIQ.RBox.eval (elHerbrandInterp O Q) ([] : SROIQ.RBox) :=
   elHerbrandInterp_satisfies_compatible_rbox O Q [] emptyRBox_compatible
 
+-- ============================================================
+-- §UNIVERSAL-ROLE HERBRAND.  First concrete step toward the
+-- §6.3.4 tree-model construction.  Same Unit domain as
+-- `elHerbrandInterp`, but with `ext_role R x y := True` for every
+-- role.  This makes role-existentials at the universal point
+-- vacuously satisfiable: ∃R.⊤ at x = True, hasSelf R at x = True.
+-- The trade-off is that asymmetric / irreflexive / role-disjoint
+-- axioms become *unsatisfiable* on `Unit`, so they are excluded
+-- from the matching RBox-compatibility predicate.
+-- ============================================================
+
+/-- **Universal-role EL Herbrand interpretation.**  Unit domain;
+    every role is full (`ext_role R x y := True`).  Concept extension
+    still tracks `ConceptDerivableEL`. -/
+def elHerbrandInterpUniversal (O : Ontology) (Q : QueryClause) :
+    Interp Unit where
+  ext_concept B _ := ConceptDerivableEL O (queryBodyAtomConcepts Q) B
+  ext_role _ _ _  := True
+  ext_ind _       := ()
+
+/-- **Self-loop**: every role holds self-loops in the universal-role
+    Herbrand. -/
+theorem elHerbrandInterpUniversal_hasSelf
+    (O : Ontology) (Q : QueryClause) (R : Nat) (x : Unit) :
+    (elHerbrandInterpUniversal O Q).eval (.hasSelf R) x := by
+  show (elHerbrandInterpUniversal O Q).ext_role R x x
+  trivial
+
+/-- **`∃R.⊤` holds everywhere** in the universal-role Herbrand. -/
+theorem elHerbrandInterpUniversal_exist_top
+    (O : Ontology) (Q : QueryClause) (R : Nat) (x : Unit) :
+    (elHerbrandInterpUniversal O Q).eval
+      (.exist R ALCHOQ.Concept.top) x := by
+  exact ⟨(), trivial, trivial⟩
+
+/-- **`atLeast 0 R C` holds everywhere** (trivially: the cardinality
+    predicate's zero base case is `True`). -/
+theorem elHerbrandInterpUniversal_atLeast_zero
+    (O : Ontology) (Q : QueryClause) (R : Nat) (C : ALCHOQ.Concept)
+    (x : Unit) :
+    (elHerbrandInterpUniversal O Q).eval (.atLeast 0 R C) x := by
+  show Interp.atLeastCard
+        (fun y => True ∧ (elHerbrandInterpUniversal O Q).eval C y) 0
+  trivial
+
+/-- **Refl-role axiom** holds in the universal-role Herbrand. -/
+theorem elHerbrandInterpUniversal_satisfies_refl
+    (O : Ontology) (Q : QueryClause) (R : Nat) :
+    (SROIQ.RAxiom.refl R).eval (elHerbrandInterpUniversal O Q) := by
+  intro _; trivial
+
+/-- **Sym-role axiom** holds in the universal-role Herbrand. -/
+theorem elHerbrandInterpUniversal_satisfies_sym
+    (O : Ontology) (Q : QueryClause) (R : Nat) :
+    (SROIQ.RAxiom.sym R).eval (elHerbrandInterpUniversal O Q) := by
+  intro _ _ _; trivial
+
+/-- **Trans-role axiom** holds in the universal-role Herbrand. -/
+theorem elHerbrandInterpUniversal_satisfies_trans
+    (O : Ontology) (Q : QueryClause) (R : Nat) :
+    (SROIQ.RAxiom.trans R).eval (elHerbrandInterpUniversal O Q) := by
+  intro _ _ _ _ _; trivial
+
+/-- **Inclusion-role axiom** holds in the universal-role Herbrand. -/
+theorem elHerbrandInterpUniversal_satisfies_incl
+    (O : Ontology) (Q : QueryClause) (R S : Nat) :
+    (SROIQ.RAxiom.incl R S).eval (elHerbrandInterpUniversal O Q) := by
+  intro _ _ _; trivial
+
+/-- **Inverse-role axiom** holds in the universal-role Herbrand. -/
+theorem elHerbrandInterpUniversal_satisfies_inv
+    (O : Ontology) (Q : QueryClause) (R S : Nat) :
+    (SROIQ.RAxiom.inv R S).eval (elHerbrandInterpUniversal O Q) := by
+  intro _ _
+  exact ⟨fun _ => trivial, fun _ => trivial⟩
+
+/-- **A chain `r :: rs` of any length holds along universal roles** — by
+    chaining self-loops at the single domain element. -/
+theorem elHerbrandInterpUniversal_satisfies_chain
+    (O : Ontology) (Q : QueryClause) (rs : List Nat) (S : Nat) :
+    (SROIQ.RAxiom.chain rs S).eval (elHerbrandInterpUniversal O Q) := by
+  intro _ _ _; trivial
+
+/-- **RAxiom compatibility under universal-role Herbrand**: an RBox
+    axiom is satisfiable on the Unit + universal-role model iff its
+    shape does not force `False` everywhere.  Concretely: every shape
+    *except* `asym`, `irrefl`, and `disj` is compatible. -/
+def RAxiomCompatibleWithUniversalRoles (ax : SROIQ.RAxiom) : Prop :=
+  match ax with
+  | .asym _    => False
+  | .irrefl _  => False
+  | .disj _ _  => False
+  | _          => True
+
+/-- **RBox compatibility (universal-role Herbrand).** -/
+def RBoxCompatibleWithUniversalRoles (rbox : SROIQ.RBox) : Prop :=
+  ∀ ax ∈ rbox, RAxiomCompatibleWithUniversalRoles ax
+
+/-- **The empty RBox is compatible (universal-role).** -/
+theorem emptyRBox_compatibleUniversal :
+    RBoxCompatibleWithUniversalRoles ([] : SROIQ.RBox) := by
+  intro ax hax
+  exact absurd hax List.not_mem_nil
+
+/-- **`elHerbrandInterpUniversal` satisfies every compatible RAxiom.** -/
+theorem elHerbrandInterpUniversal_satisfies_RAxiom
+    (O : Ontology) (Q : QueryClause)
+    (ax : SROIQ.RAxiom)
+    (hCompat : RAxiomCompatibleWithUniversalRoles ax) :
+    ax.eval (elHerbrandInterpUniversal O Q) := by
+  cases ax with
+  | incl R S    => exact elHerbrandInterpUniversal_satisfies_incl O Q R S
+  | chain rs S  => exact elHerbrandInterpUniversal_satisfies_chain O Q rs S
+  | trans R     => exact elHerbrandInterpUniversal_satisfies_trans O Q R
+  | sym R       => exact elHerbrandInterpUniversal_satisfies_sym O Q R
+  | asym R      => exact absurd hCompat (fun h => h)
+  | refl R      => exact elHerbrandInterpUniversal_satisfies_refl O Q R
+  | irrefl R    => exact absurd hCompat (fun h => h)
+  | inv R S     => exact elHerbrandInterpUniversal_satisfies_inv O Q R S
+  | disj R S    => exact absurd hCompat (fun h => h)
+
+/-- **`elHerbrandInterpUniversal` satisfies any compatible RBox.** -/
+theorem elHerbrandInterpUniversal_satisfies_compatible_rbox
+    (O : Ontology) (Q : QueryClause)
+    (rbox : SROIQ.RBox)
+    (hCompat : RBoxCompatibleWithUniversalRoles rbox) :
+    SROIQ.RBox.eval (elHerbrandInterpUniversal O Q) rbox := by
+  intro ax hax
+  exact elHerbrandInterpUniversal_satisfies_RAxiom O Q ax (hCompat ax hax)
+
 /-- **The EL Herbrand model satisfies O under the unsubsumed-Q
     assumption.**  This is the "satisfies O" content of
     `herbrandPropertyAtomConjDisj_ELOrVacuous` factored out as a

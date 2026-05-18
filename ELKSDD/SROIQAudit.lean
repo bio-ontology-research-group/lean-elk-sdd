@@ -724,4 +724,19 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.ConjMember.eval_proj
 #print axioms ALCHOIQContext.isConjOfAtoms_eval_helper
 
+-- ============================================================
+-- §UNIVERSAL-ROLE HERBRAND.  First concrete step toward the
+-- §6.3.4 tree-model construction: Unit + every role universal.
+-- Supports ∃R.⊤, hasSelf R, atLeast 0 R C as RHS shapes; the
+-- compatible RBox excludes asym/irrefl/disj instead of all roles.
+-- ============================================================
+#print axioms ALCHOIQContext.elHerbrandInterpUniversal
+#print axioms ALCHOIQContext.elHerbrandInterpUniversal_hasSelf
+#print axioms ALCHOIQContext.elHerbrandInterpUniversal_exist_top
+#print axioms ALCHOIQContext.elHerbrandInterpUniversal_atLeast_zero
+#print axioms ALCHOIQContext.RAxiomCompatibleWithUniversalRoles
+#print axioms ALCHOIQContext.RBoxCompatibleWithUniversalRoles
+#print axioms ALCHOIQContext.elHerbrandInterpUniversal_satisfies_RAxiom
+#print axioms ALCHOIQContext.elHerbrandInterpUniversal_satisfies_compatible_rbox
+
 end ELKSDD
