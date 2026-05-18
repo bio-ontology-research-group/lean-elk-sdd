@@ -9663,6 +9663,52 @@ theorem isCanonicalSeed_canonicalSeedOfFull_partial_isELOrUniversalRoleVacuousOn
   isCanonicalSeed_canonicalSeedOfFull_partial O rbox
     (inUnifiedSlice_of_isELOrUniversalRoleVacuousOnly O rbox hO hRBox)
 
+/-- **Second example ontology** exercising the ELConj cons-builders:
+    `atom 0 ⊑ atom 1`, `atom 1 ⊓ atom 2 ⊑ atom 3`, `atom 3 ⊑ ⊥`.
+    Encodes an atom-atom subsumption, a conjunction subsumption, and
+    an unsatisfiability constraint. -/
+def exampleELConj : Ontology :=
+  [(ALCHOQ.Concept.atom 0, ALCHOQ.Concept.atom 1),
+   (ALCHOQ.Concept.conj (ALCHOQ.Concept.atom 1) (ALCHOQ.Concept.atom 2),
+    ALCHOQ.Concept.atom 3),
+   (ALCHOQ.Concept.atom 3, ALCHOQ.Concept.bot)]
+
+/-- The second example is ELConj-only.   Assembled modularly via
+    the ontology cons-builders. -/
+theorem exampleELConj_isELConjOnly : IsELConjOnly exampleELConj :=
+  isELConjOnly_cons_atom
+    (isELConjOnly_cons_conjAtom
+      (isELConjOnly_cons_bot isELConjOnly_nil))
+
+/-- The second example pairs trivially with the empty RBox. -/
+theorem exampleELConj_in_unifiedSlice_emptyRBox :
+    InUnifiedSlice exampleELConj ([] : SROIQ.RBox) :=
+  inUnifiedSlice_of_isELConjOnly_emptyRBox exampleELConj
+    exampleELConj_isELConjOnly
+
+/-- **Partial-IsCanonicalSeed instance** for `exampleELConj`,
+    hypothesis-free in the slice predicate via the empty-roles
+    branch. -/
+theorem isCanonicalSeed_canonicalSeedOfFull_partial_exampleELConj :
+    (canonicalSeedOfFull exampleELConj).vr ∈
+      (canonicalSeedOfFull exampleELConj).contexts ∧
+    (∃ CD : DerivedClauses,
+       isSound exampleELConj (canonicalSeedOfFull exampleELConj) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull exampleELConj) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig exampleELConj) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies exampleELConj ∧
+          SROIQ.RBox.eval I ([] : SROIQ.RBox) ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  isCanonicalSeed_canonicalSeedOfFull_partial
+    exampleELConj [] exampleELConj_in_unifiedSlice_emptyRBox
+
 /-- **Worked example instance**: the partial-IsCanonicalSeed bundle
     for `exampleAtomChain` + `exampleTransInclRBox`, fully discharged
     via the universal-role family branch. -/
