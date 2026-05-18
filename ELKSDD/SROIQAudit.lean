@@ -791,4 +791,20 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterp2Point_no_child_out
 #print axioms ALCHOIQContext.elHerbrandInterp2Point_root_sat_atom_exist_atom
 
+-- ============================================================
+-- §RECURSIVE TREE HERBRAND.   The proper §6.3.4 structure:
+-- arbitrary-depth path-labelled tree whose internal nodes
+-- correspond to chains of existential-axiom firings.   Each
+-- successor remembers the introducing axiom (so role extension
+-- can recover R from the axiom's RHS), and concept extension
+-- recurses naturally.  Crucially: root-satisfaction generalises
+-- to *every* node of the tree by induction on the tree.
+-- ============================================================
+#print axioms ALCHOIQContext.HerbrandTree
+#print axioms ALCHOIQContext.axiomTriggersRoleAtom
+#print axioms ALCHOIQContext.triggerAtomsOfAxiom
+#print axioms ALCHOIQContext.treeNodeInitialAtoms
+#print axioms ALCHOIQContext.elHerbrandInterpTree
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_atom_exist_atom
+
 end ELKSDD

@@ -5333,6 +5333,107 @@ theorem elHerbrandInterp2Point_root_sat_atom_exist_atom
     have hTrig : childTriggerAtoms O (queryBodyAtomConcepts Q) B :=
       ⟨A, R, hA, hAx⟩
     exact ConceptDerivableEL.base hTrig
+
+-- ============================================================
+-- §RECURSIVE TREE HERBRAND.   Generalisation of the 2-point
+-- domain to arbitrary depth: a path-labelled tree whose leaves
+-- correspond to chains of existential-axiom firings.  Each
+-- internal node remembers which axiom of `O` introduced it.
+--
+-- Domain: `HerbrandTree O` — root, or successor of a parent
+-- node labelled by an axiom of `O` (using `Σ ax ∈ O`).  Role
+-- extension follows the tree structure.  Concept extension
+-- recurses on the path: at each node, atoms are derived from
+-- the trigger-set seeded by the parent's axiom RHS.
+-- ============================================================
+
+/-- Tree-shaped Herbrand domain over an ontology `O`.   `root`
+    is the universal point; `succ p ax hAx` is the unique
+    successor of `p` introduced by axiom `ax ∈ O`.
+
+    The membership proof `hAx : ax ∈ O` is carried so that the
+    role extension can decide whether two nodes are connected
+    by a particular role (by inspecting the axiom's RHS). -/
+inductive HerbrandTree (O : Ontology) : Type
+  | root : HerbrandTree O
+  | succ : HerbrandTree O → (ax : ALCHOQ.Axiom) → ax ∈ O → HerbrandTree O
+
+/-- Decide whether an axiom's RHS is `∃R.(atom B)` for the given
+    role `R` and atom `B`.   Returns `true` iff the axiom has
+    that exact shape; the LHS is unconstrained. -/
+def axiomTriggersRoleAtom : ALCHOQ.Axiom → Nat → Nat → Prop
+  | (_, ALCHOQ.Concept.exist R' (ALCHOQ.Concept.atom B')), R, B =>
+      R' = R ∧ B' = B
+  | _, _, _ => False
+
+/-- Atoms forced at a `succ p ax hAx` node.   These come from the
+    axiom's RHS shape `∃R.(atom B)`, contributing `B` as a trigger
+    atom; otherwise no contribution. -/
+def triggerAtomsOfAxiom : ALCHOQ.Axiom → Nat → Prop
+  | (_, ALCHOQ.Concept.exist _ (ALCHOQ.Concept.atom B)), B' => B' = B
+  | _, _ => False
+
+/-- Initial atoms at a tree node: at root, the query's body atoms;
+    at a successor, the trigger atoms from the introducing axiom. -/
+def treeNodeInitialAtoms
+    (Q : QueryClause) :
+    {O : Ontology} → HerbrandTree O → Nat → Prop
+  | _, HerbrandTree.root, B => queryBodyAtomConcepts Q B
+  | _, HerbrandTree.succ _ ax _, B => triggerAtomsOfAxiom ax B
+
+/-- **Tree-Herbrand interpretation.**   Concept extension at each
+    node is the EL closure of that node's initial atoms; role
+    extension is the parent-child relation labelled by an axiom
+    whose RHS produces the role. -/
+def elHerbrandInterpTree (O : Ontology) (Q : QueryClause) :
+    Interp (HerbrandTree O) where
+  ext_concept B p :=
+    ConceptDerivableEL O (treeNodeInitialAtoms Q p) B
+  ext_role R x y :=
+    match y with
+    | HerbrandTree.root => False
+    | HerbrandTree.succ p ax _ =>
+        x = p ∧ ∃ B : Nat, axiomTriggersRoleAtom ax R B
+  ext_ind _ := HerbrandTree.root
+
+/-- **Tree-Herbrand root-satisfaction for `(atom A, ∃R.(atom B))`
+    axioms.**   For any axiom of this shape that is in `O` and
+    whose LHS `atom A` evaluates true at a node `p` of the tree
+    (i.e. `A` is derivable from `p`'s initial-atom set), the
+    `∃R.(atom B)` evaluates true at `p` via the successor
+    `succ p (atom A, ∃R.(atom B)) hAx` introduced by exactly
+    this axiom. -/
+theorem elHerbrandInterpTree_sat_atom_exist_atom
+    (O : Ontology) (Q : QueryClause)
+    (A R B : Nat)
+    (hAx : (ALCHOQ.Concept.atom A,
+            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval (ALCHOQ.Concept.atom A) p →
+      (elHerbrandInterpTree O Q).eval
+        (ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) p := by
+  intro p _hA
+  refine ⟨HerbrandTree.succ p
+            (ALCHOQ.Concept.atom A,
+             ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) hAx,
+          ?_, ?_⟩
+  · -- ext_role at (p, succ p ax) reduces to `p = p ∧ ∃B', axiomTriggers...`
+    refine ⟨rfl, B, ?_, ?_⟩
+    · rfl
+    · rfl
+  · -- B at succ node: triggerAtomsOfAxiom of this axiom yields B
+    show ConceptDerivableEL O
+      (treeNodeInitialAtoms Q
+        (HerbrandTree.succ p
+          (ALCHOQ.Concept.atom A,
+           ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) hAx)) B
+    apply ConceptDerivableEL.base
+    show triggerAtomsOfAxiom (ALCHOQ.Concept.atom A,
+            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) B
+    rfl
+
+-- ============================================================
+-- §UNIVERSAL-ROLE VACUITY PREDICATES.  Concept shapes whose
 -- evaluation under `elHerbrandInterpUniversal` reduces to a
 -- fixed `True`/`False` value (modulo derivability through inner
 -- atom subterms).  These are the LHS/RHS classifications that
