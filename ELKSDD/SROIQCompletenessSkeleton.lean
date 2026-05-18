@@ -9493,6 +9493,45 @@ theorem isCanonicalSeed_canonicalSeedOfFull_partial_nil_nil :
   isCanonicalSeed_canonicalSeedOfFull_partial [] [] inUnifiedSlice_nil_nil
 
 -- ============================================================
+-- §RBOX BOTH-FAMILIES PREDICATE.   An RBox compatible with BOTH
+-- the empty-roles and universal-roles families lifts each
+-- maximal-slice branch independently; useful when the slice-
+-- eligible ontology family is itself the union.
+-- ============================================================
+
+/-- **`RBoxCompatibleWithBothFamilies`** — the intersection of the
+    empty-roles and universal-roles compatibility predicates. -/
+def RBoxCompatibleWithBothFamilies (rbox : SROIQ.RBox) : Prop :=
+  RBoxCompatibleWithEmptyRoles rbox ∧ RBoxCompatibleWithUniversalRoles rbox
+
+/-- **The empty RBox is compatible with both families.**   Single-
+    statement form of `emptyRBox_compatible` + `emptyRBox_compatibleUniversal`. -/
+theorem emptyRBox_compatibleBoth :
+    RBoxCompatibleWithBothFamilies ([] : SROIQ.RBox) :=
+  ⟨emptyRBox_compatible, emptyRBox_compatibleUniversal⟩
+
+/-- **Both-family compatibility projects to each family.** -/
+theorem rBoxCompatibleWithBothFamilies_empty
+    {rbox : SROIQ.RBox} (h : RBoxCompatibleWithBothFamilies rbox) :
+    RBoxCompatibleWithEmptyRoles rbox := h.1
+
+theorem rBoxCompatibleWithBothFamilies_universal
+    {rbox : SROIQ.RBox} (h : RBoxCompatibleWithBothFamilies rbox) :
+    RBoxCompatibleWithUniversalRoles rbox := h.2
+
+/-- **`InUnifiedSlice` constructor**: any slice-eligible ontology
+    paired with any RBox compatible with both families lives in
+    the unified slice via the matching branch. -/
+theorem inUnifiedSlice_of_sliceEligible_bothFamiliesRBox
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : SliceEligibleOntology O)
+    (hRBox : RBoxCompatibleWithBothFamilies rbox) :
+    InUnifiedSlice O rbox := by
+  rcases hO with hAll | hUni
+  · exact Or.inl ⟨hAll, hRBox.1⟩
+  · exact Or.inr ⟨hUni, hRBox.2⟩
+
+-- ============================================================
 -- §ONTOLOGY-SHAPE CONS-BUILDERS.   Cons-style builders for every
 -- slice-eligible ontology predicate, matching the RBox-compat
 -- cons-builders above.   Together they give a complete modular

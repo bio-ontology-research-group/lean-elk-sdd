@@ -1134,5 +1134,11 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.inUnifiedSlice_exists_of_sliceEligible
 #print axioms ALCHOIQContext.unconditionalSCExtensionGap_vacuous_on_slice
 #print axioms ALCHOIQContext.partial_isCanonicalSeed_of_sliceEligible
+-- §RBOX BOTH-FAMILIES
+#print axioms ALCHOIQContext.RBoxCompatibleWithBothFamilies
+#print axioms ALCHOIQContext.emptyRBox_compatibleBoth
+#print axioms ALCHOIQContext.rBoxCompatibleWithBothFamilies_empty
+#print axioms ALCHOIQContext.rBoxCompatibleWithBothFamilies_universal
+#print axioms ALCHOIQContext.inUnifiedSlice_of_sliceEligible_bothFamiliesRBox
 
 end ELKSDD
