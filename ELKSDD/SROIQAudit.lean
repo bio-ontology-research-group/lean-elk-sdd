@@ -426,4 +426,17 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.kbComplete_idempotent
 #print axioms ALCHOIQContext.kb_completion_for_trivialNeighbourhood
 
+-- ============================================================
+-- Item #6: Naming witnesses beyond `emptyNaming` (§6.3.3) — a
+-- concrete list-based naming construction that maps any chosen
+-- list of `ATerm.const u` terms to their nominals, with semantic
+-- justification via `reducesToNominal_const`.
+-- ============================================================
+#print axioms ALCHOIQContext.reducesToNominal_const
+#print axioms ALCHOIQContext.singletonNaming_const
+#print axioms ALCHOIQContext.listSingletonNamingCarrier
+#print axioms ALCHOIQContext.listSingletonNaming
+#print axioms ALCHOIQContext.listSingletonNaming_nonempty
+#print axioms ALCHOIQContext.nonempty_naming_exists
+
 end ELKSDD

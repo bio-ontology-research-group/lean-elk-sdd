@@ -473,6 +473,88 @@ theorem naming_witness_exists
     ∃ _ν : Naming O, True := naming_exists O
 
 -- ============================================================
+-- Item #6: Naming witnesses beyond `emptyNaming`.
+--
+-- The thesis §6.3.3 builds a *non-trivial* naming witness by
+-- accumulating `singletonNaming` applications for every Skolem term
+-- that is shown to be nominal-like.   The base infrastructure
+-- (`reducesToNominal`, `singletonNaming`) is already in place; we
+-- provide concrete witnesses below.
+-- ============================================================
+
+/-- **Constant terms reduce to themselves under any ontology.**  An
+    `ATerm.const u` term always evaluates to `γ u`, so trivially
+    `reducesToNominal O (.const u) u` for any `O`.   This is the
+    base case of any non-trivial naming construction. -/
+theorem reducesToNominal_const (O : Ontology) (u : Indu) :
+    reducesToNominal O (ATerm.const u) u := by
+  intro α I γ φ _hO vx vy
+  rfl
+
+/-- **Singleton naming for a constant term.**  Maps `ATerm.const u`
+    to the constant `u` for any ontology, with semantic justification
+    via `reducesToNominal_const`. -/
+def singletonNaming_const (O : Ontology) (u : Indu) : Naming O :=
+  singletonNaming O (ATerm.const u) u (reducesToNominal_const O u)
+
+/-- **Iterated singleton naming.**  For any list of constants `us`,
+    produce a naming that maps each `ATerm.const u` (u ∈ us) to its
+    matching nominal.   The base case is empty; non-empty cases
+    chain `singletonNaming` applications via a recursive carrier. -/
+def listSingletonNamingCarrier (us : List Indu) : ATerm → Option Indu
+  | ATerm.const u => if u ∈ us then some u else none
+  | _             => none
+
+/-- **The list-singleton naming.**  Maps each `ATerm.const u`
+    (with `u ∈ us`) to its matching nominal `u`.   All other
+    a-terms are unmapped.   Semantic justification reduces to
+    `reducesToNominal_const` per constant. -/
+def listSingletonNaming (O : Ontology) (us : List Indu) : Naming O where
+  carrier := listSingletonNamingCarrier us
+  reduces := by
+    intro s u h
+    cases s with
+    | x =>
+      -- carrier .x = none, so h is False.
+      exact absurd h (by intro h'; cases h')
+    | y => exact absurd h (by intro h'; cases h')
+    | fx _ => exact absurd h (by intro h'; cases h')
+    | const u' =>
+      -- listSingletonNamingCarrier (.const u') = if u' ∈ us then some u' else none
+      show reducesToNominal O (ATerm.const u') u
+      by_cases hu : u' ∈ us
+      · have : listSingletonNamingCarrier us (ATerm.const u') = some u' := by
+          show (if u' ∈ us then some u' else none) = some u'
+          rw [if_pos hu]
+        rw [this] at h
+        -- h : some u' = some u
+        have heq : u' = u := Option.some.inj h
+        rw [← heq]
+        exact reducesToNominal_const O u'
+      · have : listSingletonNamingCarrier us (ATerm.const u') = none := by
+          show (if u' ∈ us then some u' else none) = none
+          rw [if_neg hu]
+        rw [this] at h
+        exact absurd h (by intro h'; cases h')
+    | fconst _ _ => exact absurd h (by intro h'; cases h')
+
+/-- **Non-empty naming witness construction.**  For any non-empty
+    constant list `u :: us`, `listSingletonNaming` is non-empty
+    (maps `.const u` to `some u`). -/
+theorem listSingletonNaming_nonempty (O : Ontology) (u : Indu) (us : List Indu) :
+    (listSingletonNaming O (u :: us)).carrier (ATerm.const u) = some u := by
+  show listSingletonNamingCarrier (u :: us) (ATerm.const u) = some u
+  show (if u ∈ u :: us then some u else none) = some u
+  rw [if_pos (List.mem_cons.mpr (Or.inl rfl))]
+
+/-- **Concrete non-empty naming exists for any ontology.**  Goes
+    beyond `emptyNaming`: for any chosen constant `u`, there is a
+    naming that names `ATerm.const u` to `u`. -/
+theorem nonempty_naming_exists (O : Ontology) (u : Indu) :
+    ∃ ν : Naming O, ν.carrier (ATerm.const u) = some u :=
+  ⟨listSingletonNaming O [u], listSingletonNaming_nonempty O u []⟩
+
+-- ============================================================
 -- §6.3.4 — Composite confluence.
 -- ============================================================
 
