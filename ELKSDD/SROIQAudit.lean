@@ -1096,6 +1096,14 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isELConjOnly_cons_atom
 #print axioms ALCHOIQContext.isELConjOnly_cons_bot
 #print axioms ALCHOIQContext.isELConjOnly_cons_conjAtom
+-- §IsELOrVacuousOnly CONS-BUILDERS
+#print axioms ALCHOIQContext.isELOrVacuousOnly_nil
+#print axioms ALCHOIQContext.isELOrVacuousOnly_cons_atomAtom
+#print axioms ALCHOIQContext.isELOrVacuousOnly_cons_atomBot
+#print axioms ALCHOIQContext.isELOrVacuousOnly_cons_conjAtom
+#print axioms ALCHOIQContext.isELOrVacuousOnly_cons_existAtom
+#print axioms ALCHOIQContext.isELOrVacuousOnly_cons_atomUniv
+#print axioms ALCHOIQContext.isELOrVacuousOnly_cons_atomTop
 -- §MAXIMAL-SLICE CONS-BUILDERS (IsELOrAllVacuousOnly / IsELOrUniversalRoleVacuousOnly)
 #print axioms ALCHOIQContext.isELOrAllVacuousOnly_cons_atom_atom
 #print axioms ALCHOIQContext.isELOrAllVacuousOnly_cons_atom_bot

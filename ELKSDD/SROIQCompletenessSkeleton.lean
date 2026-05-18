@@ -9614,6 +9614,76 @@ theorem isELConjOnly_cons_conjAtom
   · exact Or.inr (Or.inr ⟨A₁, A₂, B, rfl⟩)
   · exact hTail ax hMem
 
+-- IsELOrVacuousOnly cons-builders (6 disjuncts)
+
+theorem isELOrVacuousOnly_nil :
+    IsELOrVacuousOnly ([] : Ontology) := by
+  intro ax hax
+  exact absurd hax List.not_mem_nil
+
+theorem isELOrVacuousOnly_cons_atomAtom
+    {A B : Nat} {O : Ontology}
+    (hTail : IsELOrVacuousOnly O) :
+    IsELOrVacuousOnly
+      ((ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inl ⟨A, B, rfl⟩
+  · exact hTail ax hMem
+
+theorem isELOrVacuousOnly_cons_atomBot
+    {A : Nat} {O : Ontology}
+    (hTail : IsELOrVacuousOnly O) :
+    IsELOrVacuousOnly
+      ((ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr (Or.inl ⟨A, rfl⟩)
+  · exact hTail ax hMem
+
+theorem isELOrVacuousOnly_cons_conjAtom
+    {A₁ A₂ B : Nat} {O : Ontology}
+    (hTail : IsELOrVacuousOnly O) :
+    IsELOrVacuousOnly
+      ((ALCHOQ.Concept.conj (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+        ALCHOQ.Concept.atom B) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr (Or.inr (Or.inl ⟨A₁, A₂, B, rfl⟩))
+  · exact hTail ax hMem
+
+theorem isELOrVacuousOnly_cons_existAtom
+    {R A B : Nat} {O : Ontology}
+    (hTail : IsELOrVacuousOnly O) :
+    IsELOrVacuousOnly
+      ((ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom A),
+        ALCHOQ.Concept.atom B) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr (Or.inr (Or.inr (Or.inl ⟨R, A, B, rfl⟩)))
+  · exact hTail ax hMem
+
+theorem isELOrVacuousOnly_cons_atomUniv
+    {A R B : Nat} {O : Ontology}
+    (hTail : IsELOrVacuousOnly O) :
+    IsELOrVacuousOnly
+      ((ALCHOQ.Concept.atom A,
+        ALCHOQ.Concept.univ R (ALCHOQ.Concept.atom B)) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨A, R, B, rfl⟩))))
+  · exact hTail ax hMem
+
+theorem isELOrVacuousOnly_cons_atomTop
+    {A : Nat} {O : Ontology}
+    (hTail : IsELOrVacuousOnly O) :
+    IsELOrVacuousOnly
+      ((ALCHOQ.Concept.atom A, ALCHOQ.Concept.top) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨A, rfl⟩))))
+  · exact hTail ax hMem
+
 -- ============================================================
 -- §MAXIMAL-SLICE CONS-BUILDERS.   nil + per-shape cons for the
 -- two maximal slice predicates `IsELOrAllVacuousOnly` and
