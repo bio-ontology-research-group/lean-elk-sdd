@@ -9531,6 +9531,64 @@ theorem inUnifiedSlice_of_sliceEligible_bothFamiliesRBox
   · exact Or.inl ⟨hAll, hRBox.1⟩
   · exact Or.inr ⟨hUni, hRBox.2⟩
 
+-- Single-axiom both-families compat predicate.
+
+/-- An RAxiom is compatible with both families iff it sits in
+    both `RAxiomCompatibleWithEmptyRoles` and
+    `RAxiomCompatibleWithUniversalRoles`.   Shapes excluded:
+    `refl` (universal-only allows it but empty-roles forbids it),
+    `asym`/`irrefl`/`disj` (empty-only), and `chain []`
+    (empty-roles forbids the trivial chain). -/
+def RAxiomCompatibleWithBothFamilies (ax : SROIQ.RAxiom) : Prop :=
+  RAxiomCompatibleWithEmptyRoles ax ∧ RAxiomCompatibleWithUniversalRoles ax
+
+theorem rAxiomCompatibleWithBothFamilies_empty
+    {ax : SROIQ.RAxiom} (h : RAxiomCompatibleWithBothFamilies ax) :
+    RAxiomCompatibleWithEmptyRoles ax := h.1
+
+theorem rAxiomCompatibleWithBothFamilies_universal
+    {ax : SROIQ.RAxiom} (h : RAxiomCompatibleWithBothFamilies ax) :
+    RAxiomCompatibleWithUniversalRoles ax := h.2
+
+/-- Cons-builder for `RBoxCompatibleWithBothFamilies`. -/
+theorem rBoxCompatibleWithBothFamilies_cons
+    {ax : SROIQ.RAxiom} {rbox : SROIQ.RBox}
+    (hHead : RAxiomCompatibleWithBothFamilies ax)
+    (hTail : RBoxCompatibleWithBothFamilies rbox) :
+    RBoxCompatibleWithBothFamilies (ax :: rbox) :=
+  ⟨rBoxCompatibleWithEmptyRoles_cons hHead.1 hTail.1,
+   rBoxCompatibleWithUniversalRoles_cons hHead.2 hTail.2⟩
+
+-- Shape-specific both-families compatibility witnesses.
+-- Shapes accepted by BOTH families: incl, trans, sym, inv,
+-- non-empty chain.
+
+theorem rAxiomCompatibleWithBothFamilies_incl (R S : Nat) :
+    RAxiomCompatibleWithBothFamilies (SROIQ.RAxiom.incl R S) :=
+  ⟨rAxiomCompatibleWithEmptyRoles_incl R S,
+   rAxiomCompatibleWithUniversalRoles_incl R S⟩
+
+theorem rAxiomCompatibleWithBothFamilies_trans (R : Nat) :
+    RAxiomCompatibleWithBothFamilies (SROIQ.RAxiom.trans R) :=
+  ⟨rAxiomCompatibleWithEmptyRoles_trans R,
+   rAxiomCompatibleWithUniversalRoles_trans R⟩
+
+theorem rAxiomCompatibleWithBothFamilies_sym (R : Nat) :
+    RAxiomCompatibleWithBothFamilies (SROIQ.RAxiom.sym R) :=
+  ⟨rAxiomCompatibleWithEmptyRoles_sym R,
+   rAxiomCompatibleWithUniversalRoles_sym R⟩
+
+theorem rAxiomCompatibleWithBothFamilies_inv (R S : Nat) :
+    RAxiomCompatibleWithBothFamilies (SROIQ.RAxiom.inv R S) :=
+  ⟨rAxiomCompatibleWithEmptyRoles_inv R S,
+   rAxiomCompatibleWithUniversalRoles_inv R S⟩
+
+theorem rAxiomCompatibleWithBothFamilies_chain_cons
+    (r : Nat) (rs : List Nat) (S : Nat) :
+    RAxiomCompatibleWithBothFamilies (SROIQ.RAxiom.chain (r :: rs) S) :=
+  ⟨rAxiomCompatibleWithEmptyRoles_chain_cons r rs S,
+   rAxiomCompatibleWithUniversalRoles_chain (r :: rs) S⟩
+
 -- ============================================================
 -- §ONTOLOGY-SHAPE CONS-BUILDERS.   Cons-style builders for every
 -- slice-eligible ontology predicate, matching the RBox-compat

@@ -1155,5 +1155,15 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.rBoxCompatibleWithBothFamilies_empty
 #print axioms ALCHOIQContext.rBoxCompatibleWithBothFamilies_universal
 #print axioms ALCHOIQContext.inUnifiedSlice_of_sliceEligible_bothFamiliesRBox
+-- §BOTH-FAMILIES AXIOM-LEVEL CTORS
+#print axioms ALCHOIQContext.RAxiomCompatibleWithBothFamilies
+#print axioms ALCHOIQContext.rAxiomCompatibleWithBothFamilies_empty
+#print axioms ALCHOIQContext.rAxiomCompatibleWithBothFamilies_universal
+#print axioms ALCHOIQContext.rBoxCompatibleWithBothFamilies_cons
+#print axioms ALCHOIQContext.rAxiomCompatibleWithBothFamilies_incl
+#print axioms ALCHOIQContext.rAxiomCompatibleWithBothFamilies_trans
+#print axioms ALCHOIQContext.rAxiomCompatibleWithBothFamilies_sym
+#print axioms ALCHOIQContext.rAxiomCompatibleWithBothFamilies_inv
+#print axioms ALCHOIQContext.rAxiomCompatibleWithBothFamilies_chain_cons
 
 end ELKSDD
