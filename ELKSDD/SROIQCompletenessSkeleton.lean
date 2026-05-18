@@ -9190,6 +9190,29 @@ theorem extensionGap_implies_unconditional_IsCanonicalSeed :
   have hSC : SaturationCompleteness := universalSC_decomposed hGap
   exact saturationCompleteness_implies_unconditional_IsCanonicalSeed hSC
 
+/-- **Per-instance gap discharge** on slice-eligible O paired with
+    an AtomConjDisj signature-referencing Q.   In this case the
+    gap's negation premise is False (the slice + Q-shape witness
+    exists), so the implication holds vacuously — and we can
+    state this *without* needing to invoke the gap predicate
+    itself. -/
+theorem extensionGap_body_vacuous_on_sliceEligible_AtomConjDisj
+    (O : Ontology) (D : ContextStructure)
+    (_hDeriv : FullDerivation (canonicalSeedOfFull O) D)
+    (_hSat : FullSaturated D)
+    (Q : QueryClause)
+    (_hEnt : entailsQuery O Q)
+    (hO : SliceEligibleOntology O)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (hNeg : ¬ (∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox ∧
+        QueryReferencesSignature (ontologyConceptSig O) Q ∧
+        AtomConjDisjQuery Q)) :
+    ∃ c ∈ D.S D.vr,
+      subsumes c {body := Q.Gamma, head := Q.Delta} := by
+  exfalso
+  exact hNeg (unconditionalSCExtensionGap_vacuous_on_slice O hO Q hQsig hQAtom)
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`

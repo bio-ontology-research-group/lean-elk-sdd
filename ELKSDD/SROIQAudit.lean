@@ -1149,6 +1149,7 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.UnconditionalSCExtensionGap
 #print axioms ALCHOIQContext.universalSC_decomposed
 #print axioms ALCHOIQContext.extensionGap_implies_unconditional_IsCanonicalSeed
+#print axioms ALCHOIQContext.extensionGap_body_vacuous_on_sliceEligible_AtomConjDisj
 -- §SLICE-ELIGIBILITY EXISTENTIALS
 #print axioms ALCHOIQContext.inUnifiedSlice_exists_of_isELOrAllVacuousOnly
 #print axioms ALCHOIQContext.inUnifiedSlice_exists_of_isELOrUniversalRoleVacuousOnly
