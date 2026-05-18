@@ -5471,12 +5471,15 @@ def axiomTriggersRole : ALCHOQ.Axiom → Nat → Prop
     no derivability dependency.  Closed under conj/disj duals:
     conj-with-False is False; disj is False iff both sides are.
     `hasSelf R` is structurally False because the tree has no
-    self-loops in `ext_role`. -/
+    self-loops.   `∃R.C` and `≥(n+1) R.C` are False when the filler
+    is structurally False (no witness can satisfy the conjunct). -/
 def TreeFalseLHS : ALCHOQ.Concept → Prop
   | .bot                       => True
   | .hasSelf _                 => True
   | .conj C₁ C₂                => TreeFalseLHS C₁ ∨ TreeFalseLHS C₂
   | .disj C₁ C₂                => TreeFalseLHS C₁ ∧ TreeFalseLHS C₂
+  | .exist _ C                 => TreeFalseLHS C
+  | .atLeast (_+1) _ C         => TreeFalseLHS C
   | _                          => False
 
 /-- **Tree-vacuity (RHS=True).**   Concepts whose evaluation under
@@ -6286,9 +6289,22 @@ theorem treeFalseLHS_eval_false (O : Ontology) (Q : QueryClause)
   | top => exact absurd hC (by intro h; exact h)
   | nom _ => exact absurd hC (by intro h; exact h)
   | neg _ _ => exact absurd hC (by intro h; exact h)
-  | exist _ _ _ => exact absurd hC (by intro h; exact h)
+  | exist _ C ihC =>
+      -- hC : TreeFalseLHS (exist _ C) = TreeFalseLHS C
+      -- Goal: ∀ p, ¬ eval (exist R C) p = ∀ p, ¬ ∃ y, R(p,y) ∧ eval C y
+      intro p ⟨y, _hRpy, hCy⟩
+      exact ihC hC y hCy
   | univ _ _ _ => exact absurd hC (by intro h; exact h)
-  | atLeast _ _ _ _ => exact absurd hC (by intro h; exact h)
+  | atLeast n _ C ihC =>
+      intro p hAL
+      cases n with
+      | zero => exact absurd hC (by intro h; exact h)
+      | succ k =>
+          -- hC : TreeFalseLHS (atLeast (k+1) _ C) = TreeFalseLHS C
+          -- hAL : atLeastCard (fun y => R(p,y) ∧ eval C y) (k+1)
+          --     = ∃ y, (R(p,y) ∧ eval C y) ∧ atLeastCard _ k
+          obtain ⟨y, ⟨_, hCy⟩, _⟩ := hAL
+          exact ihC hC y hCy
   | atMost _ _ _ _ => exact absurd hC (by intro h; exact h)
   | hasSelf R =>
       -- hC : TreeFalseLHS (hasSelf R) = True (always satisfied)
