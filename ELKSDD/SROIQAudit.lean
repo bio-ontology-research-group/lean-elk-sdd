@@ -849,4 +849,10 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.canonicalSeedOfFull_herbrand_property_unifiedSlice
 #print axioms ALCHOIQContext.theorem2_canonicalSeedOfFull_unifiedSlice
 
+-- ============================================================
+-- Final partial-IsCanonicalSeed summary statement: bundles the
+-- two unconditional conjuncts with the conditional third.
+-- ============================================================
+#print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOfFull_partial
+
 end ELKSDD

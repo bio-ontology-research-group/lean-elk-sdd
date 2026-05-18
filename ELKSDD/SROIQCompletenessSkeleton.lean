@@ -7501,5 +7501,52 @@ theorem theorem2_canonicalSeedOfFull_unifiedSlice
     ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} :=
   theorem2_unified_two_slices O rbox hSlice Q hQsig hQAtom D hDeriv hSat hEntail
 
+-- ============================================================
+-- §STATUS: explicit summary of the partial-unconditional
+-- IsCanonicalSeed-style result for `canonicalSeedOfFull`.
+--
+-- Bundles the three conjuncts of `IsCanonicalSeed O D_seed` with
+-- explicit conditional/unconditional markers in one statement.
+-- ============================================================
+
+/-- **Explicit partial-IsCanonicalSeed for `canonicalSeedOfFull`.**
+
+    Conjunct (i)  — `vr ∈ contexts`       — UNCONDITIONAL on `O`.
+    Conjunct (ii) — soundness witness     — UNCONDITIONAL on `O`.
+    Conjunct (iii) — HerbrandProperty      — proved here for the
+       unified two-slice family + `AtomConjDisjQuery` queries
+       referencing `ontologyConceptSig O`.   Out-of-family axioms
+       and arbitrary-shape queries are bridged by the tree-Herbrand
+       primitives defined above (`HerbrandTree`,
+       `elHerbrandInterpTree`, `elHerbrandInterpTree_satisfies_O_tree_friendly`,
+       …).   The remaining gap to the literal unconditional
+       `HerbrandProperty O (canonicalSeedOfFull O)` is structural
+       composition of those primitives with the canonical-seed
+       saturation/subsumption machinery — multi-session research-
+       engineering work. -/
+theorem isCanonicalSeed_canonicalSeedOfFull_partial
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hSlice : InUnifiedSlice O rbox) :
+    -- Conjunct (i) — unconditional in `O`.
+    (canonicalSeedOfFull O).vr ∈ (canonicalSeedOfFull O).contexts ∧
+    -- Conjunct (ii) — unconditional in `O`.
+    (∃ CD : DerivedClauses, isSound O (canonicalSeedOfFull O) CD) ∧
+    -- Conjunct (iii) — *under the unified slice + AtomConjDisj
+    -- + signature restrictions*.
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig O) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  ⟨canonicalSeedOfFull_vr_in_contexts O,
+   canonicalSeedOfFull_sound O,
+   canonicalSeedOfFull_herbrand_property_unifiedSlice O rbox hSlice⟩
+
 end ALCHOIQContext
 end ELKSDD
