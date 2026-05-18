@@ -10338,6 +10338,53 @@ theorem isCanonicalSeed_canonicalSeedOfFull_partial_exampleELConj :
   isCanonicalSeed_canonicalSeedOfFull_partial
     exampleELConj [] exampleELConj_in_unifiedSlice_emptyRBox
 
+/-- **Family-flexible partial-IsCanonicalSeed for both-slice-eligible
+    ontologies (empty-roles branch).**   For any
+    `SliceEligibleBoth O` ontology paired with any
+    empty-roles-compatible RBox, the partial-IsCanonicalSeed bundle
+    holds.   Strict generalization of `partial_isCanonicalSeed_of_sliceEligible`
+    on the empty-roles side. -/
+theorem partial_isCanonicalSeed_of_sliceEligibleBoth_emptyFamily
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : SliceEligibleBoth O)
+    (hRBox : RBoxCompatibleWithEmptyRoles rbox) :
+    (canonicalSeedOfFull O).vr ∈ (canonicalSeedOfFull O).contexts ∧
+    (∃ CD : DerivedClauses, isSound O (canonicalSeedOfFull O) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig O) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  isCanonicalSeed_canonicalSeedOfFull_partial O rbox
+    (inUnifiedSlice_of_sliceEligibleBoth_emptyFamily O rbox hO hRBox)
+
+/-- **Family-flexible partial-IsCanonicalSeed** (universal-role branch). -/
+theorem partial_isCanonicalSeed_of_sliceEligibleBoth_universalFamily
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : SliceEligibleBoth O)
+    (hRBox : RBoxCompatibleWithUniversalRoles rbox) :
+    (canonicalSeedOfFull O).vr ∈ (canonicalSeedOfFull O).contexts ∧
+    (∃ CD : DerivedClauses, isSound O (canonicalSeedOfFull O) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig O) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  isCanonicalSeed_canonicalSeedOfFull_partial O rbox
+    (inUnifiedSlice_of_sliceEligibleBoth_universalFamily O rbox hO hRBox)
+
 /-- **Consolidated partial-IsCanonicalSeed for any slice-eligible
     ontology.**   Bundles the three IsCanonicalSeed conjuncts for
     `canonicalSeedOfFull O`:

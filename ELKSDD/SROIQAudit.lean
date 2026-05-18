@@ -1167,6 +1167,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.sliceEligibleBoth_cons_disjAtom
 #print axioms ALCHOIQContext.unconditionalSCExtensionGap_vacuous_on_slice
 #print axioms ALCHOIQContext.partial_isCanonicalSeed_of_sliceEligible
+#print axioms ALCHOIQContext.partial_isCanonicalSeed_of_sliceEligibleBoth_emptyFamily
+#print axioms ALCHOIQContext.partial_isCanonicalSeed_of_sliceEligibleBoth_universalFamily
 -- §RBOX BOTH-FAMILIES
 #print axioms ALCHOIQContext.RBoxCompatibleWithBothFamilies
 #print axioms ALCHOIQContext.emptyRBox_compatibleBoth
