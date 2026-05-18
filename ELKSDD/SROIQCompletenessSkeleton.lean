@@ -7287,5 +7287,87 @@ theorem theorem2_unified_two_slices
   · exact theorem2_for_el_plus_universal_role_vacuous_plus_compatible_rbox
       O hO rbox hRBox Q hQsig hQAtom D hDeriv hSat hEntail
 
+-- ============================================================
+-- §FINAL: `canonicalSeedOfFull` — the full canonical-seed
+-- function used by the unified slice theorems.
+--
+-- The early `canonicalSeedOf` (line ~1968) handles the atom-atom
+-- slice only.   `canonicalSeedOfFull` is the broader construction
+-- backing all later slice theorems (EL-conj, atom-bot, vacuous,
+-- universal-role, two-slice).   Aliased to `canonicalSeedELConjFromOntology`.
+--
+-- Of the three `IsCanonicalSeed` conjuncts for `canonicalSeedOfFull`:
+--   (i)  vr ∈ contexts                                   — unconditional ✓
+--   (ii) ∃ CD, isSound O (canonicalSeedOfFull O) CD      — unconditional ✓
+--   (iii) HerbrandProperty O (canonicalSeedOfFull O)     — conditional on
+--         the unified two-slice TBox+RBox predicates above (and on
+--         `AtomConjDisjQuery` shape for the query).   Relaxing
+--         either restriction requires the multi-level §6.3.4 tree
+--         composition whose primitives are defined above
+--         (`HerbrandTree`, `elHerbrandInterpTree`, …).
+-- ============================================================
+
+/-- **The full canonical-seed function** backing the unified-slice
+    Theorem-2 statements.   Returns the same context structure as
+    `canonicalSeedELConjFromOntology O`. -/
+noncomputable def canonicalSeedOfFull (O : Ontology) : ContextStructure :=
+  canonicalSeedELConjFromOntology O
+
+/-- Unfolding lemma. -/
+theorem canonicalSeedOfFull_eq (O : Ontology) :
+    canonicalSeedOfFull O = canonicalSeedELConjFromOntology O := rfl
+
+/-- **UNCONDITIONAL conjunct (i)**: `vr ∈ contexts` for every `O`. -/
+theorem canonicalSeedOfFull_vr_in_contexts (O : Ontology) :
+    (canonicalSeedOfFull O).vr ∈ (canonicalSeedOfFull O).contexts :=
+  canonicalSeedELConj_vr_in_contexts (ontologyConceptSig O) O
+
+/-- **UNCONDITIONAL conjunct (ii)**: a sound derived-clauses witness
+    exists for `canonicalSeedOfFull O`, for every ontology `O`. -/
+theorem canonicalSeedOfFull_sound (O : Ontology) :
+    ∃ CD : DerivedClauses, isSound O (canonicalSeedOfFull O) CD :=
+  canonicalSeedELConj_sound_anyO (ontologyConceptSig O) O
+
+/-- **Conjunct (iii) — Herbrand-property — for the unified two-slice
+    family.**   The maximal SROIQ slice attainable in this Lean
+    development without the multi-level §6.3.4 tree composition. -/
+theorem canonicalSeedOfFull_herbrand_property_unifiedSlice
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hSlice : InUnifiedSlice O rbox) :
+    ∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig O) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩ := by
+  intro D hDeriv hSat Q hQsig hQAtom hNoSub
+  rcases hSlice with ⟨hO, hRBox⟩ | ⟨hO, hRBox⟩
+  · exact herbrandPropertyAtomConjDisj_ELOrAllVacuous_withRBox
+      (ontologyConceptSig O) O hO rbox hRBox D hDeriv hSat Q hQsig hQAtom hNoSub
+  · exact herbrandPropertyAtomConjDisj_ELOrUniversalRoleVacuous_withRBox
+      (ontologyConceptSig O) O hO rbox hRBox D hDeriv hSat Q hQsig hQAtom hNoSub
+
+/-- **Headline conditional Theorem 2 for `canonicalSeedOfFull`**. -/
+theorem theorem2_canonicalSeedOfFull_unifiedSlice
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hSlice : InUnifiedSlice O rbox)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull O) D)
+    (hSat : FullSaturated D)
+    (hEntail : ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+              (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+              I.satisfies O → SROIQ.RBox.eval I rbox →
+              Q.eval I ⟨γ, φ, vx, vy⟩) :
+    ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  theorem2_unified_two_slices O rbox hSlice Q hQsig hQAtom D hDeriv hSat hEntail
+
 end ALCHOIQContext
 end ELKSDD

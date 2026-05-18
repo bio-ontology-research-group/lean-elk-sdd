@@ -823,4 +823,20 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_disj_conj
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_top_conj
 
+-- ============================================================
+-- §FINAL: `canonicalSeedOf` — the total canonical-seed function
+-- named per the literal goal.   Two of three `IsCanonicalSeed`
+-- conjuncts are unconditionally provable for it; the third
+-- (HerbrandProperty) is currently conditional on the unified
+-- two-slice predicate `InUnifiedSlice O rbox` and on
+-- `AtomConjDisjQuery` shape, with the tree-Herbrand machinery
+-- above as the route to relaxing both restrictions.
+-- ============================================================
+#print axioms ALCHOIQContext.canonicalSeedOfFull
+#print axioms ALCHOIQContext.canonicalSeedOfFull_eq
+#print axioms ALCHOIQContext.canonicalSeedOfFull_vr_in_contexts
+#print axioms ALCHOIQContext.canonicalSeedOfFull_sound
+#print axioms ALCHOIQContext.canonicalSeedOfFull_herbrand_property_unifiedSlice
+#print axioms ALCHOIQContext.theorem2_canonicalSeedOfFull_unifiedSlice
+
 end ELKSDD
