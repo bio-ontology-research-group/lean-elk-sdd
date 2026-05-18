@@ -8871,6 +8871,37 @@ theorem saturationCompleteness_implies_unconditional_IsCanonicalSeed :
   fun hSC O =>
     unconditional_IsCanonicalSeed_modulo_completeness hSC O
 
+/-- **Named restricted SaturationCompleteness statement** —
+    quantifying over `(O, rbox)` in the unified slice and
+    AtomConjDisj queries that reference the ontology signature.
+    Discharged unconditionally below via the existing
+    Herbrand-property machinery. -/
+def SaturationCompletenessAtomConjDisjUnifiedSlice : Prop :=
+  ∀ (O : Ontology) (rbox : SROIQ.RBox),
+    InUnifiedSlice O rbox →
+    ∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig O) Q →
+        AtomConjDisjQuery Q →
+        (∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+            (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+            I.satisfies O → SROIQ.RBox.eval I rbox →
+            Q.eval I ⟨γ, φ, vx, vy⟩) →
+        ∃ c ∈ D.S D.vr,
+          subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- **The named restricted SC holds unconditionally.**   Discharges
+    `SaturationCompletenessAtomConjDisjUnifiedSlice` for arbitrary
+    parameters via `theorem2_canonicalSeedOfFull_unifiedSlice`.
+    No hypotheses beyond the ones embedded in the statement
+    itself. -/
+theorem saturationCompletenessAtomConjDisjUnifiedSlice_holds :
+    SaturationCompletenessAtomConjDisjUnifiedSlice := by
+  intro O rbox hSlice D hDeriv hSat Q hQsig hQAtom hEntRBox
+  exact theorem2_canonicalSeedOfFull_unifiedSlice O rbox hSlice
+    Q hQsig hQAtom D hDeriv hSat hEntRBox
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`

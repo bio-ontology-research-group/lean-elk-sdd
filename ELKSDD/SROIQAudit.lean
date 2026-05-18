@@ -1121,5 +1121,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.exampleELConj_isELConjOnly
 #print axioms ALCHOIQContext.exampleELConj_in_unifiedSlice_emptyRBox
 #print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOfFull_partial_exampleELConj
+-- §NAMED RESTRICTED SC + UNCONDITIONAL DISCHARGE
+#print axioms ALCHOIQContext.SaturationCompletenessAtomConjDisjUnifiedSlice
+#print axioms ALCHOIQContext.saturationCompletenessAtomConjDisjUnifiedSlice_holds
 
 end ELKSDD
