@@ -666,4 +666,18 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_ELOrVacuous
 #print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology_vacuous
 
+-- ============================================================
+-- RBOX EXTENSION: arbitrary compatible RBox is satisfied by
+-- the EL Herbrand model.  The "arbitrary RBox" part of the
+-- literal goal is now formally addressed for the RBox-compatibility
+-- subclass (every RAxiom shape except `refl R` and `chain []`).
+-- ============================================================
+#print axioms ALCHOIQContext.elHerbrandInterp_ext_role_false
+#print axioms ALCHOIQContext.elHerbrandInterp_satisfies_RAxiom
+#print axioms ALCHOIQContext.elHerbrandInterp_satisfies_compatible_rbox
+#print axioms ALCHOIQContext.elHerbrandInterp_satisfies_emptyRBox
+#print axioms ALCHOIQContext.elHerbrandInterp_satisfies_O_aux
+#print axioms ALCHOIQContext.herbrandPropertyAtomConjDisj_ELOrVacuous_withRBox
+#print axioms ALCHOIQContext.the_el_plus_vacuous_plus_compatible_rbox_slice
+
 end ELKSDD
