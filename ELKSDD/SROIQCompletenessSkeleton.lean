@@ -9174,6 +9174,22 @@ theorem universalSC_decomposed
   · -- Outside the restricted slice — discharged by hGap.
     exact hGap O D hDeriv hSat Q hEnt hCovered
 
+/-- **Discharging the extension gap is *sufficient* for the literal
+    unconditional theorem.**   Combining `universalSC_decomposed`
+    (which reconstructs universal SC from the gap and the
+    already-discharged restricted SC) with
+    `saturationCompleteness_implies_unconditional_IsCanonicalSeed`
+    bridges from the gap to `UnconditionalIsCanonicalSeed`.
+
+    The forward direction.   The converse (literal goal implies
+    the gap) requires soundness-preservation through `FullDerivation`
+    which is part of the §6.3.4 chain. -/
+theorem extensionGap_implies_unconditional_IsCanonicalSeed :
+    UnconditionalSCExtensionGap → UnconditionalIsCanonicalSeed := by
+  intro hGap
+  have hSC : SaturationCompleteness := universalSC_decomposed hGap
+  exact saturationCompleteness_implies_unconditional_IsCanonicalSeed hSC
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
