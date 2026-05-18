@@ -822,6 +822,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_conj_conj
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_disj_conj
 #print axioms ALCHOIQContext.elHerbrandInterpTree_sat_top_conj
+#print axioms ALCHOIQContext.isConjOfAtoms_eval_helper_tree
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_atom_conjOfAtoms
 
 -- ============================================================
 -- §FINAL: `canonicalSeedOf` — the total canonical-seed function

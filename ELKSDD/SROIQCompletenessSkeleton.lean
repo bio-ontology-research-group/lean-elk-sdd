@@ -5347,6 +5347,14 @@ theorem elHerbrandInterp2Point_root_sat_atom_exist_atom
 -- the trigger-set seeded by the parent's axiom RHS.
 -- ============================================================
 
+/-- **Conjunction of atoms shape**: a concept whose leaves are all
+    `atom _`.  Captures nested conjunctions like `conj A (conj B C)`. -/
+inductive IsConjOfAtoms : ALCHOQ.Concept → Prop where
+  | atom {A : Nat} : IsConjOfAtoms (ALCHOQ.Concept.atom A)
+  | conj {C₁ C₂ : ALCHOQ.Concept} :
+      IsConjOfAtoms C₁ → IsConjOfAtoms C₂ →
+      IsConjOfAtoms (ALCHOQ.Concept.conj C₁ C₂)
+
 /-- Tree-shaped Herbrand domain over an ontology `O`.   `root`
     is the universal point; `succ p ax hAx` is the unique
     successor of `p` introduced by axiom `ax ∈ O`.
@@ -5572,6 +5580,55 @@ theorem elHerbrandInterpTree_sat_top_conj
     exact ConceptDerivableEL.step_top_conj_L hAx
   · show ConceptDerivableEL O (treeNodeInitialAtoms Q p) C
     exact ConceptDerivableEL.step_top_conj_R hAx
+
+/-- Parallel of `isConjOfAtoms_eval_helper` for the tree Herbrand.
+    Shares the same `ext_concept` field
+    (`ConceptDerivableEL O (treeNodeInitialAtoms Q p) B`), so the
+    proof structurally mirrors the empty-role and universal-role
+    helpers — only the model name changes. -/
+theorem isConjOfAtoms_eval_helper_tree
+    (O : Ontology) (Q : QueryClause)
+    {Cwhole : ALCHOQ.Concept} {A : Nat}
+    (hAx : (ALCHOQ.Concept.atom A, Cwhole) ∈ O) :
+    ∀ {C : ALCHOQ.Concept}, IsConjOfAtoms C →
+      (∀ B, ConjMember C B → ConjMember Cwhole B) →
+      ∀ (p : HerbrandTree O),
+        ConceptDerivableEL O (treeNodeInitialAtoms Q p) A →
+        (elHerbrandInterpTree O Q).eval C p := by
+  intro C hC
+  induction hC with
+  | @atom B =>
+      intro hSub p hA
+      have hMW : ConjMember Cwhole B := hSub B ConjMember.atom_self
+      show ConceptDerivableEL O (treeNodeInitialAtoms Q p) B
+      exact ConceptDerivableEL.step_atom_conjmember hA hAx hMW
+  | @conj C₁ C₂ _ _ ih₁ ih₂ =>
+      intro hSub p hA
+      have hSub₁ : ∀ B, ConjMember C₁ B → ConjMember Cwhole B :=
+        fun B hM₁ => hSub B (ConjMember.left hM₁)
+      have hSub₂ : ∀ B, ConjMember C₂ B → ConjMember Cwhole B :=
+        fun B hM₂ => hSub B (ConjMember.right hM₂)
+      exact ⟨ih₁ hSub₁ p hA, ih₂ hSub₂ p hA⟩
+
+/-- `(atom A, C) ∈ O` with `IsConjOfAtoms C`: at every tree node where
+    `A` is derivable, every atom-leaf of `C` is derivable.
+    Generalises both `_sat_atom_atom` and `_sat_atom_conj`. -/
+theorem elHerbrandInterpTree_sat_atom_conjOfAtoms
+    (O : Ontology) (Q : QueryClause)
+    (A : Nat) (C : ALCHOQ.Concept) (hC : IsConjOfAtoms C)
+    (hAx : (ALCHOQ.Concept.atom A, C) ∈ O) :
+    ∀ (p : HerbrandTree O),
+      (elHerbrandInterpTree O Q).eval (ALCHOQ.Concept.atom A) p →
+      (elHerbrandInterpTree O Q).eval C p := by
+  intro p hA
+  exact isConjOfAtoms_eval_helper_tree O Q hAx hC (fun _ hM => hM) p hA
+
+-- Note: a tree-level analogue of the `(atom A, ⊥)` axiom case is
+-- NOT a pointwise statement — bot-closure on the tree must be
+-- handled at the canonical-seed + saturated-structure level (as in
+-- the empty-role `_satisfies_O_aux_full`'s `hNoBotInBody`).   The
+-- per-axiom tree satisfaction lemmas above cover all non-`⊥` EL-
+-- substantive shapes uniformly.
 
 -- ============================================================
 -- §UNIVERSAL-ROLE VACUITY PREDICATES.  Concept shapes whose
@@ -5818,14 +5875,6 @@ theorem elHerbrandInterpUniversal_trivialises
 -- substantive shapes are identical (ConceptDerivableEL is
 -- interpretation-independent); only the vacuity branches differ.
 -- ============================================================
-
-/-- **Conjunction of atoms shape**: a concept whose leaves are all
-    `atom _`.  Captures nested conjunctions like `conj A (conj B C)`. -/
-inductive IsConjOfAtoms : ALCHOQ.Concept → Prop where
-  | atom {A : Nat} : IsConjOfAtoms (ALCHOQ.Concept.atom A)
-  | conj {C₁ C₂ : ALCHOQ.Concept} :
-      IsConjOfAtoms C₁ → IsConjOfAtoms C₂ →
-      IsConjOfAtoms (ALCHOQ.Concept.conj C₁ C₂)
 
 /-- **Universal-role-friendly TBox shape.**   Same EL-substantive
     shapes as `IsELOrAllVacuousOnly`, but the vacuity tail uses
