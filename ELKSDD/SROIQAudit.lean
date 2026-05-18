@@ -1011,4 +1011,13 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.saturationCompleteness_implies_unconditional_IsCanonicalSeed
 #print axioms ALCHOIQContext.saturationCompleteness_partial_unifiedSlice
 
+-- ============================================================
+-- §TREE: IsConjOfAtomsOrTop — fillers mixing atoms and top.
+-- Generalises IsConjOfAtoms by allowing top leaves; top leaves
+-- evaluate True trivially, atoms get triggered as before.
+-- ============================================================
+#print axioms ALCHOIQContext.IsConjOfAtomsOrTop
+#print axioms ALCHOIQContext.isConjOfAtomsOrTop_trigger_eval_succ
+#print axioms ALCHOIQContext.elHerbrandInterpTree_sat_anyLHS_exist_conjOfAtomsOrTop
+
 end ELKSDD
