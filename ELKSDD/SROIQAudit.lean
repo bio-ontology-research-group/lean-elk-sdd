@@ -1114,5 +1114,9 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.exampleAtomChain_in_unifiedSlice_emptyRBox
 #print axioms ALCHOIQContext.exampleAtomChain_isELOrUniversalRoleVacuousOnly
 #print axioms ALCHOIQContext.exampleAtomChain_in_unifiedSlice_transInclRBox
+-- §PER-MAXIMAL-SLICE PARTIAL-IsCanonicalSeed
+#print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOfFull_partial_isELOrAllVacuousOnly
+#print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOfFull_partial_isELOrUniversalRoleVacuousOnly
+#print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOfFull_partial_exampleAtomChain
 
 end ELKSDD

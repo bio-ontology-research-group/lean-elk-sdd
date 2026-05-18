@@ -9606,5 +9606,86 @@ theorem exampleAtomChain_in_unifiedSlice_transInclRBox :
     exampleAtomChain_isELOrUniversalRoleVacuousOnly
     exampleTransInclRBox_compat
 
+-- ============================================================
+-- §PER-MAXIMAL-SLICE PARTIAL-IsCanonicalSeed INSTANCES.
+--
+-- `isCanonicalSeed_canonicalSeedOfFull_partial` is parameterised
+-- by the unified-slice predicate; we specialise it to each
+-- maximal slice branch in turn.   Each instance bundles the three
+-- IsCanonicalSeed conjuncts unconditionally in the unified-slice
+-- predicate (conjunct (iii) retains the per-query AtomConjDisj +
+-- signature restrictions inherited from the partial result).
+-- ============================================================
+
+/-- **Per-maximal-slice partial-IsCanonicalSeed** for the
+    empty-roles family: any `IsELOrAllVacuousOnly` ontology paired
+    with any empty-roles-compatible RBox. -/
+theorem isCanonicalSeed_canonicalSeedOfFull_partial_isELOrAllVacuousOnly
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : IsELOrAllVacuousOnly O)
+    (hRBox : RBoxCompatibleWithEmptyRoles rbox) :
+    (canonicalSeedOfFull O).vr ∈ (canonicalSeedOfFull O).contexts ∧
+    (∃ CD : DerivedClauses, isSound O (canonicalSeedOfFull O) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig O) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  isCanonicalSeed_canonicalSeedOfFull_partial O rbox
+    (inUnifiedSlice_of_isELOrAllVacuousOnly O rbox hO hRBox)
+
+/-- **Per-maximal-slice partial-IsCanonicalSeed** for the
+    universal-role family: any `IsELOrUniversalRoleVacuousOnly`
+    ontology paired with any universal-roles-compatible RBox. -/
+theorem isCanonicalSeed_canonicalSeedOfFull_partial_isELOrUniversalRoleVacuousOnly
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hO : IsELOrUniversalRoleVacuousOnly O)
+    (hRBox : RBoxCompatibleWithUniversalRoles rbox) :
+    (canonicalSeedOfFull O).vr ∈ (canonicalSeedOfFull O).contexts ∧
+    (∃ CD : DerivedClauses, isSound O (canonicalSeedOfFull O) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig O) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  isCanonicalSeed_canonicalSeedOfFull_partial O rbox
+    (inUnifiedSlice_of_isELOrUniversalRoleVacuousOnly O rbox hO hRBox)
+
+/-- **Worked example instance**: the partial-IsCanonicalSeed bundle
+    for `exampleAtomChain` + `exampleTransInclRBox`, fully discharged
+    via the universal-role family branch. -/
+theorem isCanonicalSeed_canonicalSeedOfFull_partial_exampleAtomChain :
+    (canonicalSeedOfFull exampleAtomChain).vr ∈
+      (canonicalSeedOfFull exampleAtomChain).contexts ∧
+    (∃ CD : DerivedClauses,
+       isSound exampleAtomChain (canonicalSeedOfFull exampleAtomChain) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull exampleAtomChain) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig exampleAtomChain) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies exampleAtomChain ∧
+          SROIQ.RBox.eval I exampleTransInclRBox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  isCanonicalSeed_canonicalSeedOfFull_partial
+    exampleAtomChain exampleTransInclRBox
+    exampleAtomChain_in_unifiedSlice_transInclRBox
+
 end ALCHOIQContext
 end ELKSDD
