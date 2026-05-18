@@ -1009,5 +1009,6 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.SaturationCompleteness
 #print axioms ALCHOIQContext.UnconditionalIsCanonicalSeed
 #print axioms ALCHOIQContext.saturationCompleteness_implies_unconditional_IsCanonicalSeed
+#print axioms ALCHOIQContext.saturationCompleteness_partial_unifiedSlice
 
 end ELKSDD

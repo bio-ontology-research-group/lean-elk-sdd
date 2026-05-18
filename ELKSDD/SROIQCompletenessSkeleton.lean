@@ -8657,5 +8657,34 @@ theorem saturationCompleteness_implies_unconditional_IsCanonicalSeed :
   fun hSC O =>
     unconditional_IsCanonicalSeed_modulo_completeness hSC O
 
+/-- **Partial SaturationCompleteness for the unified-slice +
+    AtomConjDisjQuery + signature-restricted family.**   For every
+    `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
+    referencing the ontology signature is subsumed in the
+    saturation whenever it is semantically entailed (with respect
+    to O and the RBox).   Discharged by classical contraposition
+    against `canonicalSeedOfFull_herbrand_property_unifiedSlice`.
+
+    Restricting the universal SaturationCompleteness to this slice
+    + query family yields a foundation-only-provable theorem; the
+    unrestricted form requires the §6.3.4 chain. -/
+theorem saturationCompleteness_partial_unifiedSlice
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hSlice : InUnifiedSlice O rbox)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull O) D)
+    (hSat : FullSaturated D)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (hEntRBox : ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+                  (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+                  I.satisfies O → SROIQ.RBox.eval I rbox →
+                  Q.eval I ⟨γ, φ, vx, vy⟩) :
+    ∃ c ∈ D.S D.vr,
+      subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  theorem2_unified_two_slices O rbox hSlice Q hQsig hQAtom D hDeriv hSat
+    hEntRBox
+
 end ALCHOIQContext
 end ELKSDD
