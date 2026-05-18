@@ -5474,9 +5474,10 @@ def TreeFalseLHS : ALCHOQ.Concept → Prop
 /-- **Tree-vacuity (RHS=True).**   Concepts whose evaluation under
     the tree Herbrand is `True` at every node.  Dual to
     `TreeFalseLHS`: disj-with-True is True; conj is True iff both
-    sides are. -/
+    sides are.   `atLeast 0 _ _` is structurally `top`. -/
 def TreeTrueRHS : ALCHOQ.Concept → Prop
   | .top                       => True
+  | .atLeast 0 _ _             => True
   | .conj D₁ D₂                => TreeTrueRHS D₁ ∧ TreeTrueRHS D₂
   | .disj D₁ D₂                => TreeTrueRHS D₁ ∨ TreeTrueRHS D₂
   | _                          => False
@@ -6300,7 +6301,14 @@ theorem treeTrueRHS_eval_true (O : Ontology) (Q : QueryClause)
   | neg _ _ => exact absurd hD (by intro h; exact h)
   | exist _ _ _ => exact absurd hD (by intro h; exact h)
   | univ _ _ _ => exact absurd hD (by intro h; exact h)
-  | atLeast _ _ _ _ => exact absurd hD (by intro h; exact h)
+  | atLeast n _ _ _ =>
+      intro p
+      cases n with
+      | zero =>
+          -- atLeast 0 R C unfolds to atLeastCard _ 0 = True
+          show Interp.atLeastCard _ 0
+          trivial
+      | succ _ => exact absurd hD (by intro h; exact h)
   | atMost _ _ _ _ => exact absurd hD (by intro h; exact h)
   | hasSelf _ => exact absurd hD (by intro h; exact h)
 
