@@ -1096,6 +1096,18 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isELConjOnly_cons_atom
 #print axioms ALCHOIQContext.isELConjOnly_cons_bot
 #print axioms ALCHOIQContext.isELConjOnly_cons_conjAtom
+-- §MAXIMAL-SLICE CONS-BUILDERS (IsELOrAllVacuousOnly / IsELOrUniversalRoleVacuousOnly)
+#print axioms ALCHOIQContext.isELOrAllVacuousOnly_cons_atom_atom
+#print axioms ALCHOIQContext.isELOrAllVacuousOnly_cons_atom_bot
+#print axioms ALCHOIQContext.isELOrAllVacuousOnly_cons_conj_atom
+#print axioms ALCHOIQContext.isELOrAllVacuousOnly_cons_atom_conj
+#print axioms ALCHOIQContext.isELOrAllVacuousOnly_cons_disj_atom
+#print axioms ALCHOIQContext.isELOrAllVacuousOnly_cons_top_atom
+#print axioms ALCHOIQContext.isELOrUniversalRoleVacuousOnly_cons_atom_atom
+#print axioms ALCHOIQContext.isELOrUniversalRoleVacuousOnly_cons_atom_bot
+#print axioms ALCHOIQContext.isELOrUniversalRoleVacuousOnly_cons_conj_atom
+#print axioms ALCHOIQContext.isELOrUniversalRoleVacuousOnly_cons_atom_conj
+#print axioms ALCHOIQContext.isELOrUniversalRoleVacuousOnly_cons_disj_atom
 -- §CONCRETE NON-TRIVIAL WORKED EXAMPLE: atom-atom chain + trans+incl RBox
 #print axioms ALCHOIQContext.exampleAtomChain_isAtomicSubsumptionOnly
 #print axioms ALCHOIQContext.exampleTransInclRBox_compat

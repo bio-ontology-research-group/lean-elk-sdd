@@ -9414,6 +9414,133 @@ theorem isELConjOnly_cons_conjAtom
   · exact hTail ax hMem
 
 -- ============================================================
+-- §MAXIMAL-SLICE CONS-BUILDERS.   nil + per-shape cons for the
+-- two maximal slice predicates `IsELOrAllVacuousOnly` and
+-- `IsELOrUniversalRoleVacuousOnly`.   Together with the smaller
+-- slice cons-builders above, every concrete ontology in any slice
+-- becomes assemblable modularly.
+-- ============================================================
+
+theorem isELOrAllVacuousOnly_cons_atom_atom
+    {A B : Nat} {O : Ontology}
+    (hTail : IsELOrAllVacuousOnly O) :
+    IsELOrAllVacuousOnly
+      ((ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inl ⟨A, B, rfl⟩
+  · exact hTail ax hMem
+
+theorem isELOrAllVacuousOnly_cons_atom_bot
+    {A : Nat} {O : Ontology}
+    (hTail : IsELOrAllVacuousOnly O) :
+    IsELOrAllVacuousOnly
+      ((ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr (Or.inl ⟨A, rfl⟩)
+  · exact hTail ax hMem
+
+theorem isELOrAllVacuousOnly_cons_conj_atom
+    {A₁ A₂ B : Nat} {O : Ontology}
+    (hTail : IsELOrAllVacuousOnly O) :
+    IsELOrAllVacuousOnly
+      ((ALCHOQ.Concept.conj (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+        ALCHOQ.Concept.atom B) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr (Or.inr (Or.inl ⟨A₁, A₂, B, rfl⟩))
+  · exact hTail ax hMem
+
+theorem isELOrAllVacuousOnly_cons_atom_conj
+    {A B C : Nat} {O : Ontology}
+    (hTail : IsELOrAllVacuousOnly O) :
+    IsELOrAllVacuousOnly
+      ((ALCHOQ.Concept.atom A,
+        ALCHOQ.Concept.conj (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C))
+       :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr (Or.inr (Or.inr (Or.inl ⟨A, B, C, rfl⟩)))
+  · exact hTail ax hMem
+
+theorem isELOrAllVacuousOnly_cons_disj_atom
+    {A₁ A₂ B : Nat} {O : Ontology}
+    (hTail : IsELOrAllVacuousOnly O) :
+    IsELOrAllVacuousOnly
+      ((ALCHOQ.Concept.disj (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+        ALCHOQ.Concept.atom B) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨A₁, A₂, B, rfl⟩))))
+  · exact hTail ax hMem
+
+theorem isELOrAllVacuousOnly_cons_top_atom
+    {B : Nat} {O : Ontology}
+    (hTail : IsELOrAllVacuousOnly O) :
+    IsELOrAllVacuousOnly
+      ((ALCHOQ.Concept.top, ALCHOQ.Concept.atom B) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · right; right; right; right; right; right; right; left
+    exact ⟨B, rfl⟩
+  · exact hTail ax hMem
+
+theorem isELOrUniversalRoleVacuousOnly_cons_atom_atom
+    {A B : Nat} {O : Ontology}
+    (hTail : IsELOrUniversalRoleVacuousOnly O) :
+    IsELOrUniversalRoleVacuousOnly
+      ((ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inl ⟨A, B, rfl⟩
+  · exact hTail ax hMem
+
+theorem isELOrUniversalRoleVacuousOnly_cons_atom_bot
+    {A : Nat} {O : Ontology}
+    (hTail : IsELOrUniversalRoleVacuousOnly O) :
+    IsELOrUniversalRoleVacuousOnly
+      ((ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr (Or.inl ⟨A, rfl⟩)
+  · exact hTail ax hMem
+
+theorem isELOrUniversalRoleVacuousOnly_cons_conj_atom
+    {A₁ A₂ B : Nat} {O : Ontology}
+    (hTail : IsELOrUniversalRoleVacuousOnly O) :
+    IsELOrUniversalRoleVacuousOnly
+      ((ALCHOQ.Concept.conj (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+        ALCHOQ.Concept.atom B) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr (Or.inr (Or.inl ⟨A₁, A₂, B, rfl⟩))
+  · exact hTail ax hMem
+
+theorem isELOrUniversalRoleVacuousOnly_cons_atom_conj
+    {A B C : Nat} {O : Ontology}
+    (hTail : IsELOrUniversalRoleVacuousOnly O) :
+    IsELOrUniversalRoleVacuousOnly
+      ((ALCHOQ.Concept.atom A,
+        ALCHOQ.Concept.conj (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C))
+       :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr (Or.inr (Or.inr (Or.inl ⟨A, B, C, rfl⟩)))
+  · exact hTail ax hMem
+
+theorem isELOrUniversalRoleVacuousOnly_cons_disj_atom
+    {A₁ A₂ B : Nat} {O : Ontology}
+    (hTail : IsELOrUniversalRoleVacuousOnly O) :
+    IsELOrUniversalRoleVacuousOnly
+      ((ALCHOQ.Concept.disj (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+        ALCHOQ.Concept.atom B) :: O) := by
+  intro ax hax
+  rcases List.mem_cons.mp hax with rfl | hMem
+  · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨A₁, A₂, B, rfl⟩))))
+  · exact hTail ax hMem
+
+-- ============================================================
 -- §CONCRETE NON-TRIVIAL WORKED EXAMPLES.   To show the slice
 -- machinery composes on real input, we exhibit explicit
 -- ontology/RBox pairs assembled via the constructors above and
