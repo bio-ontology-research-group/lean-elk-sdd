@@ -5423,10 +5423,67 @@ theorem elHerbrandInterpUniversal_trivialises
     (elHerbrandInterpUniversal O Q).eval D x :=
   (elHerbrandInterpUniversal_falseLHS_trueRHS_aux O Q D).2 hD x
 
-/-- **The EL Herbrand model satisfies O under the unsubsumed-Q
-    assumption.**  This is the "satisfies O" content of
-    `herbrandPropertyAtomConjDisj_ELOrVacuous` factored out as a
-    standalone lemma, so it can be combined with RBox compatibility. -/
+-- ============================================================
+-- §UNIVERSAL-ROLE SLICE.  Parallel TBox-shape predicate using
+-- universal-role vacuity instead of empty-role vacuity.   The EL-
+-- substantive shapes are identical (ConceptDerivableEL is
+-- interpretation-independent); only the vacuity branches differ.
+-- ============================================================
+
+/-- **Conjunction of atoms shape**: a concept whose leaves are all
+    `atom _`.  Captures nested conjunctions like `conj A (conj B C)`. -/
+inductive IsConjOfAtoms : ALCHOQ.Concept → Prop where
+  | atom {A : Nat} : IsConjOfAtoms (ALCHOQ.Concept.atom A)
+  | conj {C₁ C₂ : ALCHOQ.Concept} :
+      IsConjOfAtoms C₁ → IsConjOfAtoms C₂ →
+      IsConjOfAtoms (ALCHOQ.Concept.conj C₁ C₂)
+
+/-- **Universal-role-friendly TBox shape.**   Same EL-substantive
+    shapes as `IsELOrAllVacuousOnly`, but the vacuity tail uses
+    `HerbrandFalseLHS_universal` / `HerbrandTrueRHS_universal`. -/
+def IsELOrUniversalRoleVacuousOnly (O : Ontology) : Prop :=
+  ∀ ax ∈ O,
+    -- EL-substantive shapes (contribute to closure):
+    (∃ A B : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B)) ∨
+    (∃ A : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot)) ∨
+    (∃ A₁ A₂ B : Nat,
+       ax = (ALCHOQ.Concept.conj
+              (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+             ALCHOQ.Concept.atom B)) ∨
+    (∃ A B C : Nat,
+       ax = (ALCHOQ.Concept.atom A,
+             ALCHOQ.Concept.conj
+               (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C))) ∨
+    (∃ A₁ A₂ B : Nat,
+       ax = (ALCHOQ.Concept.disj
+              (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+             ALCHOQ.Concept.atom B)) ∨
+    (∃ A₁ A₂ B C : Nat,
+       ax = (ALCHOQ.Concept.conj
+              (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+             ALCHOQ.Concept.conj
+               (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C))) ∨
+    (∃ A₁ A₂ B C : Nat,
+       ax = (ALCHOQ.Concept.disj
+              (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+             ALCHOQ.Concept.conj
+               (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C))) ∨
+    (∃ B : Nat, ax = (ALCHOQ.Concept.top, ALCHOQ.Concept.atom B)) ∨
+    (∃ B C : Nat,
+       ax = (ALCHOQ.Concept.top,
+             ALCHOQ.Concept.conj
+               (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C))) ∨
+    -- General atom-to-conj-of-atoms shape (n-ary RHS conjunction):
+    (∃ A : Nat, ∃ C : ALCHOQ.Concept,
+       ax = (ALCHOQ.Concept.atom A, C) ∧ IsConjOfAtoms C) ∨
+    -- Universal-role vacuous shapes:
+    HerbrandFalseLHS_universal ax.1 ∨
+    HerbrandTrueRHS_universal ax.2
+
+-- The empty-role and universal-role slices cover *complementary*
+-- axiom shapes on the role axis: empty-role excludes refl / chain-
+-- witness shapes, universal-role excludes asym / irrefl / disj.
+-- The EL-substantive shape predicates are identical.
 theorem elHerbrandInterp_satisfies_O_aux
     (sig : List Nat) (O : Ontology) (hO : IsELOrVacuousOnly O)
     (D : ContextStructure)
@@ -5886,14 +5943,6 @@ theorem elHerbrandInterp_trivialises
     (elHerbrandInterp O Q).eval D x :=
   (elHerbrandInterp_falseLHS_trueRHS_aux O Q D).2 hD x
 
-/-- **Conjunction of atoms shape**: a concept whose leaves are all
-    `atom _`.  Captures nested conjunctions like `conj A (conj B C)`. -/
-inductive IsConjOfAtoms : ALCHOQ.Concept → Prop where
-  | atom {A : Nat} : IsConjOfAtoms (ALCHOQ.Concept.atom A)
-  | conj {C₁ C₂ : ALCHOQ.Concept} :
-      IsConjOfAtoms C₁ → IsConjOfAtoms C₂ →
-      IsConjOfAtoms (ALCHOQ.Concept.conj C₁ C₂)
-
 /-- **Maximal Herbrand-friendly ontology shape.**  Strict extension
     of `IsELOrVacuousOnly`.  Covers (in addition to the previous
     shapes):
@@ -5981,6 +6030,32 @@ theorem isConjOfAtoms_eval_helper (O : Ontology) (Q : QueryClause)
     ∀ {C : ALCHOQ.Concept}, IsConjOfAtoms C →
       (∀ B, ConjMember C B → ConjMember Cwhole B) →
       ∀ x, (elHerbrandInterp O Q).eval C x := by
+  intro C hC
+  induction hC with
+  | @atom B =>
+      intro hSub x
+      have hMW : ConjMember Cwhole B := hSub B ConjMember.atom_self
+      show ConceptDerivableEL O (queryBodyAtomConcepts Q) B
+      exact ConceptDerivableEL.step_atom_conjmember hA hAx hMW
+  | @conj C₁ C₂ _ _ ih₁ ih₂ =>
+      intro hSub x
+      have hSub₁ : ∀ B, ConjMember C₁ B → ConjMember Cwhole B :=
+        fun B hM₁ => hSub B (ConjMember.left hM₁)
+      have hSub₂ : ∀ B, ConjMember C₂ B → ConjMember Cwhole B :=
+        fun B hM₂ => hSub B (ConjMember.right hM₂)
+      exact ⟨ih₁ hSub₁ x, ih₂ hSub₂ x⟩
+
+/-- Parallel of `isConjOfAtoms_eval_helper` for the universal-role
+    Herbrand.  Same `ext_concept` field, so the proof is identical
+    save for the model. -/
+theorem isConjOfAtoms_eval_helper_universal
+    (O : Ontology) (Q : QueryClause)
+    {Cwhole : ALCHOQ.Concept} {A : Nat}
+    (hAx : (ALCHOQ.Concept.atom A, Cwhole) ∈ O)
+    (hA : ConceptDerivableEL O (queryBodyAtomConcepts Q) A) :
+    ∀ {C : ALCHOQ.Concept}, IsConjOfAtoms C →
+      (∀ B, ConjMember C B → ConjMember Cwhole B) →
+      ∀ x, (elHerbrandInterpUniversal O Q).eval C x := by
   intro C hC
   induction hC with
   | @atom B =>
@@ -6160,6 +6235,155 @@ theorem elHerbrandInterp_satisfies_O_aux_full
   · -- HerbrandTrueRHS ax.2: RHS evaluates to True, axiom vacuous.
     intro x _
     exact elHerbrandInterp_trivialises O Q ax.2 hTrueRHS x
+
+/-- **The universal-role Herbrand satisfies O under
+    `IsELOrUniversalRoleVacuousOnly` and the unsubsumed-Q
+    assumption.**  Parallel to `elHerbrandInterp_satisfies_O_aux_full`;
+    the EL-substantive shape cases reuse the *identical* `ext_concept`
+    field (ConceptDerivableEL) and only the vacuity branches switch
+    to the universal-role projections. -/
+theorem elHerbrandInterpUniversal_satisfies_O_aux_full
+    (sig : List Nat) (O : Ontology)
+    (hO : IsELOrUniversalRoleVacuousOnly O)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedELConj sig O) D)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature sig Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (hNoSub : ∀ c ∈ D.S D.vr,
+       ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) :
+    (elHerbrandInterpUniversal O Q).satisfies O := by
+  classical
+  obtain ⟨hBodyShape, _hHeadShape⟩ := hQAtom
+  have hNoSubSeed :
+      ∀ c ∈ (canonicalSeedELConj sig O).S
+              (canonicalSeedELConj sig O).vr,
+        ¬ subsumes c {body := Q.Gamma, head := Q.Delta} := by
+    intro c hc hSub
+    have hSubInv : SubsumerInvariant Q (canonicalSeedELConj sig O) :=
+      ⟨canonicalSeedELConj_vr_in_contexts sig O, c, hc, hSub⟩
+    have hSubInvD := fullDeriv_preserves_SubsumerInvariant hDeriv Q hSubInv
+    obtain ⟨_, c', hc'In, hc'Sub⟩ := hSubInvD
+    exact hNoSub c' hc'In hc'Sub
+  have hBodyAtomsInGamma : ∀ A : Nat, queryBodyAtomConcepts Q A →
+      BLit.atomTrue (PTerm.atom A ATerm.x) ∈ Q.Gamma := by
+    intro A hA
+    obtain ⟨t, ht⟩ := hA
+    have ht_eq : t = ATerm.x :=
+      atomConjDisj_bodyTerm_is_x Q hBodyShape A t ht
+    subst ht_eq; exact ht
+  have hNoBotInBody :
+      ∀ (S : List Nat) (A : Nat),
+        (∀ X, X ∈ S → queryBodyAtomConcepts Q X) →
+        ConceptDerivableEL O (fun X => X ∈ S) A →
+        (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) ∈ O →
+        False := by
+    intro S A hSinit hSDer hABot
+    have hS_sub_sig : ∀ X, X ∈ S → X ∈ sig := by
+      intro X hX
+      have hXinit := hSinit X hX
+      obtain ⟨tX, hXmem⟩ := hXinit
+      have htX_eq : tX = ATerm.x :=
+        atomConjDisj_bodyTerm_is_x Q hBodyShape X tX hXmem
+      subst htX_eq
+      exact hQsig.1 X ATerm.x hXmem
+    set L := sig.filter (fun X => decide (X ∈ S)) with hLdef
+    have hLsig : L ∈ sig.sublists := filter_mem_sublists sig (· ∈ S)
+    have hL_eq_S : ∀ X, X ∈ L ↔ X ∈ S := by
+      intro X
+      rw [hLdef]
+      rw [mem_filter_iff sig (· ∈ S)]
+      constructor
+      · exact fun ⟨_, h⟩ => h
+      · intro h; exact ⟨hS_sub_sig X h, h⟩
+    have hDerL : ConceptDerivableEL O (fun X => X ∈ L) A := by
+      apply conceptDerivableEL_mono O (fun X => X ∈ S) (fun X => X ∈ L)
+        _ hSDer
+      intro X hXS
+      exact (hL_eq_S X).mpr hXS
+    have hBotL : ∃ A' : Nat,
+        ConceptDerivableEL O (fun X => X ∈ L) A' ∧
+        (ALCHOQ.Concept.atom A', ALCHOQ.Concept.bot) ∈ O :=
+      ⟨A, hDerL, hABot⟩
+    have hClauseIn :
+        multiBodyBotClause L ∈ (canonicalSeedELConj sig O).S
+                                (canonicalSeedELConj sig O).vr :=
+      canonicalSeedELConj_subsumes_elBot sig O L hLsig hBotL
+    have hSubs :
+        subsumes (multiBodyBotClause L)
+                 { body := Q.Gamma, head := Q.Delta } := by
+      refine ⟨?_, ?_⟩
+      · intro b hb
+        rcases List.mem_map.mp hb with ⟨X, hX, rfl⟩
+        have hXinS : X ∈ S := (hL_eq_S X).mp hX
+        have hXinit := hSinit X hXinS
+        exact hBodyAtomsInGamma X hXinit
+      · intro hLit hLitMem
+        exact absurd hLitMem List.not_mem_nil
+    exact hNoSubSeed _ hClauseIn hSubs
+  intro ax hax
+  rcases hO ax hax with hAA | hAB | hCJ | hCJ_RHS | hDJ_LHS | hCJ_CJ | hDJ_CJ | hTopLHS | hTopCJ | hCM | hFalseLHS | hTrueRHS
+  · obtain ⟨A, B, rfl⟩ := hAA
+    intro x hxA
+    show ConceptDerivableEL O (queryBodyAtomConcepts Q) B
+    have hA : ConceptDerivableEL O (queryBodyAtomConcepts Q) A := hxA
+    exact ConceptDerivableEL.step_atom hA hax
+  · obtain ⟨A, rfl⟩ := hAB
+    intro x hxA
+    have hDerA : ConceptDerivableEL O (queryBodyAtomConcepts Q) A := hxA
+    obtain ⟨S, hSinit, hSDer⟩ :=
+      conceptDerivableEL_multi_witness O _ hDerA
+    exact hNoBotInBody S A hSinit hSDer hax
+  · obtain ⟨A₁, A₂, B, rfl⟩ := hCJ
+    intro x hx
+    obtain ⟨hA1, hA2⟩ := hx
+    exact ConceptDerivableEL.step_conj hA1 hA2 hax
+  · obtain ⟨A, B, C, rfl⟩ := hCJ_RHS
+    intro x hxA
+    have hA : ConceptDerivableEL O (queryBodyAtomConcepts Q) A := hxA
+    refine ⟨?_, ?_⟩
+    · exact ConceptDerivableEL.step_conj_RHS_left hA hax
+    · exact ConceptDerivableEL.step_conj_RHS_right hA hax
+  · obtain ⟨A₁, A₂, B, rfl⟩ := hDJ_LHS
+    intro x hxOr
+    show ConceptDerivableEL O (queryBodyAtomConcepts Q) B
+    rcases hxOr with hA1 | hA2
+    · exact ConceptDerivableEL.step_disj_LHS_left hA1 hax
+    · exact ConceptDerivableEL.step_disj_LHS_right hA2 hax
+  · obtain ⟨A₁, A₂, B, C, rfl⟩ := hCJ_CJ
+    intro x hx
+    obtain ⟨hA1, hA2⟩ := hx
+    refine ⟨?_, ?_⟩
+    · exact ConceptDerivableEL.step_conj_conj_left hA1 hA2 hax
+    · exact ConceptDerivableEL.step_conj_conj_right hA1 hA2 hax
+  · obtain ⟨A₁, A₂, B, C, rfl⟩ := hDJ_CJ
+    intro x hxOr
+    rcases hxOr with hA1 | hA2
+    · refine ⟨?_, ?_⟩
+      · exact ConceptDerivableEL.step_disj_conj_left_L hA1 hax
+      · exact ConceptDerivableEL.step_disj_conj_right_L hA1 hax
+    · refine ⟨?_, ?_⟩
+      · exact ConceptDerivableEL.step_disj_conj_left_R hA2 hax
+      · exact ConceptDerivableEL.step_disj_conj_right_R hA2 hax
+  · obtain ⟨B, rfl⟩ := hTopLHS
+    intro x _hxTop
+    show ConceptDerivableEL O (queryBodyAtomConcepts Q) B
+    exact ConceptDerivableEL.step_top hax
+  · obtain ⟨B, C, rfl⟩ := hTopCJ
+    intro x _hxTop
+    refine ⟨?_, ?_⟩
+    · exact ConceptDerivableEL.step_top_conj_L hax
+    · exact ConceptDerivableEL.step_top_conj_R hax
+  · obtain ⟨A, C, rfl, hC⟩ := hCM
+    intro x hxA
+    have hA : ConceptDerivableEL O (queryBodyAtomConcepts Q) A := hxA
+    exact isConjOfAtoms_eval_helper_universal O Q hax hA hC
+      (fun _ hM => hM) x
+  · intro x hxLHS
+    exact absurd hxLHS
+      (elHerbrandInterpUniversal_falsifies O Q ax.1 hFalseLHS x)
+  · intro x _
+    exact elHerbrandInterpUniversal_trivialises O Q ax.2 hTrueRHS x
 
 /-- **HerbrandProperty for the maximally-Herbrand-friendly TBox.** -/
 theorem herbrandPropertyAtomConjDisj_ELOrAllVacuous

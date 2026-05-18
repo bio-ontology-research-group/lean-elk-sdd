@@ -753,4 +753,14 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpUniversal_falsifies
 #print axioms ALCHOIQContext.elHerbrandInterpUniversal_trivialises
 
+-- ============================================================
+-- §UNIVERSAL-ROLE SLICE.  Parallel TBox-shape predicate
+-- IsELOrUniversalRoleVacuousOnly combining EL-substantive shapes
+-- with universal-role vacuity, plus the satisfaction theorem
+-- bridging the universal-role Herbrand and the EL canonical seed.
+-- ============================================================
+#print axioms ALCHOIQContext.IsELOrUniversalRoleVacuousOnly
+#print axioms ALCHOIQContext.isConjOfAtoms_eval_helper_universal
+#print axioms ALCHOIQContext.elHerbrandInterpUniversal_satisfies_O_aux_full
+
 end ELKSDD
