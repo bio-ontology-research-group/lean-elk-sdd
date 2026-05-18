@@ -1136,6 +1136,10 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.exampleVacuous_isELOrAllVacuousOnly
 #print axioms ALCHOIQContext.exampleVacuous_in_unifiedSlice_emptyRBox
 #print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOfFull_partial_exampleVacuous
+#print axioms ALCHOIQContext.exampleBothFamiliesRBox_compatBoth
+#print axioms ALCHOIQContext.exampleAtomChain_sliceEligible
+#print axioms ALCHOIQContext.exampleAtomChain_in_unifiedSlice_bothFamiliesRBox
+#print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOfFull_partial_exampleAtomChain_bothFamiliesRBox
 -- §NAMED RESTRICTED SC + UNCONDITIONAL DISCHARGE
 #print axioms ALCHOIQContext.SaturationCompletenessAtomConjDisjUnifiedSlice
 #print axioms ALCHOIQContext.saturationCompletenessAtomConjDisjUnifiedSlice_holds

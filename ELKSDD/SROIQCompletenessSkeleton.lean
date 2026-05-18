@@ -10118,6 +10118,62 @@ theorem isCanonicalSeed_canonicalSeedOfFull_partial_exampleVacuous :
   isCanonicalSeed_canonicalSeedOfFull_partial
     exampleVacuous [] exampleVacuous_in_unifiedSlice_emptyRBox
 
+/-- **Fourth example RBox** built via the both-families cons-builder:
+    Sym(0) ⊓ Inv(0, 1) ⊓ Incl(0, 1), all compatible with BOTH the
+    empty-roles and universal-roles families. -/
+def exampleBothFamiliesRBox : SROIQ.RBox :=
+  [SROIQ.RAxiom.sym 0, SROIQ.RAxiom.inv 0 1, SROIQ.RAxiom.incl 0 1]
+
+theorem exampleBothFamiliesRBox_compatBoth :
+    RBoxCompatibleWithBothFamilies exampleBothFamiliesRBox :=
+  rBoxCompatibleWithBothFamilies_cons
+    (rAxiomCompatibleWithBothFamilies_sym 0)
+    (rBoxCompatibleWithBothFamilies_cons
+      (rAxiomCompatibleWithBothFamilies_inv 0 1)
+      (rBoxCompatibleWithBothFamilies_cons
+        (rAxiomCompatibleWithBothFamilies_incl 0 1)
+        ⟨emptyRBox_compatible, emptyRBox_compatibleUniversal⟩))
+
+/-- The atom-atom-chain example, slice-eligible under both
+    families, lives in the unified slice when paired with the
+    both-families RBox — via the dual-branch constructor. -/
+theorem exampleAtomChain_sliceEligible :
+    SliceEligibleOntology exampleAtomChain :=
+  Or.inl
+    (isELOrAllVacuousOnly_of_isAtomicSubsumptionOnly _
+      exampleAtomChain_isAtomicSubsumptionOnly)
+
+theorem exampleAtomChain_in_unifiedSlice_bothFamiliesRBox :
+    InUnifiedSlice exampleAtomChain exampleBothFamiliesRBox :=
+  inUnifiedSlice_of_sliceEligible_bothFamiliesRBox
+    exampleAtomChain exampleBothFamiliesRBox
+    exampleAtomChain_sliceEligible
+    exampleBothFamiliesRBox_compatBoth
+
+/-- **Partial-IsCanonicalSeed** for `exampleAtomChain` paired with
+    `exampleBothFamiliesRBox` — exercising the dual-branch slice
+    constructor and the both-families RBox machinery. -/
+theorem isCanonicalSeed_canonicalSeedOfFull_partial_exampleAtomChain_bothFamiliesRBox :
+    (canonicalSeedOfFull exampleAtomChain).vr ∈
+      (canonicalSeedOfFull exampleAtomChain).contexts ∧
+    (∃ CD : DerivedClauses,
+       isSound exampleAtomChain (canonicalSeedOfFull exampleAtomChain) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull exampleAtomChain) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig exampleAtomChain) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies exampleAtomChain ∧
+          SROIQ.RBox.eval I exampleBothFamiliesRBox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  isCanonicalSeed_canonicalSeedOfFull_partial
+    exampleAtomChain exampleBothFamiliesRBox
+    exampleAtomChain_in_unifiedSlice_bothFamiliesRBox
+
 /-- **Partial-IsCanonicalSeed instance** for `exampleELConj`,
     hypothesis-free in the slice predicate via the empty-roles
     branch. -/
