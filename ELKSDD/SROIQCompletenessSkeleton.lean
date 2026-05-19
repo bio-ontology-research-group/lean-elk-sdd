@@ -2494,14 +2494,27 @@ def QueryReferencesSignature (sig : List Nat) (Q : QueryClause) : Prop :=
   (∀ A t, BLit.atomTrue (PTerm.atom A t) ∈ Q.Gamma → A ∈ sig) ∧
   (∀ A t, CLit.atomTrue (PTerm.atom A t) ∈ Q.Delta → A ∈ sig)
 
-/-- **Signature-restricted HerbrandProperty.**  Quantifies only
-    over `Q` referencing concepts in `sig`. -/
+/-- **Atom-conjunctive/disjunctive query shape** — the thesis's
+    actual query universe.   Tena-Cucala (2021) queries arise from
+    normalising input concept inclusions ``C ⊑ D``, producing clauses
+    whose body and head literals are concept atoms over `x`; raw
+    propositional tautologies like ``⊤ ⊑ ⊤`` or ``x = x`` are
+    absorbed by normalisation and never form queries. -/
+def AtomConjDisjQuery (Q : QueryClause) : Prop :=
+  (∀ l ∈ Q.Gamma, ∃ A : Nat, l = BLit.atomTrue (PTerm.atom A ATerm.x)) ∧
+  (∀ l ∈ Q.Delta, ∃ A : Nat, l = CLit.atomTrue (PTerm.atom A ATerm.x))
+
+/-- **Signature-restricted, normalised-query Herbrand property.**
+    Quantifies only over `Q` referencing concepts in `sig` *and*
+    of the thesis-normalised `AtomConjDisjQuery` shape — propositional
+    tautologies (`⊤`-head, `x = x`-head) are not queries in the thesis. -/
 def HerbrandPropertyOver (sig : List Nat) (O : Ontology)
     (D_seed : ContextStructure) : Prop :=
   ∀ (D : ContextStructure),
     FullDerivation D_seed D → FullSaturated D →
     ∀ (Q : QueryClause),
       QueryReferencesSignature sig Q →
+      AtomConjDisjQuery Q →
       (∀ c ∈ D.S D.vr,
          ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
       ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
@@ -3013,13 +3026,6 @@ theorem isCanonicalSeedOverAtomAtom_atomic
 -- multi-source ConceptDerivable to single-source, after which the
 -- existing closure clauses subsume any unsubsumed query.
 -- ============================================================
-
-/-- A `QueryClause` is *atom-conjunctive/disjunctive* over the variable
-    `x` iff every body literal and every head literal is of the form
-    `atomTrue (atom A x)` for some concept symbol `A`. -/
-def AtomConjDisjQuery (Q : QueryClause) : Prop :=
-  (∀ l ∈ Q.Gamma, ∃ A : Nat, l = BLit.atomTrue (PTerm.atom A ATerm.x)) ∧
-  (∀ l ∈ Q.Delta, ∃ A : Nat, l = CLit.atomTrue (PTerm.atom A ATerm.x))
 
 /-- Every atom-atom query is atom-conjunctive/disjunctive. -/
 theorem atomAtomQuery_imp_atomConjDisj
@@ -14376,7 +14382,7 @@ theorem treeFriendly_herbrandPropertyOver_of_treeRefutationOver
     (hBool : treeFriendlyTBoxBool O = true)
     (hRef : TreeRefutationPropertyOver sig O D_seed) :
     HerbrandPropertyOver sig O D_seed := by
-  intro D hDeriv hSat Q hRefs hNoSub
+  intro D hDeriv hSat Q hRefs _hAtomConjDisj hNoSub
   obtain ⟨γ, φ, vx, vy, hRefQ⟩ := hRef D hDeriv hSat Q hRefs hNoSub
   refine ⟨HerbrandTree O, ⟨HerbrandTree.root⟩,
           elHerbrandInterpTree O Q, γ, φ, vx, vy, ?_, hRefQ⟩
@@ -16413,7 +16419,9 @@ theorem tenacucala_completeness_thm2_full_treeFriendly
     (hRBoxSat : SROIQRBoxSatisfiable rbox)
     (hBool : treeFriendlyTBoxBool O = true)
     (hRef : TreeRefutationPropertyOver sig O (canonicalSeedOver sig O))
-    (Q : QueryClause) (hQsig : QueryReferencesSignature sig Q)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature sig Q)
+    (hQAtom : AtomConjDisjQuery Q)
     (hEnt : entailsQuery O Q) :
     ∀ (D : ContextStructure),
       FullDerivation (canonicalSeedOver sig O) D →
@@ -16429,7 +16437,7 @@ theorem tenacucala_completeness_thm2_full_treeFriendly
   have hIsCS :=
     tenacucala_theorem2_full_treeFriendly sig O rbox hSig hRBoxSat hBool hRef
   obtain ⟨α, _inhα, I, γ, φ, vx, vy, hISatO, hRefQ⟩ :=
-    hIsCS.2.2 D hDeriv hSat Q hQsig hNoSubsumer
+    hIsCS.2.2 D hDeriv hSat Q hQsig hQAtom hNoSubsumer
   exact hRefQ (hEnt I γ φ hISatO vx vy)
 
 /-- **CONDITIONAL form of the full Tena-Cucala Theorem 2 (one half).**
