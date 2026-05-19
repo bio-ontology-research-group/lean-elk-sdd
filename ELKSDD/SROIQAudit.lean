@@ -1324,5 +1324,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.axiomIsDisjConj_iff
 #print axioms ALCHOIQContext.axiomIsTopConj
 #print axioms ALCHOIQContext.axiomIsTopConj_iff
+-- §FULL DECIDABLE IsELOrAllVacuousOnly
+#print axioms ALCHOIQContext.axiomIsELOrAllVacuousShape
+#print axioms ALCHOIQContext.axiomIsELOrAllVacuousShape_iff
 
 end ELKSDD

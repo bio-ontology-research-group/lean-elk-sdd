@@ -11346,6 +11346,95 @@ instance : DecidablePred IsELOrVacuousOnly := by
         (Or.inr ((axiomIsAtomUnivAtom_iff ax).mpr h5))))
     · exact Bool.or_eq_true _ _ |>.mpr (Or.inr ((axiomIsAtomTop_iff ax).mpr h6))
 
+/-- **Combined Bool check** for the disjunction underlying
+    `IsELOrAllVacuousOnly`'s 12 axiom shapes plus the
+    Herbrand-vacuous shapes on LHS/RHS. -/
+def axiomIsELOrAllVacuousShape (ax : ALCHOQ.Concept × ALCHOQ.Concept) : Bool :=
+  axiomIsAtomAtom ax ||
+  axiomIsAtomBot ax ||
+  axiomIsConjAtomAtom ax ||
+  axiomIsAtomConjAtomAtom ax ||
+  axiomIsDisjAtomAtomAtom ax ||
+  axiomIsConjConj ax ||
+  axiomIsDisjConj ax ||
+  axiomIsTopAtom ax ||
+  axiomIsTopConj ax ||
+  axiomIsAtomConjOfAtoms ax ||
+  herbrandFalseLHSBool ax.1 ||
+  herbrandTrueRHSBool ax.2
+
+/-- **Combined-shape characterization.**   The Bool check matches the
+    full 12-way disjunction of `IsELOrAllVacuousOnly`'s axiom shapes. -/
+theorem axiomIsELOrAllVacuousShape_iff
+    (ax : ALCHOQ.Concept × ALCHOQ.Concept) :
+    axiomIsELOrAllVacuousShape ax = true ↔
+    ((∃ A B : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B)) ∨
+     (∃ A : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot)) ∨
+     (∃ A₁ A₂ B : Nat,
+        ax = (ALCHOQ.Concept.conj
+               (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+              ALCHOQ.Concept.atom B)) ∨
+     (∃ A B C : Nat,
+        ax = (ALCHOQ.Concept.atom A,
+              ALCHOQ.Concept.conj
+                (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C))) ∨
+     (∃ A₁ A₂ B : Nat,
+        ax = (ALCHOQ.Concept.disj
+               (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+              ALCHOQ.Concept.atom B)) ∨
+     (∃ A₁ A₂ B C : Nat,
+        ax = (ALCHOQ.Concept.conj
+               (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+              ALCHOQ.Concept.conj
+                (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C))) ∨
+     (∃ A₁ A₂ B C : Nat,
+        ax = (ALCHOQ.Concept.disj
+               (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+              ALCHOQ.Concept.conj
+                (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C))) ∨
+     (∃ B : Nat, ax = (ALCHOQ.Concept.top, ALCHOQ.Concept.atom B)) ∨
+     (∃ B C : Nat,
+        ax = (ALCHOQ.Concept.top,
+              ALCHOQ.Concept.conj
+                (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C))) ∨
+     (∃ A : Nat, ∃ C : ALCHOQ.Concept,
+        ax = (ALCHOQ.Concept.atom A, C) ∧ IsConjOfAtoms C) ∨
+     HerbrandFalseLHS ax.1 ∨
+     HerbrandTrueRHS ax.2) := by
+  unfold axiomIsELOrAllVacuousShape
+  rw [show ((((((((((((axiomIsAtomAtom ax || axiomIsAtomBot ax) ||
+                axiomIsConjAtomAtom ax) || axiomIsAtomConjAtomAtom ax) ||
+               axiomIsDisjAtomAtomAtom ax) || axiomIsConjConj ax) ||
+              axiomIsDisjConj ax) || axiomIsTopAtom ax) ||
+             axiomIsTopConj ax) || axiomIsAtomConjOfAtoms ax) ||
+            herbrandFalseLHSBool ax.1) || herbrandTrueRHSBool ax.2) = true) ↔
+        ((axiomIsAtomAtom ax = true) ∨ (axiomIsAtomBot ax = true) ∨
+         (axiomIsConjAtomAtom ax = true) ∨ (axiomIsAtomConjAtomAtom ax = true) ∨
+         (axiomIsDisjAtomAtomAtom ax = true) ∨ (axiomIsConjConj ax = true) ∨
+         (axiomIsDisjConj ax = true) ∨ (axiomIsTopAtom ax = true) ∨
+         (axiomIsTopConj ax = true) ∨ (axiomIsAtomConjOfAtoms ax = true) ∨
+         (herbrandFalseLHSBool ax.1 = true) ∨
+         (herbrandTrueRHSBool ax.2 = true)) by
+      simp only [Bool.or_eq_true]; tauto]
+  rw [axiomIsAtomAtom_iff, axiomIsAtomBot_iff, axiomIsConjAtomAtom_iff,
+      axiomIsAtomConjAtomAtom_iff, axiomIsDisjAtomAtomAtom_iff,
+      axiomIsConjConj_iff, axiomIsDisjConj_iff, axiomIsTopAtom_iff,
+      axiomIsTopConj_iff, axiomIsAtomConjOfAtoms_iff,
+      herbrandFalseLHSBool_iff, herbrandTrueRHSBool_iff]
+
+/-- **Decidable instance for `IsELOrAllVacuousOnly`.**   The maximal
+    EL-or-vacuous slice predicate is now algorithmically decidable. -/
+instance : DecidablePred IsELOrAllVacuousOnly := by
+  intro O
+  unfold IsELOrAllVacuousOnly
+  refine decidable_of_iff (O.all axiomIsELOrAllVacuousShape) ?_
+  rw [List.all_eq_true]
+  constructor
+  · intro h ax hax
+    exact (axiomIsELOrAllVacuousShape_iff ax).mp (h ax hax)
+  · intro h ax hax
+    exact (axiomIsELOrAllVacuousShape_iff ax).mpr (h ax hax)
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at
