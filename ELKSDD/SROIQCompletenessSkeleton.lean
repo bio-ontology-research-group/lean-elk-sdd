@@ -7706,6 +7706,30 @@ def HerbrandTrueRHS : ALCHOQ.Concept → Prop
   | _                          => False
 end
 
+-- Bool-valued counterparts for `HerbrandFalseLHS` / `HerbrandTrueRHS`.
+mutual
+def herbrandFalseLHSBool : ALCHOQ.Concept → Bool
+  | ALCHOQ.Concept.bot         => true
+  | ALCHOQ.Concept.exist _ _   => true
+  | ALCHOQ.Concept.hasSelf _   => true
+  | ALCHOQ.Concept.atLeast (_ + 1) _ _ => true
+  | ALCHOQ.Concept.conj C₁ C₂  => herbrandFalseLHSBool C₁ || herbrandFalseLHSBool C₂
+  | ALCHOQ.Concept.disj C₁ C₂  => herbrandFalseLHSBool C₁ && herbrandFalseLHSBool C₂
+  | ALCHOQ.Concept.neg C       => herbrandTrueRHSBool C
+  | _                          => false
+
+def herbrandTrueRHSBool : ALCHOQ.Concept → Bool
+  | ALCHOQ.Concept.top         => true
+  | ALCHOQ.Concept.univ _ _    => true
+  | ALCHOQ.Concept.atMost _ _ _ => true
+  | ALCHOQ.Concept.atLeast 0 _ _ => true
+  | ALCHOQ.Concept.nom _       => true
+  | ALCHOQ.Concept.conj D₁ D₂  => herbrandTrueRHSBool D₁ && herbrandTrueRHSBool D₂
+  | ALCHOQ.Concept.disj D₁ D₂  => herbrandTrueRHSBool D₁ || herbrandTrueRHSBool D₂
+  | ALCHOQ.Concept.neg D       => herbrandFalseLHSBool D
+  | _                          => false
+end
+
 /-- **Combined Herbrand-falsifies / Herbrand-trivialises lemma.**
     Proved simultaneously by structural induction on the concept so
     the mutually recursive `neg` cases of `HerbrandFalseLHS` /
