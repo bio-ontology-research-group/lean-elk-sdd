@@ -6209,6 +6209,53 @@ theorem axiomIsTopUnivAtom_iff (ax : ALCHOQ.Axiom) :
     subst h1; subst h2
     rfl
 
+/-- **Bool check for `(lhs, ∀R.filler) ∧ TreeTrueRHS lhs ∧ IsConjOfAtoms filler`.**
+    Tree-friendly disjunct 30 — universal-restriction RHS with a
+    structurally-True LHS and a conj-of-atoms filler. -/
+def axiomIsTTRHSLhsUnivConjOfAtoms (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.2 with
+  | ALCHOQ.Concept.univ _ filler =>
+      treeTrueRHSBool ax.1 && isConjOfAtomsBool filler
+  | _ => false
+
+/-- Characterization of the `(TreeTrueRHS-lhs, ∀R.IsConjOfAtoms-filler)`
+    axiom shape (disjunct 30 of `IsTreeFriendlyAxiom`). -/
+theorem axiomIsTTRHSLhsUnivConjOfAtoms_iff (ax : ALCHOQ.Axiom) :
+    axiomIsTTRHSLhsUnivConjOfAtoms ax = true ↔
+    ∃ lhs : ALCHOQ.Concept, ∃ R : Nat, ∃ filler : ALCHOQ.Concept,
+      ax = (lhs, ALCHOQ.Concept.univ R filler) ∧
+      TreeTrueRHS lhs ∧ IsConjOfAtoms filler := by
+  unfold axiomIsTTRHSLhsUnivConjOfAtoms
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c2 with
+    | univ R filler =>
+      simp only at h
+      rw [Bool.and_eq_true] at h
+      obtain ⟨hL, hF⟩ := h
+      exact ⟨c1, R, filler, rfl,
+             (treeTrueRHSBool_iff c1).mp hL,
+             (isConjOfAtomsBool_iff filler).mp hF⟩
+    | atom _ => simp at h
+    | top => simp at h
+    | bot => simp at h
+    | nom _ => simp at h
+    | neg _ => simp at h
+    | conj _ _ => simp at h
+    | disj _ _ => simp at h
+    | exist _ _ => simp at h
+    | atLeast _ _ _ => simp at h
+    | atMost _ _ _ => simp at h
+    | hasSelf _ => simp at h
+  · rintro ⟨lhs, R, filler, hEq, hL, hF⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    rw [h1, h2]
+    simp only
+    rw [Bool.and_eq_true]
+    exact ⟨(treeTrueRHSBool_iff lhs).mpr hL,
+           (isConjOfAtomsBool_iff filler).mpr hF⟩
+
 /-- **Bool check for `(LHS, ≥1 R.D) ∧ TreeTrueRHS D` axiom shape.**
     Tree-friendly disjunct: number-restriction analogue of
     `∃R.TreeTrueRHS-filler` — the extended `axiomTriggersRole` fires
@@ -14083,6 +14130,41 @@ theorem axiomIsTreeFriendlySomeBool24_implies_treeFriendly
         Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
         Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
         Or.inr <| Or.inr h2
+
+/-- **Extended combined Bool check (round 25)** — adds
+    `axiomIsTTRHSLhsUnivConjOfAtoms` (disjunct 30: TreeTrueRHS-LHS
+    ∀R.IsConjOfAtoms-filler) to the prior 34-way Bool check.
+    With this round, 32 of the 33 disjuncts have a sufficient Bool
+    counterpart; only disjunct 31 (TreeTrueRHS-LHS
+    ∀R.IsConjOfAtomsOrTop-filler) remains outside. -/
+def axiomIsTreeFriendlySomeBool25 (ax : ALCHOQ.Axiom) : Bool :=
+  axiomIsTreeFriendlySomeBool24 ax ||
+  axiomIsTTRHSLhsUnivConjOfAtoms ax
+
+/-- Implication for the round-25 Bool check. -/
+theorem axiomIsTreeFriendlySomeBool25_implies_treeFriendly
+    (ax : ALCHOQ.Axiom) :
+    axiomIsTreeFriendlySomeBool25 ax = true → IsTreeFriendlyAxiom ax := by
+  intro h
+  classical
+  unfold axiomIsTreeFriendlySomeBool25 at h
+  by_cases h1 : axiomIsTreeFriendlySomeBool24 ax = true
+  · exact axiomIsTreeFriendlySomeBool24_implies_treeFriendly ax h1
+  have h2 : axiomIsTTRHSLhsUnivConjOfAtoms ax = true := by
+    have hAll : (axiomIsTreeFriendlySomeBool24 ax ||
+                 axiomIsTTRHSLhsUnivConjOfAtoms ax) = true := h
+    rw [Bool.or_eq_true] at hAll
+    rcases hAll with hAll | hAll
+    · exact absurd hAll h1
+    · exact hAll
+  rw [axiomIsTTRHSLhsUnivConjOfAtoms_iff] at h2
+  -- disjunct 30: TreeTrueRHS-LHS ∀R.IsConjOfAtoms-filler
+  -- — 29 Or.inr's then Or.inl
+  exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inl h2
 
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
