@@ -10332,6 +10332,52 @@ theorem unconditional_IsCanonicalSeed_iff_universal_perOResidual :
   · intro hRes O
     exact (isCanonicalSeed_canonicalSeedOfFull_iff_perOResidual O).mpr (hRes O)
 
+/-- **MILESTONE: All unconditionally-proved facts + precise residual.**
+    This is a single statement combining every fact about
+    `canonicalSeedOfFull` that has been unconditionally proved at
+    foundation-only granularity, together with the precise
+    characterization of the literal goal as a single named residual.
+
+    Components:
+    1.  **`canonicalSeedOfFull` is total** — the function exists for
+        every ontology.
+    2.  **Conjunct (i) of `IsCanonicalSeed`** — `vr ∈ contexts` for every O.
+    3.  **Conjunct (ii) of `IsCanonicalSeed`** — a sound derived-clauses
+        witness exists for every O.
+    4.  **Positive content of the discharged region** — every
+        entailed query in `InDischargedRegion O Q` is subsumed.
+    5.  **The literal goal is exactly the per-O residual** —
+        `UnconditionalIsCanonicalSeed ↔ ∀ O, PerOResidualHerbrand O`.
+    6.  **Discharging the residual yields the literal goal** —
+        `(∀ O, PerOResidualHerbrand O) → UnconditionalIsCanonicalSeed`.
+
+    The remaining §6.3.4 multi-session work is precisely
+    `∀ O, PerOResidualHerbrand O`, with no hidden direction or
+    additional obligations. -/
+theorem milestone_unconditionally_proved_plus_residual :
+    -- (1) Total function:
+    (∀ O : Ontology, ∃ D : ContextStructure, D = canonicalSeedOfFull O) ∧
+    -- (2) Conjunct (i):
+    (∀ O : Ontology, (canonicalSeedOfFull O).vr ∈ (canonicalSeedOfFull O).contexts) ∧
+    -- (3) Conjunct (ii):
+    (∀ O : Ontology, ∃ CD : DerivedClauses, isSound O (canonicalSeedOfFull O) CD) ∧
+    -- (4) Discharged region positive content:
+    (∀ (O : Ontology) (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        InDischargedRegion O Q → entailsQuery O Q →
+        ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta}) ∧
+    -- (5) Bidirectional residual characterization:
+    (UnconditionalIsCanonicalSeed ↔ (∀ O : Ontology, PerOResidualHerbrand O)) ∧
+    -- (6) Forward bridge:
+    ((∀ O : Ontology, PerOResidualHerbrand O) → UnconditionalIsCanonicalSeed) :=
+  ⟨fun O => ⟨canonicalSeedOfFull O, rfl⟩,
+   canonicalSeedOfFull_vr_in_contexts,
+   canonicalSeedOfFull_sound,
+   inDischargedRegion_implies_subsumed,
+   unconditional_IsCanonicalSeed_iff_universal_perOResidual,
+   unconditional_IsCanonicalSeed_iff_universal_perOResidual.mpr⟩
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`

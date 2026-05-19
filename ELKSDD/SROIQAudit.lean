@@ -1271,5 +1271,7 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.PerOResidualHerbrand
 #print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOfFull_iff_perOResidual
 #print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_iff_universal_perOResidual
+-- §MILESTONE BUNDLE: ALL UNCONDITIONALLY-PROVED FACTS + RESIDUAL
+#print axioms ALCHOIQContext.milestone_unconditionally_proved_plus_residual
 
 end ELKSDD
