@@ -15958,5 +15958,25 @@ theorem partial_isCanonicalSeed_canonicalSeedOfFull_of_isELOrUniversalRoleVacuou
   isCanonicalSeed_canonicalSeedOfFull_partial_isELOrUniversalRoleVacuousOnly
     O rbox ((isELOrUniversalRoleVacuousOnlyBool_iff O).mp hBool) hRBox
 
+/-- **Worked instance** of `isCanonicalSeedAtomConjDisj_of_isELOrAllVacuousOnlyBool`
+    on `exampleELConj`.   The required `isELOrAllVacuousOnlyBool` Bool
+    fact is `decide`-true on this concrete three-axiom ontology. -/
+theorem isCanonicalSeedAtomConjDisj_exampleELConj_via_bool :
+    IsCanonicalSeedAtomConjDisj (ontologyConceptSig exampleELConj)
+      exampleELConj
+      (canonicalSeedELConjFromOntology exampleELConj) :=
+  isCanonicalSeedAtomConjDisj_of_isELOrAllVacuousOnlyBool
+    exampleELConj (by decide)
+
+/-- **Worked instance** of `isCanonicalSeedAtomConjDisj_of_isELOrAllVacuousOnlyBool`
+    on `exampleVacuous`.   Mixes an EL-substantive axiom with
+    Herbrand-vacuous extensions; passes the Bool check by `decide`. -/
+theorem isCanonicalSeedAtomConjDisj_exampleVacuous_via_bool :
+    IsCanonicalSeedAtomConjDisj (ontologyConceptSig exampleVacuous)
+      exampleVacuous
+      (canonicalSeedELConjFromOntology exampleVacuous) :=
+  isCanonicalSeedAtomConjDisj_of_isELOrAllVacuousOnlyBool
+    exampleVacuous (by decide)
+
 end ALCHOIQContext
 end ELKSDD

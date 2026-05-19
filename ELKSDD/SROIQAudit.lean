@@ -1540,5 +1540,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isELOrUniversalRoleVacuousOnlyBool
 #print axioms ALCHOIQContext.isELOrUniversalRoleVacuousOnlyBool_iff
 #print axioms ALCHOIQContext.partial_isCanonicalSeed_canonicalSeedOfFull_of_isELOrUniversalRoleVacuousOnlyBool
+-- §WORKED EXAMPLES USING THE NEW BOOL DISPATCH (via `decide`)
+#print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_exampleELConj_via_bool
+#print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_exampleVacuous_via_bool
 
 end ELKSDD
