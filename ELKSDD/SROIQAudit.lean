@@ -1213,5 +1213,14 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.extensionGap_four_cell_decomposition
 #print axioms ALCHOIQContext.extensionGap_three_cell_residual
 #print axioms ALCHOIQContext.three_cells_imply_unconditional_IsCanonicalSeed
+-- §SIMPLIFIED FORMS OF THE THREE RESIDUAL CELLS
+#print axioms ALCHOIQContext.GapCell_SE_NACD_simple
+#print axioms ALCHOIQContext.GapCell_NSE_ACD_simple
+#print axioms ALCHOIQContext.GapCell_NSE_NACD_simple
+#print axioms ALCHOIQContext.gapCell_SE_NACD_iff_simple
+#print axioms ALCHOIQContext.gapCell_NSE_ACD_iff_simple
+#print axioms ALCHOIQContext.gapCell_NSE_NACD_iff_simple
+#print axioms ALCHOIQContext.extensionGap_three_cell_residual_simple
+#print axioms ALCHOIQContext.three_simple_cells_imply_unconditional_IsCanonicalSeed
 
 end ELKSDD

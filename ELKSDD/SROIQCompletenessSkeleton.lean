@@ -9620,6 +9620,125 @@ theorem three_cells_imply_unconditional_IsCanonicalSeed
     extensionGap_three_cell_residual.mpr ⟨hSE_NACD, hNSE_ACD, hNSE_NACD⟩
   exact extensionGap_implies_unconditional_IsCanonicalSeed hGap
 
+-- ============================================================
+-- §SIMPLIFIED FORMS OF THE THREE RESIDUAL CELLS
+--
+-- In each of the three undischarged cells, the negation premise
+-- `¬ ∃ rbox, InUnifiedSlice O rbox ∧ QRefSig ∧ AtomConjDisj` is
+-- redundant — the hypotheses already in the cell determine it.
+-- We give simplified (negation-premise-free) forms equivalent to
+-- each cell's original definition.
+-- ============================================================
+
+/-- Simplified cell (2/4): slice-eligible O, non-AtomConjDisj-signature Q. -/
+def GapCell_SE_NACD_simple : Prop :=
+  ∀ (O : Ontology), SliceEligibleOntology O →
+  ∀ (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      ¬ (QueryReferencesSignature (ontologyConceptSig O) Q ∧
+         AtomConjDisjQuery Q) →
+      entailsQuery O Q →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- Simplified cell (3/4): non-slice-eligible O, AtomConjDisj-signature Q. -/
+def GapCell_NSE_ACD_simple : Prop :=
+  ∀ (O : Ontology), ¬ SliceEligibleOntology O →
+  ∀ (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      QueryReferencesSignature (ontologyConceptSig O) Q →
+      AtomConjDisjQuery Q →
+      entailsQuery O Q →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- Simplified cell (4/4): non-slice-eligible O, non-AtomConjDisj-sig Q. -/
+def GapCell_NSE_NACD_simple : Prop :=
+  ∀ (O : Ontology), ¬ SliceEligibleOntology O →
+  ∀ (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      ¬ (QueryReferencesSignature (ontologyConceptSig O) Q ∧
+         AtomConjDisjQuery Q) →
+      entailsQuery O Q →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- The (slice-eligible, non-AtomConjDisj-sig) cell has a redundant
+    negation premise: when `¬ (QRefSig ∧ AtomConjDisj)`, no rbox
+    can witness `InUnifiedSlice O rbox ∧ QRefSig ∧ AtomConjDisj`
+    since the last two conjuncts already fail.   So the simplified
+    form is equivalent to the original. -/
+theorem gapCell_SE_NACD_iff_simple :
+    GapCell_SE_NACD ↔ GapCell_SE_NACD_simple := by
+  constructor
+  · intro hCell O hO D hDeriv hSat Q hPQ hEnt
+    apply hCell O hO D hDeriv hSat Q hPQ hEnt
+    rintro ⟨_, _, hQsig, hQAtom⟩
+    exact hPQ ⟨hQsig, hQAtom⟩
+  · intro hCell O hO D hDeriv hSat Q hPQ hEnt _hNeg
+    exact hCell O hO D hDeriv hSat Q hPQ hEnt
+
+/-- The (non-slice-eligible, AtomConjDisj-sig) cell has a redundant
+    negation premise: when `¬ SliceEligibleOntology O`, no rbox can
+    witness `InUnifiedSlice O rbox` (any such witness would make `O`
+    slice-eligible).   So the entire existential in the negation
+    premise is vacuously false. -/
+theorem gapCell_NSE_ACD_iff_simple :
+    GapCell_NSE_ACD ↔ GapCell_NSE_ACD_simple := by
+  constructor
+  · intro hCell O hO D hDeriv hSat Q hQsig hQAtom hEnt
+    apply hCell O hO D hDeriv hSat Q hQsig hQAtom hEnt
+    rintro ⟨rbox, hSlice, _, _⟩
+    -- hSlice : InUnifiedSlice O rbox, so O is slice-eligible.
+    apply hO
+    rcases hSlice with hAll | hUni
+    · exact Or.inl hAll.1
+    · exact Or.inr hUni.1
+  · intro hCell O hO D hDeriv hSat Q hQsig hQAtom hEnt _hNeg
+    exact hCell O hO D hDeriv hSat Q hQsig hQAtom hEnt
+
+/-- The (non-slice-eligible, non-AtomConjDisj-sig) cell has a
+    redundant negation premise: under `¬ SliceEligibleOntology O`,
+    the rbox-witness inside the existential cannot exist. -/
+theorem gapCell_NSE_NACD_iff_simple :
+    GapCell_NSE_NACD ↔ GapCell_NSE_NACD_simple := by
+  constructor
+  · intro hCell O hO D hDeriv hSat Q hPQ hEnt
+    apply hCell O hO D hDeriv hSat Q hPQ hEnt
+    rintro ⟨rbox, hSlice, _, _⟩
+    apply hO
+    rcases hSlice with hAll | hUni
+    · exact Or.inl hAll.1
+    · exact Or.inr hUni.1
+  · intro hCell O hO D hDeriv hSat Q hPQ hEnt _hNeg
+    exact hCell O hO D hDeriv hSat Q hPQ hEnt
+
+/-- **Three-cell residual in simplified form.**   Combining
+    `extensionGap_three_cell_residual` with each cell's
+    negation-premise-free equivalent. -/
+theorem extensionGap_three_cell_residual_simple :
+    UnconditionalSCExtensionGap ↔
+    GapCell_SE_NACD_simple ∧ GapCell_NSE_ACD_simple ∧ GapCell_NSE_NACD_simple := by
+  rw [extensionGap_three_cell_residual,
+      gapCell_SE_NACD_iff_simple,
+      gapCell_NSE_ACD_iff_simple,
+      gapCell_NSE_NACD_iff_simple]
+
+/-- **Three-cell bridge in simplified form.**   Discharging the
+    three negation-premise-free cells implies the literal
+    unconditional theorem. -/
+theorem three_simple_cells_imply_unconditional_IsCanonicalSeed
+    (hSE_NACD : GapCell_SE_NACD_simple)
+    (hNSE_ACD : GapCell_NSE_ACD_simple)
+    (hNSE_NACD : GapCell_NSE_NACD_simple) :
+    UnconditionalIsCanonicalSeed := by
+  have hGap : UnconditionalSCExtensionGap :=
+    extensionGap_three_cell_residual_simple.mpr ⟨hSE_NACD, hNSE_ACD, hNSE_NACD⟩
+  exact extensionGap_implies_unconditional_IsCanonicalSeed hGap
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
