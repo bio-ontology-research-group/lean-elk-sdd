@@ -1189,5 +1189,10 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.rAxiomCompatibleWithBothFamilies_sym
 #print axioms ALCHOIQContext.rAxiomCompatibleWithBothFamilies_inv
 #print axioms ALCHOIQContext.rAxiomCompatibleWithBothFamilies_chain_cons
+-- §SLICE-ELIGIBLE GAP SIMPLIFICATION + RESTRICTED-GAP NAMED PROP
+#print axioms ALCHOIQContext.sliceEligible_extensionGap_premise_simplification
+#print axioms ALCHOIQContext.UnconditionalSCExtensionGapOnSliceEligible
+#print axioms ALCHOIQContext.extensionGap_sliceEligible_holds_on_AtomConjDisj
+#print axioms ALCHOIQContext.extensionGapOnSliceEligible_reduces_to_nonAtomConjDisj
 
 end ELKSDD

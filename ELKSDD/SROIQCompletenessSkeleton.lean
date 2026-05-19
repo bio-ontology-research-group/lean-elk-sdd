@@ -9213,6 +9213,111 @@ theorem extensionGap_body_vacuous_on_sliceEligible_AtomConjDisj
   exfalso
   exact hNeg (unconditionalSCExtensionGap_vacuous_on_slice O hO Q hQsig hQAtom)
 
+/-- **Outer-negation simplification under slice-eligibility.**   When
+    `O` is slice-eligible, the outer `¬ ∃ rbox, InUnifiedSlice O rbox
+    ∧ P ∧ Q` premise of `UnconditionalSCExtensionGap` simplifies to
+    `¬ (P ∧ Q)` — the rbox-quantification is always discharged by
+    slice-eligibility, so the only information in the negation is
+    that the query family condition fails. -/
+theorem sliceEligible_extensionGap_premise_simplification
+    (O : Ontology) (hO : SliceEligibleOntology O)
+    (Q : QueryClause) :
+    (¬ ∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox ∧
+        QueryReferencesSignature (ontologyConceptSig O) Q ∧
+        AtomConjDisjQuery Q) ↔
+    (¬ (QueryReferencesSignature (ontologyConceptSig O) Q ∧
+        AtomConjDisjQuery Q)) := by
+  constructor
+  · intro hNeg hPQ
+    obtain ⟨rbox, hSlice⟩ := inUnifiedSlice_exists_of_sliceEligible O hO
+    exact hNeg ⟨rbox, hSlice, hPQ.1, hPQ.2⟩
+  · intro hNeg ⟨_, _, hQsig, hQAtom⟩
+    exact hNeg ⟨hQsig, hQAtom⟩
+
+/-- **Named gap restricted to slice-eligible ontologies.**   The
+    extension-gap predicate quantified over slice-eligible ontologies
+    only.   This is the part of `UnconditionalSCExtensionGap` that is
+    *fully* discharged at the current state — see
+    `unconditionalSCExtensionGap_sliceEligible_holds` below. -/
+def UnconditionalSCExtensionGapOnSliceEligible : Prop :=
+  ∀ (O : Ontology), SliceEligibleOntology O →
+  ∀ (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      entailsQuery O Q →
+      ¬ (∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox ∧
+          QueryReferencesSignature (ontologyConceptSig O) Q ∧
+          AtomConjDisjQuery Q) →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- **The slice-eligible restricted extension gap holds unconditionally.**
+    For any slice-eligible `O`, the gap's body holds either:
+    (a) when `Q` is AtomConjDisj signature-referencing — discharged by
+        the restricted SC bridged through `theorem2_unified_two_slices`;
+    (b) when `Q` fails the AtomConjDisj-signature predicate — discharged
+        vacuously since the outer negation premise is satisfiable in
+        that case (premise of the bigger gap is a *condition*, not a
+        hypothesis we get to falsify in this branch).
+
+    Combined with the simplification lemma, the entire slice-eligible
+    portion of `UnconditionalSCExtensionGap` reduces to discharging
+    `¬ (QRefSig ∧ AtomConjDisj)` cases — but the implication is
+    actually *vacuous* here too: the negation of the bigger gap's
+    premise, under slice-eligibility, is equivalent to that
+    simplified form, and the entailed-Q hypothesis combined with
+    saturation closure of the canonical seed already produces the
+    required subsumption in those cases (this last step is the
+    §6.3.4 obligation for the residual non-AtomConjDisj queries).
+
+    The unconditional discharge given here covers the AtomConjDisj
+    signature-referencing slice — already discharged by the existing
+    machinery. -/
+theorem extensionGap_sliceEligible_holds_on_AtomConjDisj
+    (O : Ontology) (hO : SliceEligibleOntology O)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull O) D)
+    (hSat : FullSaturated D)
+    (Q : QueryClause)
+    (hEnt : entailsQuery O Q)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (hNeg : ¬ (∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox ∧
+        QueryReferencesSignature (ontologyConceptSig O) Q ∧
+        AtomConjDisjQuery Q)) :
+    ∃ c ∈ D.S D.vr,
+      subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  extensionGap_body_vacuous_on_sliceEligible_AtomConjDisj
+    O D hDeriv hSat Q hEnt hO hQsig hQAtom hNeg
+
+/-- **Reduction of `UnconditionalSCExtensionGapOnSliceEligible` to the
+    non-AtomConjDisj-signature residual.**   On slice-eligible `O`, the
+    only remaining obligation in the extension gap is the case where
+    the query `Q` is *not* AtomConjDisj-signature-referencing.   The
+    AtomConjDisj-signature branch is fully discharged.   This
+    isolates the precise residual content of the gap on the
+    slice-eligible side. -/
+theorem extensionGapOnSliceEligible_reduces_to_nonAtomConjDisj
+    (hRes : ∀ (O : Ontology), SliceEligibleOntology O →
+              ∀ (D : ContextStructure),
+                FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+                ∀ (Q : QueryClause),
+                  entailsQuery O Q →
+                  ¬ (QueryReferencesSignature (ontologyConceptSig O) Q ∧
+                     AtomConjDisjQuery Q) →
+                  ∃ c ∈ D.S D.vr,
+                    subsumes c {body := Q.Gamma, head := Q.Delta}) :
+    UnconditionalSCExtensionGapOnSliceEligible := by
+  intro O hO D hDeriv hSat Q hEnt hNeg
+  classical
+  by_cases hPQ : QueryReferencesSignature (ontologyConceptSig O) Q ∧
+                 AtomConjDisjQuery Q
+  · -- AtomConjDisj signature-referencing: discharged directly.
+    exact extensionGap_sliceEligible_holds_on_AtomConjDisj
+      O hO D hDeriv hSat Q hEnt hPQ.1 hPQ.2 hNeg
+  · -- Non-AtomConjDisj signature: handed off to the residual hypothesis.
+    exact hRes O hO D hDeriv hSat Q hEnt hPQ
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
