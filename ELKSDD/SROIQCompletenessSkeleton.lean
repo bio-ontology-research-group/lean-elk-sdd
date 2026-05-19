@@ -16467,6 +16467,30 @@ theorem tenacucala_theorem2_dual_directions
   ⟨tenacucala_theorem2_entailsQuery_form O rbox hSlice Q hQsig hQAtom D hDeriv hSat,
    tenacucala_theorem2_countermodel O rbox hSlice Q hQsig hQAtom D hDeriv hSat⟩
 
+/-- **Worked instance** of `tenacucala_theorem2_dual_directions` on
+    `exampleAtomChain` paired with `exampleTransInclRBox`.   Both the
+    entailment direction (completeness) and the countermodel direction
+    (constructive Herbrand witness) discharge on a single concrete
+    SROIQ ontology with non-trivial universal-role RBox — packaging
+    the headline saturation-completeness story for a realistic input. -/
+theorem tenacucala_theorem2_dual_directions_exampleAtomChain
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig exampleAtomChain) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull exampleAtomChain) D)
+    (hSat : FullSaturated D) :
+    (entailsQuery exampleAtomChain Q →
+      ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta}) ∧
+    ((∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+      ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+        (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+        I.satisfies exampleAtomChain ∧
+        SROIQ.RBox.eval I exampleTransInclRBox ∧
+        ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  tenacucala_theorem2_dual_directions exampleAtomChain exampleTransInclRBox
+    exampleAtomChain_in_unifiedSlice_transInclRBox Q hQsig hQAtom D hDeriv hSat
+
 -- ============================================================
 -- §FINAL-GOAL.  Statement scaffolding for the full Tena-Cucala
 -- (2021) Theorem 2.
