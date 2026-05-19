@@ -1258,5 +1258,7 @@ namespace ELKSDD
 -- §IsCanonicalSeed REDUCES TO HerbrandProperty AT THE CANONICAL SEED
 #print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOfFull_iff_herbrandProperty
 #print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_iff_universal_HerbrandProperty
+-- §HERBRANDPROPERTY RESIDUAL ON SLICE-ELIGIBLE O
+#print axioms ALCHOIQContext.herbrandProperty_residual_on_sliceEligible
 
 end ELKSDD

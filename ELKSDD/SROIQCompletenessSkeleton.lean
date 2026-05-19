@@ -10154,6 +10154,39 @@ theorem unconditional_IsCanonicalSeed_iff_universal_HerbrandProperty :
     exact (isCanonicalSeed_canonicalSeedOfFull_iff_herbrandProperty O).mpr
       (hHP O)
 
+/-- **HerbrandProperty residual on slice-eligible `O`.**   For
+    slice-eligible `O`, the full `HerbrandProperty` decomposes: the
+    AtomConjDisj-signature portion is already discharged by
+    `canonicalSeedOfFull_herbrand_property_unifiedSlice` paired with
+    the slice-eligibility witness, leaving the *non*-AtomConjDisj-sig
+    portion as the residual obligation. -/
+theorem herbrandProperty_residual_on_sliceEligible
+    (O : Ontology) (hO : SliceEligibleOntology O)
+    (hRes :
+      ∀ (D : ContextStructure),
+        FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+        ∀ (Q : QueryClause),
+          ¬ (QueryReferencesSignature (ontologyConceptSig O) Q ∧
+             AtomConjDisjQuery Q) →
+          (∀ c ∈ D.S D.vr,
+             ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+          ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+            (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+            I.satisfies O ∧ ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :
+    HerbrandProperty O (canonicalSeedOfFull O) := by
+  intro D hDeriv hSat Q hNoSub
+  classical
+  by_cases hPQ : QueryReferencesSignature (ontologyConceptSig O) Q ∧
+                 AtomConjDisjQuery Q
+  · -- AtomConjDisj-sig Q: discharged by the slice-machinery.
+    obtain ⟨rbox, hSlice⟩ := inUnifiedSlice_exists_of_sliceEligible O hO
+    obtain ⟨α, _inh, I, γ, φ, vx, vy, hSatO, _hRBox, hNotEval⟩ :=
+      canonicalSeedOfFull_herbrand_property_unifiedSlice O rbox hSlice
+        D hDeriv hSat Q hPQ.1 hPQ.2 hNoSub
+    exact ⟨α, _inh, I, γ, φ, vx, vy, hSatO, hNotEval⟩
+  · -- Non-AtomConjDisj-sig Q: handed to the residual hypothesis.
+    exact hRes D hDeriv hSat Q hPQ hNoSub
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
