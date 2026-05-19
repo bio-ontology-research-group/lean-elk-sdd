@@ -1296,5 +1296,12 @@ namespace ELKSDD
 -- §DECIDABILITY OF IsELConjOnly
 #print axioms ALCHOIQContext.axiomIsConjAtomAtom
 #print axioms ALCHOIQContext.axiomIsConjAtomAtom_iff
+-- §DECIDABILITY OF IsELOrVacuousOnly + helpers
+#print axioms ALCHOIQContext.axiomIsExistAtomAtom
+#print axioms ALCHOIQContext.axiomIsAtomUnivAtom
+#print axioms ALCHOIQContext.axiomIsAtomTop
+#print axioms ALCHOIQContext.axiomIsExistAtomAtom_iff
+#print axioms ALCHOIQContext.axiomIsAtomUnivAtom_iff
+#print axioms ALCHOIQContext.axiomIsAtomTop_iff
 
 end ELKSDD

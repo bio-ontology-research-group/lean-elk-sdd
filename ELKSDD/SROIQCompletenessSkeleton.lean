@@ -10672,6 +10672,128 @@ instance : DecidablePred IsELConjOnly := by
         (Bool.or_eq_true _ _ |>.mpr (Or.inr ((axiomIsAtomBot_iff ax).mpr h2))))
     · exact Bool.or_eq_true _ _ |>.mpr (Or.inr ((axiomIsConjAtomAtom_iff ax).mpr h3))
 
+/-- **Bool check for `(exist R (atom A), atom B)`.** -/
+def axiomIsExistAtomAtom (ax : ALCHOQ.Concept × ALCHOQ.Concept) : Bool :=
+  match ax.1, ax.2 with
+  | ALCHOQ.Concept.exist _ (ALCHOQ.Concept.atom _), ALCHOQ.Concept.atom _ => true
+  | _, _ => false
+
+/-- **Bool check for `(atom A, univ R (atom B))`.** -/
+def axiomIsAtomUnivAtom (ax : ALCHOQ.Concept × ALCHOQ.Concept) : Bool :=
+  match ax.1, ax.2 with
+  | ALCHOQ.Concept.atom _, ALCHOQ.Concept.univ _ (ALCHOQ.Concept.atom _) => true
+  | _, _ => false
+
+/-- **Bool check for `(atom A, top)`.** -/
+def axiomIsAtomTop (ax : ALCHOQ.Concept × ALCHOQ.Concept) : Bool :=
+  match ax.1, ax.2 with
+  | ALCHOQ.Concept.atom _, ALCHOQ.Concept.top => true
+  | _, _ => false
+
+theorem axiomIsExistAtomAtom_iff (ax : ALCHOQ.Concept × ALCHOQ.Concept) :
+    axiomIsExistAtomAtom ax = true ↔
+    ∃ R A B : Nat,
+      ax = (ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom A),
+            ALCHOQ.Concept.atom B) := by
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 <;> (try simp [axiomIsExistAtomAtom] at h)
+    rename_i R d
+    cases d <;> (try simp [axiomIsExistAtomAtom] at h)
+    cases c2 <;> (try simp [axiomIsExistAtomAtom] at h)
+    rename_i A B
+    exact ⟨R, A, B, rfl⟩
+  · rintro ⟨R, A, B, hEq⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    subst h1; subst h2
+    rfl
+
+theorem axiomIsAtomUnivAtom_iff (ax : ALCHOQ.Concept × ALCHOQ.Concept) :
+    axiomIsAtomUnivAtom ax = true ↔
+    ∃ A R B : Nat,
+      ax = (ALCHOQ.Concept.atom A,
+            ALCHOQ.Concept.univ R (ALCHOQ.Concept.atom B)) := by
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 <;> (try simp [axiomIsAtomUnivAtom] at h)
+    cases c2 <;> (try simp [axiomIsAtomUnivAtom] at h)
+    rename_i A R d
+    cases d <;> (try simp [axiomIsAtomUnivAtom] at h)
+    rename_i B
+    exact ⟨A, R, B, rfl⟩
+  · rintro ⟨A, R, B, hEq⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    subst h1; subst h2
+    rfl
+
+theorem axiomIsAtomTop_iff (ax : ALCHOQ.Concept × ALCHOQ.Concept) :
+    axiomIsAtomTop ax = true ↔
+    ∃ A : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.top) := by
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 <;> (try simp [axiomIsAtomTop] at h) <;>
+      (cases c2 <;> simp [axiomIsAtomTop] at h)
+    rename_i A
+    exact ⟨A, rfl⟩
+  · rintro ⟨A, hEq⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    subst h1; subst h2
+    rfl
+
+/-- **Decidable instance for `IsELOrVacuousOnly`.**   Six axiom
+    shapes, all Bool-checkable. -/
+instance : DecidablePred IsELOrVacuousOnly := by
+  intro O
+  unfold IsELOrVacuousOnly
+  refine decidable_of_iff
+    (O.all (fun ax => axiomIsAtomAtom ax ||
+                       axiomIsAtomBot ax ||
+                       axiomIsConjAtomAtom ax ||
+                       axiomIsExistAtomAtom ax ||
+                       axiomIsAtomUnivAtom ax ||
+                       axiomIsAtomTop ax)) ?_
+  rw [List.all_eq_true]
+  constructor
+  · intro h ax hax
+    have hOr := h ax hax
+    -- The Bool decomposes as ((((b1 || b2) || b3) || b4) || b5) || b6.
+    rcases Bool.or_eq_true _ _ |>.mp hOr with h12345 | h6
+    · rcases Bool.or_eq_true _ _ |>.mp h12345 with h1234 | h5
+      · rcases Bool.or_eq_true _ _ |>.mp h1234 with h123 | h4
+        · rcases Bool.or_eq_true _ _ |>.mp h123 with h12 | h3
+          · rcases Bool.or_eq_true _ _ |>.mp h12 with h1 | h2
+            · exact Or.inl ((axiomIsAtomAtom_iff ax).mp h1)
+            · exact Or.inr (Or.inl ((axiomIsAtomBot_iff ax).mp h2))
+          · exact Or.inr (Or.inr (Or.inl ((axiomIsConjAtomAtom_iff ax).mp h3)))
+        · exact Or.inr (Or.inr (Or.inr (Or.inl
+            ((axiomIsExistAtomAtom_iff ax).mp h4))))
+      · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl
+          ((axiomIsAtomUnivAtom_iff ax).mp h5)))))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+        ((axiomIsAtomTop_iff ax).mp h6)))))
+  · intro h ax hax
+    rcases h ax hax with h1 | h2 | h3 | h4 | h5 | h6
+    · exact Bool.or_eq_true _ _ |>.mpr (Or.inl (Bool.or_eq_true _ _ |>.mpr
+        (Or.inl (Bool.or_eq_true _ _ |>.mpr (Or.inl (Bool.or_eq_true _ _ |>.mpr
+          (Or.inl (Bool.or_eq_true _ _ |>.mpr
+            (Or.inl ((axiomIsAtomAtom_iff ax).mpr h1))))))))))
+    · exact Bool.or_eq_true _ _ |>.mpr (Or.inl (Bool.or_eq_true _ _ |>.mpr
+        (Or.inl (Bool.or_eq_true _ _ |>.mpr (Or.inl (Bool.or_eq_true _ _ |>.mpr
+          (Or.inl (Bool.or_eq_true _ _ |>.mpr
+            (Or.inr ((axiomIsAtomBot_iff ax).mpr h2))))))))))
+    · exact Bool.or_eq_true _ _ |>.mpr (Or.inl (Bool.or_eq_true _ _ |>.mpr
+        (Or.inl (Bool.or_eq_true _ _ |>.mpr (Or.inl (Bool.or_eq_true _ _ |>.mpr
+          (Or.inr ((axiomIsConjAtomAtom_iff ax).mpr h3))))))))
+    · exact Bool.or_eq_true _ _ |>.mpr (Or.inl (Bool.or_eq_true _ _ |>.mpr
+        (Or.inl (Bool.or_eq_true _ _ |>.mpr
+          (Or.inr ((axiomIsExistAtomAtom_iff ax).mpr h4))))))
+    · exact Bool.or_eq_true _ _ |>.mpr (Or.inl (Bool.or_eq_true _ _ |>.mpr
+        (Or.inr ((axiomIsAtomUnivAtom_iff ax).mpr h5))))
+    · exact Bool.or_eq_true _ _ |>.mpr (Or.inr ((axiomIsAtomTop_iff ax).mpr h6))
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at
