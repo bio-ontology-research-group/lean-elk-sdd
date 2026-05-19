@@ -10343,6 +10343,81 @@ theorem queryClause_empty_eval_false
   obtain ⟨h, hMem, _⟩ := hEval (fun b hb => absurd hb List.not_mem_nil)
   exact absurd hMem List.not_mem_nil
 
+/-- **Decidable check on `BLit`** for the AtomConjDisj-x shape. -/
+def BLit.isAtomX : BLit → Bool
+  | BLit.atomTrue (PTerm.atom _ ATerm.x) => true
+  | _ => false
+
+/-- **Decidable check on `CLit`** for the AtomConjDisj-x shape. -/
+def CLit.isAtomX : CLit → Bool
+  | CLit.atomTrue (PTerm.atom _ ATerm.x) => true
+  | _ => false
+
+/-- Characterization: `BLit.isAtomX l = true` iff `l` is `atomTrue
+    (atom A x)` for some `A`. -/
+theorem BLit.isAtomX_iff (l : BLit) :
+    l.isAtomX = true ↔
+    ∃ A : Nat, l = BLit.atomTrue (PTerm.atom A ATerm.x) := by
+  constructor
+  · intro h
+    cases l with
+    | atomTrue p =>
+      cases p with
+      | ttrue => simp [BLit.isAtomX] at h
+      | atom A t =>
+        cases t with
+        | x => exact ⟨A, rfl⟩
+        | y => simp [BLit.isAtomX] at h
+        | fx _ => simp [BLit.isAtomX] at h
+        | const _ => simp [BLit.isAtomX] at h
+        | fconst _ _ => simp [BLit.isAtomX] at h
+      | role _ _ _ => simp [BLit.isAtomX] at h
+    | uequ _ _ => simp [BLit.isAtomX] at h
+  · rintro ⟨A, rfl⟩
+    rfl
+
+/-- Characterization: `CLit.isAtomX l = true` iff `l` is `atomTrue
+    (atom A x)` for some `A`. -/
+theorem CLit.isAtomX_iff (l : CLit) :
+    l.isAtomX = true ↔
+    ∃ A : Nat, l = CLit.atomTrue (PTerm.atom A ATerm.x) := by
+  constructor
+  · intro h
+    cases l with
+    | atomTrue p =>
+      cases p with
+      | ttrue => simp [CLit.isAtomX] at h
+      | atom A t =>
+        cases t with
+        | x => exact ⟨A, rfl⟩
+        | y => simp [CLit.isAtomX] at h
+        | fx _ => simp [CLit.isAtomX] at h
+        | const _ => simp [CLit.isAtomX] at h
+        | fconst _ _ => simp [CLit.isAtomX] at h
+      | role _ _ _ => simp [CLit.isAtomX] at h
+    | aeq _ => simp [CLit.isAtomX] at h
+  · rintro ⟨A, rfl⟩
+    rfl
+
+/-- **Decidable instance for `AtomConjDisjQuery`.**   Via the
+    Bool-valued checks `BLit.isAtomX` and `CLit.isAtomX`, the
+    AtomConjDisj predicate becomes algorithmically decidable. -/
+instance : DecidablePred AtomConjDisjQuery := by
+  intro Q
+  unfold AtomConjDisjQuery
+  refine decidable_of_iff
+    (Q.Gamma.all BLit.isAtomX ∧ Q.Delta.all CLit.isAtomX) ?_
+  rw [List.all_eq_true, List.all_eq_true]
+  constructor
+  · intro ⟨hG, hD⟩
+    refine ⟨?_, ?_⟩
+    · intro l hl; exact (BLit.isAtomX_iff l).mp (hG l hl)
+    · intro l hl; exact (CLit.isAtomX_iff l).mp (hD l hl)
+  · intro ⟨hG, hD⟩
+    refine ⟨?_, ?_⟩
+    · intro l hl; exact (BLit.isAtomX_iff l).mpr (hG l hl)
+    · intro l hl; exact (CLit.isAtomX_iff l).mpr (hD l hl)
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at

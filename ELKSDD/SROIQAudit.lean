@@ -1275,5 +1275,10 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.milestone_unconditionally_proved_plus_residual
 -- §EMPTY QUERY IS ALWAYS FALSIFIABLE
 #print axioms ALCHOIQContext.queryClause_empty_eval_false
+-- §DECIDABLE INSTANCE FOR AtomConjDisjQuery
+#print axioms ALCHOIQContext.BLit.isAtomX
+#print axioms ALCHOIQContext.CLit.isAtomX
+#print axioms ALCHOIQContext.BLit.isAtomX_iff
+#print axioms ALCHOIQContext.CLit.isAtomX_iff
 
 end ELKSDD
