@@ -1242,5 +1242,12 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.gapCell_outsideDischargedRegion_iff_two
 #print axioms ALCHOIQContext.extensionGap_single_cell_residual
 #print axioms ALCHOIQContext.single_cell_implies_unconditional_IsCanonicalSeed
+-- §NAMED DISCHARGED REGION + CLEAN SINGLE-CELL RESIDUAL
+#print axioms ALCHOIQContext.InDischargedRegion
+#print axioms ALCHOIQContext.inDischargedRegion_implies_subsumed
+#print axioms ALCHOIQContext.GapCell_OutsideInDischargedRegion
+#print axioms ALCHOIQContext.gapCell_outside_iff_outsideInDischargedRegion
+#print axioms ALCHOIQContext.extensionGap_outsideInDischargedRegion
+#print axioms ALCHOIQContext.outsideInDischargedRegion_implies_unconditional_IsCanonicalSeed
 
 end ELKSDD

@@ -9971,6 +9971,71 @@ theorem single_cell_implies_unconditional_IsCanonicalSeed
     extensionGap_single_cell_residual.mpr hOut
   exact extensionGap_implies_unconditional_IsCanonicalSeed hGap
 
+/-- **Named discharged region.**   A `(O, Q)` pair is in the
+    discharged region exactly when `O` is slice-eligible, `Q`
+    references the ontology signature, and `Q` is an
+    AtomConjDisj query.   Exactly the region where the
+    saturation-completeness obligation is unconditionally
+    discharged. -/
+def InDischargedRegion (O : Ontology) (Q : QueryClause) : Prop :=
+  SliceEligibleOntology O ∧
+  QueryReferencesSignature (ontologyConceptSig O) Q ∧
+  AtomConjDisjQuery Q
+
+/-- **Positive content of the discharged region.**   On `(O, Q)` in
+    the discharged region with `entailsQuery O Q`, the saturation
+    contains a subsumer of `Q`.   The complement of `GapCell_
+    OutsideDischargedRegion`. -/
+theorem inDischargedRegion_implies_subsumed
+    (O : Ontology) (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull O) D)
+    (hSat : FullSaturated D)
+    (Q : QueryClause)
+    (hIn : InDischargedRegion O Q)
+    (hEnt : entailsQuery O Q) :
+    ∃ c ∈ D.S D.vr,
+      subsumes c {body := Q.Gamma, head := Q.Delta} := by
+  obtain ⟨hO, hQsig, hQAtom⟩ := hIn
+  exact gapCell_SE_ACD_simple_holds O hO D hDeriv hSat Q hQsig hQAtom hEnt
+
+/-- **Single-cell residual via `InDischargedRegion`.**   Using the
+    named discharged-region predicate, the single residual cell
+    reads as: `¬ InDischargedRegion O Q → entailsQuery O Q →
+    subsumed`. -/
+def GapCell_OutsideInDischargedRegion : Prop :=
+  ∀ (O : Ontology) (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      ¬ InDischargedRegion O Q →
+      entailsQuery O Q →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- The two equivalent forms of the single-cell residual. -/
+theorem gapCell_outside_iff_outsideInDischargedRegion :
+    GapCell_OutsideDischargedRegion ↔ GapCell_OutsideInDischargedRegion := by
+  unfold GapCell_OutsideDischargedRegion GapCell_OutsideInDischargedRegion
+    InDischargedRegion
+  rfl
+
+/-- **Final clean residual statement.**   The full gap is equivalent
+    to the single named `GapCell_OutsideInDischargedRegion` cell —
+    the cleanest renaming of the residual obligation. -/
+theorem extensionGap_outsideInDischargedRegion :
+    UnconditionalSCExtensionGap ↔ GapCell_OutsideInDischargedRegion := by
+  rw [extensionGap_single_cell_residual,
+      gapCell_outside_iff_outsideInDischargedRegion]
+
+/-- **Final clean bridge.**   The literal `UnconditionalIsCanonicalSeed`
+    follows from `GapCell_OutsideInDischargedRegion` — the §6.3.4
+    obligation in its cleanest single-named form. -/
+theorem outsideInDischargedRegion_implies_unconditional_IsCanonicalSeed
+    (hOut : GapCell_OutsideInDischargedRegion) :
+    UnconditionalIsCanonicalSeed := by
+  have hGap : UnconditionalSCExtensionGap :=
+    extensionGap_outsideInDischargedRegion.mpr hOut
+  exact extensionGap_implies_unconditional_IsCanonicalSeed hGap
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
