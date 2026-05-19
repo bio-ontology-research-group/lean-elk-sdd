@@ -6257,6 +6257,14 @@ def axiomIsAnyLHSAtLeast1ConjOfAtoms (ax : ALCHOQ.Axiom) : Bool :=
   | ALCHOQ.Concept.atLeast 1 _ filler => isConjOfAtomsBool filler
   | _ => false
 
+/-- **Bool check for `(LHS, ∃R.filler) ∧ IsConjOfAtomsOrTop filler`.**
+    Tree-friendly disjunct: existential with mixed atom/top
+    conjunction filler. -/
+def axiomIsAnyLHSExistConjOfAtomsOrTop (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.2 with
+  | ALCHOQ.Concept.exist _ filler => isConjOfAtomsOrTopBool filler
+  | _ => false
+
 /-- Characterization of the `(LHS, ≥1 R.TreeTrueRHS-filler)` axiom shape. -/
 theorem axiomIsAnyLHSAtLeast1TreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     axiomIsAnyLHSAtLeast1TreeTrueRHS ax = true ↔
@@ -6287,6 +6295,35 @@ theorem axiomIsAnyLHSAtLeast1TreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     have h2 : c2 = ALCHOQ.Concept.atLeast 1 R D := (Prod.mk.inj hEq).2
     rw [h2]
     exact (treeTrueRHSBool_iff D).mpr hD
+
+/-- Characterization of the `(LHS, ∃R.IsConjOfAtomsOrTop-filler)` shape. -/
+theorem axiomIsAnyLHSExistConjOfAtomsOrTop_iff (ax : ALCHOQ.Axiom) :
+    axiomIsAnyLHSExistConjOfAtomsOrTop ax = true ↔
+    ∃ LHS : ALCHOQ.Concept, ∃ R : Nat, ∃ filler : ALCHOQ.Concept,
+      ax = (LHS, ALCHOQ.Concept.exist R filler) ∧
+      IsConjOfAtomsOrTop filler := by
+  unfold axiomIsAnyLHSExistConjOfAtomsOrTop
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c2 with
+    | exist R filler =>
+      exact ⟨c1, R, filler, rfl, (isConjOfAtomsOrTopBool_iff filler).mp h⟩
+    | atom _ => simp at h
+    | top => simp at h
+    | bot => simp at h
+    | nom _ => simp at h
+    | neg _ => simp at h
+    | conj _ _ => simp at h
+    | disj _ _ => simp at h
+    | univ _ _ => simp at h
+    | atLeast _ _ _ => simp at h
+    | atMost _ _ _ => simp at h
+    | hasSelf _ => simp at h
+  · rintro ⟨LHS, R, filler, hEq, hF⟩
+    have h2 : c2 = ALCHOQ.Concept.exist R filler := (Prod.mk.inj hEq).2
+    rw [h2]
+    exact (isConjOfAtomsOrTopBool_iff filler).mpr hF
 
 /-- Characterization of the `(LHS, ≥1 R.IsConjOfAtoms-filler)` shape. -/
 theorem axiomIsAnyLHSAtLeast1ConjOfAtoms_iff (ax : ALCHOQ.Axiom) :
