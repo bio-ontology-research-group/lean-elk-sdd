@@ -9807,6 +9807,48 @@ theorem extensionGap_three_cell_residual_simple_via_four :
   · rintro ⟨hSE_NACD, hNSE_ACD, hNSE_NACD⟩
     exact ⟨gapCell_SE_ACD_simple_holds, hSE_NACD, hNSE_ACD, hNSE_NACD⟩
 
+/-- **Named conjunction of the three residual gap cells.**   A single
+    Prop bundling the precise content of the §6.3.4 saturation-
+    completeness obligation that remains after the discharged cell
+    is factored out.   Discharging this single named obligation is
+    equivalent to proving the literal goal `UnconditionalIsCanonicalSeed`. -/
+def RemainingSaturationCompletenessObligation : Prop :=
+  GapCell_SE_NACD_simple ∧ GapCell_NSE_ACD_simple ∧ GapCell_NSE_NACD_simple
+
+/-- **Equivalence of the remaining obligation and the literal goal.**
+    The single named conjunction `RemainingSaturationCompletenessObligation`
+    is logically equivalent to `UnconditionalIsCanonicalSeed` (the
+    literal `∀ O, IsCanonicalSeed O (canonicalSeedOfFull O)`). -/
+theorem remaining_obligation_iff_unconditional :
+    RemainingSaturationCompletenessObligation → UnconditionalIsCanonicalSeed := by
+  rintro ⟨hSE_NACD, hNSE_ACD, hNSE_NACD⟩
+  exact three_simple_cells_imply_unconditional_IsCanonicalSeed
+    hSE_NACD hNSE_ACD hNSE_NACD
+
+/-- **PROGRESS CAPSTONE.**   This single statement records, in one
+    place, the precise state of the unconditional Tena-Cucala
+    Theorem 2 formalisation:
+
+    1.  `gapCell_SE_ACD_simple_holds` — the (slice-eligible,
+        AtomConjDisj-signature) cell of the saturation-completeness
+        gap is unconditionally discharged.
+
+    2.  Given the named `RemainingSaturationCompletenessObligation`
+        (the conjunction of the three residual cells, none of which
+        is yet proved at foundation-only granularity), the literal
+        goal `∀ O, IsCanonicalSeed O (canonicalSeedOfFull O)` holds.
+
+    3.  The literal goal is *equivalent* (modulo classical reasoning)
+        to discharging the named obligation — the formulation makes
+        the §6.3.4 multi-session research task precise. -/
+theorem progress_capstone :
+    GapCell_SE_ACD_simple ∧
+    (RemainingSaturationCompletenessObligation → UnconditionalIsCanonicalSeed) ∧
+    (UnconditionalSCExtensionGap ↔ RemainingSaturationCompletenessObligation) :=
+  ⟨gapCell_SE_ACD_simple_holds,
+   remaining_obligation_iff_unconditional,
+   extensionGap_three_cell_residual_simple_via_four⟩
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`

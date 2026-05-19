@@ -1228,5 +1228,9 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.gapCell_SE_ACD_iff_simple
 #print axioms ALCHOIQContext.extensionGap_four_cell_decomposition_simple
 #print axioms ALCHOIQContext.extensionGap_three_cell_residual_simple_via_four
+-- §PROGRESS CAPSTONE: REMAINING OBLIGATION + SUMMARY THEOREM
+#print axioms ALCHOIQContext.RemainingSaturationCompletenessObligation
+#print axioms ALCHOIQContext.remaining_obligation_iff_unconditional
+#print axioms ALCHOIQContext.progress_capstone
 
 end ELKSDD
