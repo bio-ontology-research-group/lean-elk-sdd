@@ -16433,6 +16433,40 @@ theorem tenacucala_theorem2_countermodel
   canonicalSeedOfFull_herbrand_property_unifiedSlice O rbox hSlice
     D hDeriv hSat Q hQsig hQAtom hNoSubsumer
 
+/-- **Tena-Cucala Theorem 2 — both directions.**   Bundles the
+    headline completeness theorem `tenacucala_theorem2_entailsQuery_form`
+    with its contrapositive countermodel companion
+    `tenacucala_theorem2_countermodel` into a single named result:
+
+      (→) entailment direction: `O ⊨ Q ⟹ ∃ c ∈ S(D.vr), c subsumes Q`.
+      (←) countermodel direction: `(∀ c ∈ S(D.vr), ¬ subsumes c Q) ⟹
+          ∃ I, I ⊨ O ∪ rbox ∧ ¬ Q.eval I`.
+
+    Together these are equivalent (one is the contrapositive of the
+    other modulo classical reasoning over the entailment quantifier).
+    This is the saturation-completeness face of Tena-Cucala
+    Theorem 2 for the framework's unified-slice fragment. -/
+theorem tenacucala_theorem2_dual_directions
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hSlice : InUnifiedSlice O rbox)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull O) D)
+    (hSat : FullSaturated D) :
+    -- (→) completeness: entailment implies subsumer at root.
+    (entailsQuery O Q →
+      ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta}) ∧
+    -- (←) countermodel: no subsumer implies a refuting model.
+    ((∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+      ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+        (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+        I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+        ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  ⟨tenacucala_theorem2_entailsQuery_form O rbox hSlice Q hQsig hQAtom D hDeriv hSat,
+   tenacucala_theorem2_countermodel O rbox hSlice Q hQsig hQAtom D hDeriv hSat⟩
+
 -- ============================================================
 -- §FINAL-GOAL.  Statement scaffolding for the full Tena-Cucala
 -- (2021) Theorem 2.
