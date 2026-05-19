@@ -14049,6 +14049,41 @@ theorem axiomIsTreeFriendlySomeBool23_implies_treeFriendly
         Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
         Or.inr <| Or.inl h2
 
+/-- **Extended combined Bool check (round 24)** — adds
+    `axiomIsTreeTrueRHS` (disjunct 33, vacuous-RHS catch-all) to
+    the prior 33-way Bool check.   With this round, every disjunct
+    of `IsTreeFriendlyAxiom` except positions 30 and 31 (the
+    TreeTrueRHS-LHS-with-filler-constraint disjuncts) has a
+    sufficient Bool counterpart. -/
+def axiomIsTreeFriendlySomeBool24 (ax : ALCHOQ.Axiom) : Bool :=
+  axiomIsTreeFriendlySomeBool23 ax ||
+  axiomIsTreeTrueRHS ax
+
+/-- Implication for the round-24 Bool check. -/
+theorem axiomIsTreeFriendlySomeBool24_implies_treeFriendly
+    (ax : ALCHOQ.Axiom) :
+    axiomIsTreeFriendlySomeBool24 ax = true → IsTreeFriendlyAxiom ax := by
+  intro h
+  classical
+  unfold axiomIsTreeFriendlySomeBool24 at h
+  by_cases h1 : axiomIsTreeFriendlySomeBool23 ax = true
+  · exact axiomIsTreeFriendlySomeBool23_implies_treeFriendly ax h1
+  have h2 : axiomIsTreeTrueRHS ax = true := by
+    have hAll : (axiomIsTreeFriendlySomeBool23 ax ||
+                 axiomIsTreeTrueRHS ax) = true := h
+    rw [Bool.or_eq_true] at hAll
+    rcases hAll with hAll | hAll
+    · exact absurd hAll h1
+    · exact hAll
+  rw [axiomIsTreeTrueRHS_iff] at h2
+  -- disjunct 33 (innermost): TreeTrueRHS — 32 Or.inr's, no Or.inl
+  exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr h2
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at
