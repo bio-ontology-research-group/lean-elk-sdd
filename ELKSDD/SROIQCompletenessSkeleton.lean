@@ -10118,6 +10118,42 @@ theorem final_status :
    unconditional_IsCanonicalSeed_iff_extensionGap,
    outsideInDischargedRegion_implies_unconditional_IsCanonicalSeed⟩
 
+/-- **`IsCanonicalSeed` reduces to `HerbrandProperty` at the canonical
+    seed.**   Conjuncts (i) `D.vr ∈ D.contexts` and (ii) `∃ CD, isSound …`
+    of `IsCanonicalSeed` are unconditionally true at
+    `canonicalSeedOfFull O`, so the predicate reduces to its third
+    conjunct — the substantive `HerbrandProperty O (canonicalSeedOfFull O)`.
+
+    This isolates the §6.3.4 obligation per-`O`: a per-ontology
+    bidirectional version of `unconditional_IsCanonicalSeed_iff_*`. -/
+theorem isCanonicalSeed_canonicalSeedOfFull_iff_herbrandProperty
+    (O : Ontology) :
+    IsCanonicalSeed O (canonicalSeedOfFull O) ↔
+    HerbrandProperty O (canonicalSeedOfFull O) := by
+  constructor
+  · intro ⟨_, _, hHP⟩; exact hHP
+  · intro hHP
+    exact ⟨canonicalSeedOfFull_vr_in_contexts O,
+           canonicalSeedOfFull_sound O,
+           hHP⟩
+
+/-- **Per-ontology equivalence: `IsCanonicalSeed` iff `HerbrandProperty`,
+    pointwise.**   The literal goal `UnconditionalIsCanonicalSeed` is
+    therefore equivalent to a universally-quantified `HerbrandProperty`
+    over arbitrary `O` — making the §6.3.4 obligation explicit at the
+    `Prop`-level rather than the `IsCanonicalSeed`-bundle level. -/
+theorem unconditional_IsCanonicalSeed_iff_universal_HerbrandProperty :
+    UnconditionalIsCanonicalSeed ↔
+    (∀ O : Ontology, HerbrandProperty O (canonicalSeedOfFull O)) := by
+  unfold UnconditionalIsCanonicalSeed
+  constructor
+  · intro hUncond O
+    exact (isCanonicalSeed_canonicalSeedOfFull_iff_herbrandProperty O).mp
+      (hUncond O)
+  · intro hHP O
+    exact (isCanonicalSeed_canonicalSeedOfFull_iff_herbrandProperty O).mpr
+      (hHP O)
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`

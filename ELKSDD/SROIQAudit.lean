@@ -1255,5 +1255,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_iff_extensionGap
 -- §FINAL STATUS BUNDLE: ALL FOUR FOUNDATION-ONLY FACTS IN ONE PLACE
 #print axioms ALCHOIQContext.final_status
+-- §IsCanonicalSeed REDUCES TO HerbrandProperty AT THE CANONICAL SEED
+#print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOfFull_iff_herbrandProperty
+#print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_iff_universal_HerbrandProperty
 
 end ELKSDD
