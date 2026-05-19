@@ -9908,6 +9908,69 @@ theorem two_cells_imply_unconditional_IsCanonicalSeed
     extensionGap_two_cell_residual.mpr ⟨hNACD, hNSE_ACD⟩
   exact extensionGap_implies_unconditional_IsCanonicalSeed hGap
 
+/-- **Single unified residual cell.**   The complement of the
+    discharged region `SliceEligibleOntology O ∧ QRefSig ∧ AtomConjDisj`:
+    every `(O, Q)` pair outside the discharged region must produce
+    a subsumer.   This is the cleanest single-obligation form of the
+    residual §6.3.4 content. -/
+def GapCell_OutsideDischargedRegion : Prop :=
+  ∀ (O : Ontology) (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      ¬ (SliceEligibleOntology O ∧
+         QueryReferencesSignature (ontologyConceptSig O) Q ∧
+         AtomConjDisjQuery Q) →
+      entailsQuery O Q →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- The single unified residual cell is equivalent to the two-cell
+    conjunction.   Forward direction: do case analysis on the
+    `QRefSig ∧ AtomConjDisj` predicate; backward: case on slice
+    eligibility within the AtomConjDisj branch. -/
+theorem gapCell_outsideDischargedRegion_iff_two :
+    GapCell_OutsideDischargedRegion ↔
+    GapCell_NACD_simple ∧ GapCell_NSE_ACD_simple := by
+  constructor
+  · intro hCell
+    refine ⟨?_, ?_⟩
+    · intro O D hDeriv hSat Q hPQ hEnt
+      apply hCell O D hDeriv hSat Q ?_ hEnt
+      rintro ⟨_, hQsig, hQAtom⟩
+      exact hPQ ⟨hQsig, hQAtom⟩
+    · intro O hO D hDeriv hSat Q hQsig hQAtom hEnt
+      apply hCell O D hDeriv hSat Q ?_ hEnt
+      rintro ⟨hSE, _, _⟩
+      exact hO hSE
+  · rintro ⟨hNACD, hNSE_ACD⟩ O D hDeriv hSat Q hOut hEnt
+    classical
+    by_cases hPQ : QueryReferencesSignature (ontologyConceptSig O) Q ∧
+                   AtomConjDisjQuery Q
+    · -- AtomConjDisj-sig Q: must have ¬ sliceEligible O.
+      have hNotSE : ¬ SliceEligibleOntology O := by
+        intro hSE
+        exact hOut ⟨hSE, hPQ.1, hPQ.2⟩
+      exact hNSE_ACD O hNotSE D hDeriv hSat Q hPQ.1 hPQ.2 hEnt
+    · -- Non-AtomConjDisj-sig Q: handled by GapCell_NACD_simple.
+      exact hNACD O D hDeriv hSat Q hPQ hEnt
+
+/-- **Single-cell residual.**   The full gap is equivalent to a
+    single named cell — the complement of the discharged region. -/
+theorem extensionGap_single_cell_residual :
+    UnconditionalSCExtensionGap ↔ GapCell_OutsideDischargedRegion := by
+  rw [extensionGap_two_cell_residual,
+      ← gapCell_outsideDischargedRegion_iff_two]
+
+/-- **Single-cell bridge to `UnconditionalIsCanonicalSeed`.**   The
+    cleanest statement of the §6.3.4 obligation: discharging one
+    named single-cell predicate suffices for the literal goal. -/
+theorem single_cell_implies_unconditional_IsCanonicalSeed
+    (hOut : GapCell_OutsideDischargedRegion) :
+    UnconditionalIsCanonicalSeed := by
+  have hGap : UnconditionalSCExtensionGap :=
+    extensionGap_single_cell_residual.mpr hOut
+  exact extensionGap_implies_unconditional_IsCanonicalSeed hGap
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`

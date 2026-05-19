@@ -1237,5 +1237,10 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.gapCell_NACD_iff_split
 #print axioms ALCHOIQContext.extensionGap_two_cell_residual
 #print axioms ALCHOIQContext.two_cells_imply_unconditional_IsCanonicalSeed
+-- §SINGLE-CELL RESIDUAL: COMPLEMENT OF DISCHARGED REGION
+#print axioms ALCHOIQContext.GapCell_OutsideDischargedRegion
+#print axioms ALCHOIQContext.gapCell_outsideDischargedRegion_iff_two
+#print axioms ALCHOIQContext.extensionGap_single_cell_residual
+#print axioms ALCHOIQContext.single_cell_implies_unconditional_IsCanonicalSeed
 
 end ELKSDD
