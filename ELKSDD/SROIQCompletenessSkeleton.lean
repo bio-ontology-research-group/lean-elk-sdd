@@ -6291,6 +6291,15 @@ def axiomIsConjAtomAtomExistAtom (ax : ALCHOQ.Axiom) : Bool :=
     ALCHOQ.Concept.exist _ (ALCHOQ.Concept.atom _) => true
   | _, _ => false
 
+/-- **Bool check for `(disj (atom A₁) (atom A₂), ∃R.atom B)` axiom shape.**
+    Tree-friendly disjunct: existential-RHS with binary atom-atom
+    disjunction LHS and atom filler. -/
+def axiomIsDisjAtomAtomExistAtom (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.1, ax.2 with
+  | ALCHOQ.Concept.disj (ALCHOQ.Concept.atom _) (ALCHOQ.Concept.atom _),
+    ALCHOQ.Concept.exist _ (ALCHOQ.Concept.atom _) => true
+  | _, _ => false
+
 /-- Characterization of the `(LHS, ≥1 R.TreeTrueRHS-filler)` axiom shape. -/
 theorem axiomIsAnyLHSAtLeast1TreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     axiomIsAnyLHSAtLeast1TreeTrueRHS ax = true ↔
@@ -6321,6 +6330,87 @@ theorem axiomIsAnyLHSAtLeast1TreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     have h2 : c2 = ALCHOQ.Concept.atLeast 1 R D := (Prod.mk.inj hEq).2
     rw [h2]
     exact (treeTrueRHSBool_iff D).mpr hD
+
+/-- Characterization of the `(disj (atom A₁) (atom A₂), ∃R.atom B)` shape. -/
+theorem axiomIsDisjAtomAtomExistAtom_iff (ax : ALCHOQ.Axiom) :
+    axiomIsDisjAtomAtomExistAtom ax = true ↔
+    ∃ A₁ A₂ R B : Nat,
+      ax = (ALCHOQ.Concept.disj
+              (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) := by
+  unfold axiomIsDisjAtomAtomExistAtom
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 with
+    | disj L R =>
+      cases L with
+      | atom A₁ =>
+        cases R with
+        | atom A₂ =>
+          cases c2 with
+          | exist S filler =>
+            cases filler with
+            | atom B => exact ⟨A₁, A₂, S, B, rfl⟩
+            | top => simp at h
+            | bot => simp at h
+            | nom _ => simp at h
+            | neg _ => simp at h
+            | conj _ _ => simp at h
+            | disj _ _ => simp at h
+            | exist _ _ => simp at h
+            | univ _ _ => simp at h
+            | atLeast _ _ _ => simp at h
+            | atMost _ _ _ => simp at h
+            | hasSelf _ => simp at h
+          | atom _ => simp at h
+          | top => simp at h
+          | bot => simp at h
+          | nom _ => simp at h
+          | neg _ => simp at h
+          | conj _ _ => simp at h
+          | disj _ _ => simp at h
+          | univ _ _ => simp at h
+          | atLeast _ _ _ => simp at h
+          | atMost _ _ _ => simp at h
+          | hasSelf _ => simp at h
+        | top => simp [axiomIsDisjAtomAtomExistAtom] at h
+        | bot => simp [axiomIsDisjAtomAtomExistAtom] at h
+        | nom _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+        | neg _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+        | conj _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+        | disj _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+        | exist _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+        | univ _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+        | atLeast _ _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+        | atMost _ _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+        | hasSelf _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+      | top => simp [axiomIsDisjAtomAtomExistAtom] at h
+      | bot => simp [axiomIsDisjAtomAtomExistAtom] at h
+      | nom _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+      | neg _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+      | conj _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+      | disj _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+      | exist _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+      | univ _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+      | atLeast _ _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+      | atMost _ _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+      | hasSelf _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+    | atom _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+    | top => simp [axiomIsDisjAtomAtomExistAtom] at h
+    | bot => simp [axiomIsDisjAtomAtomExistAtom] at h
+    | nom _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+    | neg _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+    | conj _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+    | exist _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+    | univ _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+    | atLeast _ _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+    | atMost _ _ _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+    | hasSelf _ => simp [axiomIsDisjAtomAtomExistAtom] at h
+  · rintro ⟨A₁, A₂, R, B, hEq⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    subst h1; subst h2
+    rfl
 
 /-- Characterization of the `(conj (atom A₁) (atom A₂), ∃R.atom B)` shape. -/
 theorem axiomIsConjAtomAtomExistAtom_iff (ax : ALCHOQ.Axiom) :

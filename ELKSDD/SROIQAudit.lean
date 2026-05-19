@@ -1412,5 +1412,8 @@ namespace ELKSDD
 -- §AXIOM-SHAPE BOOL CHECK FOR (conj atom atom, ∃R.atom B)
 #print axioms ALCHOIQContext.axiomIsConjAtomAtomExistAtom
 #print axioms ALCHOIQContext.axiomIsConjAtomAtomExistAtom_iff
+-- §AXIOM-SHAPE BOOL CHECK FOR (disj atom atom, ∃R.atom B)
+#print axioms ALCHOIQContext.axiomIsDisjAtomAtomExistAtom
+#print axioms ALCHOIQContext.axiomIsDisjAtomAtomExistAtom_iff
 
 end ELKSDD
