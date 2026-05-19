@@ -16235,5 +16235,121 @@ theorem partial_isCanonicalSeed_exampleAtomChain_via_sliceEligibleBothBool_unive
   partial_isCanonicalSeed_of_sliceEligibleBothBool_universalFamily
     exampleAtomChain exampleTransInclRBox (by decide) (by decide)
 
+-- ============================================================
+-- §FINAL-GOAL.  Statement scaffolding for the full Tena-Cucala
+-- (2021) Theorem 2.
+--
+-- The goal is `tenacucala_theorem2_full` (and its completeness
+-- corollary `tenacucala_completeness_thm2_full`) for arbitrary
+-- SROIQ ontologies.  The substantive obligation is conjunct (iii)
+-- of `IsCanonicalSeedOverWithRBox`, which expands to the §6.3.4
+-- Herbrand property quantified over the full 33-way
+-- `IsTreeFriendlyAxiom` case-split.  Conjuncts (i) and (ii) are
+-- unconditional; the Herbrand obligation accumulates disjunct-by-
+-- disjunct in subsequent work.
+-- ============================================================
+
+/-- **`sig` covers `O`'s concept signature**: every concept name
+    appearing in any axiom of `O` is in `sig`. -/
+def OntologyConceptsSubset (sig : List Nat) (O : Ontology) : Prop :=
+  ∀ A ∈ ontologyConceptSig O, A ∈ sig
+
+/-- **The RBox is satisfiable**: there exists at least one inhabited
+    interpretation under which every axiom of `rbox` holds. -/
+def SROIQRBoxSatisfiable (rbox : SROIQ.RBox) : Prop :=
+  ∃ (α : Type) (_inh : Inhabited α) (I : Interp α),
+    SROIQ.RBox.eval I rbox
+
+/-- **RBox-aware Herbrand property over a signature.**  Strengthens
+    `HerbrandPropertyOver` by bundling RBox satisfaction into the
+    Herbrand model produced for any unsubsumed signature-restricted
+    query.   This matches the conclusion shape of the slice-eligible
+    apparatus. -/
+def HerbrandPropertyOverWithRBox
+    (sig : List Nat) (O : Ontology) (rbox : SROIQ.RBox)
+    (D_seed : ContextStructure) : Prop :=
+  ∀ (D : ContextStructure),
+    FullDerivation D_seed D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      QueryReferencesSignature sig Q →
+      (∀ c ∈ D.S D.vr,
+         ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+      ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+        (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+        I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+        ¬ Q.eval I ⟨γ, φ, vx, vy⟩
+
+/-- **RBox-aware refined `IsCanonicalSeed`.**  Three conjuncts as in
+    `IsCanonicalSeedOver`, but with the Herbrand property carrying
+    the RBox-satisfaction witness inside the existential. -/
+def IsCanonicalSeedOverWithRBox
+    (sig : List Nat) (O : Ontology) (rbox : SROIQ.RBox)
+    (D_seed : ContextStructure) : Prop :=
+  D_seed.vr ∈ D_seed.contexts ∧
+  (∃ CD : DerivedClauses, isSound O D_seed CD) ∧
+  HerbrandPropertyOverWithRBox sig O rbox D_seed
+
+/-- **Unconditional bundle of conjuncts (i) and (ii)** for
+    `canonicalSeedOver sig O`, for every signature and every
+    ontology — the easy half of `IsCanonicalSeedOverWithRBox`. -/
+theorem canonicalSeedOver_partial_easy_conjuncts
+    (sig : List Nat) (O : Ontology) :
+    (canonicalSeedOver sig O).vr ∈ (canonicalSeedOver sig O).contexts ∧
+    (∃ CD : DerivedClauses, isSound O (canonicalSeedOver sig O) CD) :=
+  ⟨canonicalSeedOver_vr_in_contexts sig O,
+   canonicalSeedOver_sound sig O⟩
+
+/-- **CONDITIONAL form of the full Tena-Cucala Theorem 2 (one half).**
+    Given the §6.3.4 Herbrand obligation
+    `HerbrandPropertyOverWithRBox sig O rbox (canonicalSeedOver sig O)`
+    as a hypothesis, the full `IsCanonicalSeedOverWithRBox` bundle
+    holds — assembling the unconditional easy conjuncts with the
+    supplied Herbrand witness.
+
+    The substantive thesis content lives in discharging the Herbrand
+    hypothesis disjunct-by-disjunct over the 33-way
+    `IsTreeFriendlyAxiom` case-split; this conditional theorem is
+    the joining scaffolding. -/
+theorem tenacucala_theorem2_full_conditional
+    (sig : List Nat) (O : Ontology) (rbox : SROIQ.RBox)
+    (_hSig : OntologyConceptsSubset sig O)
+    (_hRBoxSat : SROIQRBoxSatisfiable rbox)
+    (hHerb : HerbrandPropertyOverWithRBox sig O rbox
+               (canonicalSeedOver sig O)) :
+    IsCanonicalSeedOverWithRBox sig O rbox (canonicalSeedOver sig O) :=
+  ⟨canonicalSeedOver_vr_in_contexts sig O,
+   canonicalSeedOver_sound sig O,
+   hHerb⟩
+
+/-- **CONDITIONAL headline completeness theorem.**  Derived from
+    `tenacucala_theorem2_full_conditional` by the standard
+    contraposition route: if a query semantically entailed by `O`
+    were not subsumed at the root, the Herbrand witness produced by
+    conjunct (iii) would contradict entailment. -/
+theorem tenacucala_completeness_thm2_full_conditional
+    (sig : List Nat) (O : Ontology) (rbox : SROIQ.RBox)
+    (hSig : OntologyConceptsSubset sig O)
+    (hRBoxSat : SROIQRBoxSatisfiable rbox)
+    (hHerb : HerbrandPropertyOverWithRBox sig O rbox
+               (canonicalSeedOver sig O))
+    (Q : QueryClause) (hQsig : QueryReferencesSignature sig Q)
+    (hEnt : entailsQuery O Q) :
+    ∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOver sig O) D →
+      FullSaturated D →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta} := by
+  classical
+  intro D hDeriv hSat
+  by_contra hNoExists
+  have hNoSubsumer : ∀ c ∈ D.S D.vr,
+      ¬ subsumes c {body := Q.Gamma, head := Q.Delta} := by
+    intro c hcIn hSub; exact hNoExists ⟨c, hcIn, hSub⟩
+  have hIsCS := tenacucala_theorem2_full_conditional
+                  sig O rbox hSig hRBoxSat hHerb
+  obtain ⟨α, _inhα, I, γ, φ, vx, vy, hISatO, _hIRBox, hRefQ⟩ :=
+    hIsCS.2.2 D hDeriv hSat Q hQsig hNoSubsumer
+  exact hRefQ (hEnt I γ φ hISatO vx vy)
+
 end ALCHOIQContext
 end ELKSDD
