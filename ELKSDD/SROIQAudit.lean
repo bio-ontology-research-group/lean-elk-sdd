@@ -1263,5 +1263,9 @@ namespace ELKSDD
 -- §COMBINED HERBRANDPROPERTY RESIDUAL + BRIDGE
 #print axioms ALCHOIQContext.universal_HerbrandProperty_from_combined_residual
 #print axioms ALCHOIQContext.combined_residual_implies_unconditional_IsCanonicalSeed
+-- §EMPTY-ONTOLOGY SPECIALIZATIONS OF InDischargedRegion
+#print axioms ALCHOIQContext.sliceEligibleOntology_nil
+#print axioms ALCHOIQContext.inDischargedRegion_nil_iff
+#print axioms ALCHOIQContext.notInDischargedRegion_nil_iff
 
 end ELKSDD

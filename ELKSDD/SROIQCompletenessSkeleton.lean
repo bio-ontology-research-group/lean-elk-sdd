@@ -10250,6 +10250,36 @@ theorem combined_residual_implies_unconditional_IsCanonicalSeed
   (unconditional_IsCanonicalSeed_iff_universal_HerbrandProperty).mpr
     (universal_HerbrandProperty_from_combined_residual hRes)
 
+/-- **The empty ontology is slice-eligible.**   Specialization of
+    `sliceEligibleBoth_nil` to the `SliceEligibleOntology` disjunction. -/
+theorem sliceEligibleOntology_nil :
+    SliceEligibleOntology ([] : Ontology) :=
+  sliceEligibleOntology_of_sliceEligibleBoth sliceEligibleBoth_nil
+
+/-- **InDischargedRegion at the empty ontology** simplifies: the
+    slice-eligibility conjunct is automatic, leaving only the
+    `QRefSig + AtomConjDisj` predicate on `Q`. -/
+theorem inDischargedRegion_nil_iff (Q : QueryClause) :
+    InDischargedRegion [] Q ↔
+    QueryReferencesSignature (ontologyConceptSig []) Q ∧
+    AtomConjDisjQuery Q := by
+  unfold InDischargedRegion
+  constructor
+  · intro ⟨_, hQsig, hQAtom⟩; exact ⟨hQsig, hQAtom⟩
+  · intro ⟨hQsig, hQAtom⟩
+    exact ⟨sliceEligibleOntology_nil, hQsig, hQAtom⟩
+
+/-- **The discharged-region predicate on the empty ontology is
+    equivalent to `QRefSig + AtomConjDisj` directly.**   The
+    slice-eligibility hypothesis simplifies away.   On the empty
+    ontology, the *non-discharged* region therefore corresponds
+    exactly to queries that fail `QRefSig + AtomConjDisj`. -/
+theorem notInDischargedRegion_nil_iff (Q : QueryClause) :
+    ¬ InDischargedRegion [] Q ↔
+    ¬ (QueryReferencesSignature (ontologyConceptSig []) Q ∧
+       AtomConjDisjQuery Q) := by
+  rw [inDischargedRegion_nil_iff]
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
