@@ -7730,6 +7730,155 @@ def herbrandTrueRHSBool : ALCHOQ.Concept → Bool
   | _                          => false
 end
 
+/-- **Joint correctness of the Bool counterparts.**   Both
+    Bool-valued functions agree with their `Prop`-valued originals
+    on every concept.   Proved by mutual induction on `C`. -/
+theorem herbrand_bool_iff (C : ALCHOQ.Concept) :
+    (herbrandFalseLHSBool C = true ↔ HerbrandFalseLHS C) ∧
+    (herbrandTrueRHSBool C = true ↔ HerbrandTrueRHS C) := by
+  induction C with
+  | atom _ =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h; simp [herbrandFalseLHSBool] at h
+    · intro h; simp [HerbrandFalseLHS] at h
+    · intro h; simp [herbrandTrueRHSBool] at h
+    · intro h; simp [HerbrandTrueRHS] at h
+  | top =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h; simp [herbrandFalseLHSBool] at h
+    · intro h; simp [HerbrandFalseLHS] at h
+    · intro _; trivial
+    · intro _; rfl
+  | bot =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro _; trivial
+    · intro _; rfl
+    · intro h; simp [herbrandTrueRHSBool] at h
+    · intro h; simp [HerbrandTrueRHS] at h
+  | nom _ =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h; simp [herbrandFalseLHSBool] at h
+    · intro h; simp [HerbrandFalseLHS] at h
+    · intro _; trivial
+    · intro _; rfl
+  | neg C ih =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h
+      simp only [herbrandFalseLHSBool] at h
+      simp only [HerbrandFalseLHS]
+      exact ih.2.mp h
+    · intro h
+      simp only [HerbrandFalseLHS] at h
+      simp only [herbrandFalseLHSBool]
+      exact ih.2.mpr h
+    · intro h
+      simp only [herbrandTrueRHSBool] at h
+      simp only [HerbrandTrueRHS]
+      exact ih.1.mp h
+    · intro h
+      simp only [HerbrandTrueRHS] at h
+      simp only [herbrandTrueRHSBool]
+      exact ih.1.mpr h
+  | conj C₁ C₂ ih₁ ih₂ =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h
+      simp only [herbrandFalseLHSBool, Bool.or_eq_true] at h
+      simp only [HerbrandFalseLHS]
+      rcases h with h1 | h2
+      · exact Or.inl (ih₁.1.mp h1)
+      · exact Or.inr (ih₂.1.mp h2)
+    · intro h
+      simp only [HerbrandFalseLHS] at h
+      simp only [herbrandFalseLHSBool, Bool.or_eq_true]
+      rcases h with h1 | h2
+      · exact Or.inl (ih₁.1.mpr h1)
+      · exact Or.inr (ih₂.1.mpr h2)
+    · intro h
+      simp only [herbrandTrueRHSBool, Bool.and_eq_true] at h
+      simp only [HerbrandTrueRHS]
+      exact ⟨ih₁.2.mp h.1, ih₂.2.mp h.2⟩
+    · intro h
+      simp only [HerbrandTrueRHS] at h
+      simp only [herbrandTrueRHSBool, Bool.and_eq_true]
+      exact ⟨ih₁.2.mpr h.1, ih₂.2.mpr h.2⟩
+  | disj C₁ C₂ ih₁ ih₂ =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h
+      simp only [herbrandFalseLHSBool, Bool.and_eq_true] at h
+      simp only [HerbrandFalseLHS]
+      exact ⟨ih₁.1.mp h.1, ih₂.1.mp h.2⟩
+    · intro h
+      simp only [HerbrandFalseLHS] at h
+      simp only [herbrandFalseLHSBool, Bool.and_eq_true]
+      exact ⟨ih₁.1.mpr h.1, ih₂.1.mpr h.2⟩
+    · intro h
+      simp only [herbrandTrueRHSBool, Bool.or_eq_true] at h
+      simp only [HerbrandTrueRHS]
+      rcases h with h1 | h2
+      · exact Or.inl (ih₁.2.mp h1)
+      · exact Or.inr (ih₂.2.mp h2)
+    · intro h
+      simp only [HerbrandTrueRHS] at h
+      simp only [herbrandTrueRHSBool, Bool.or_eq_true]
+      rcases h with h1 | h2
+      · exact Or.inl (ih₁.2.mpr h1)
+      · exact Or.inr (ih₂.2.mpr h2)
+  | exist _ _ _ =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro _; trivial
+    · intro _; rfl
+    · intro h; simp [herbrandTrueRHSBool] at h
+    · intro h; simp [HerbrandTrueRHS] at h
+  | univ _ _ _ =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h; simp [herbrandFalseLHSBool] at h
+    · intro h; simp [HerbrandFalseLHS] at h
+    · intro _; trivial
+    · intro _; rfl
+  | atLeast n _ _ _ =>
+    cases n with
+    | zero =>
+      refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+      · intro h; simp [herbrandFalseLHSBool] at h
+      · intro h; simp [HerbrandFalseLHS] at h
+      · intro _; trivial
+      · intro _; rfl
+    | succ n =>
+      refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+      · intro _; trivial
+      · intro _; rfl
+      · intro h; simp [herbrandTrueRHSBool] at h
+      · intro h; simp [HerbrandTrueRHS] at h
+  | atMost _ _ _ _ =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h; simp [herbrandFalseLHSBool] at h
+    · intro h; simp [HerbrandFalseLHS] at h
+    · intro _; trivial
+    · intro _; rfl
+  | hasSelf _ =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro _; trivial
+    · intro _; rfl
+    · intro h; simp [herbrandTrueRHSBool] at h
+    · intro h; simp [HerbrandTrueRHS] at h
+
+theorem herbrandFalseLHSBool_iff (C : ALCHOQ.Concept) :
+    herbrandFalseLHSBool C = true ↔ HerbrandFalseLHS C :=
+  (herbrand_bool_iff C).1
+
+theorem herbrandTrueRHSBool_iff (C : ALCHOQ.Concept) :
+    herbrandTrueRHSBool C = true ↔ HerbrandTrueRHS C :=
+  (herbrand_bool_iff C).2
+
+/-- **Decidable instance for `HerbrandFalseLHS`.** -/
+instance : DecidablePred HerbrandFalseLHS :=
+  fun C => decidable_of_iff _ (herbrandFalseLHSBool_iff C)
+
+/-- **Decidable instance for `HerbrandTrueRHS`.** -/
+instance : DecidablePred HerbrandTrueRHS :=
+  fun C => decidable_of_iff _ (herbrandTrueRHSBool_iff C)
+
+
 /-- **Combined Herbrand-falsifies / Herbrand-trivialises lemma.**
     Proved simultaneously by structural induction on the concept so
     the mutually recursive `neg` cases of `HerbrandFalseLHS` /

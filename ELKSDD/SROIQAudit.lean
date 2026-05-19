@@ -1303,5 +1303,9 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.axiomIsExistAtomAtom_iff
 #print axioms ALCHOIQContext.axiomIsAtomUnivAtom_iff
 #print axioms ALCHOIQContext.axiomIsAtomTop_iff
+-- §DECIDABILITY OF HerbrandFalseLHS / HerbrandTrueRHS
+#print axioms ALCHOIQContext.herbrand_bool_iff
+#print axioms ALCHOIQContext.herbrandFalseLHSBool_iff
+#print axioms ALCHOIQContext.herbrandTrueRHSBool_iff
 
 end ELKSDD
