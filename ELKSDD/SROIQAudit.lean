@@ -1362,5 +1362,8 @@ namespace ELKSDD
 -- §AXIOM-SHAPE BOOL CHECK FOR (LHS, ∃R.IsConjOfAtoms filler)
 #print axioms ALCHOIQContext.axiomIsAnyLHSExistConjOfAtoms
 #print axioms ALCHOIQContext.axiomIsAnyLHSExistConjOfAtoms_iff
+-- §EMPTY-ONTOLOGY HERBRAND-TREE FULL CHARACTERIZATION
+#print axioms ALCHOIQContext.herbrandTree_empty_only_root
+#print axioms ALCHOIQContext.elHerbrandInterpTree_empty_any_atom_iff
 
 end ELKSDD

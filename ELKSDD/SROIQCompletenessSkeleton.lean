@@ -6193,6 +6193,30 @@ theorem elHerbrandInterpTree_empty_root_iff_body_atom
   rw [conceptDerivableEL_empty_iff_initial]
   exact Iff.rfl
 
+/-- **The empty-ontology Herbrand tree has only the root.**   Every
+    successor constructor of `HerbrandTree` requires an axiom
+    `ax ∈ O`, which is impossible when `O = []`.   So the empty
+    ontology's Herbrand tree is the singleton `{root}`. -/
+theorem herbrandTree_empty_only_root (p : HerbrandTree []) :
+    p = HerbrandTree.root := by
+  cases p with
+  | root => rfl
+  | succ _ _ hAx => exact absurd hAx List.not_mem_nil
+
+/-- **Tree-Herbrand atomic evaluation at any node on the empty
+    ontology.**   Combining `herbrandTree_empty_only_root` with
+    `elHerbrandInterpTree_empty_root_iff_body_atom`: at *any* node of
+    the empty-ontology tree Herbrand, atom `B` holds iff `B` is a
+    query body atom.   Complete characterization of the empty-
+    ontology tree-Herbrand atomic semantics. -/
+theorem elHerbrandInterpTree_empty_any_atom_iff
+    (Q : QueryClause) (B : Nat) (p : HerbrandTree []) :
+    (elHerbrandInterpTree [] Q).eval (ALCHOQ.Concept.atom B) p ↔
+      queryBodyAtomConcepts Q B := by
+  have hp : p = HerbrandTree.root := herbrandTree_empty_only_root p
+  subst hp
+  exact elHerbrandInterpTree_empty_root_iff_body_atom Q B
+
 /-- `(conj (atom A₁) (atom A₂), atom B) ∈ O`: by `step_conj`. -/
 theorem elHerbrandInterpTree_sat_conj_atom
     (O : Ontology) (Q : QueryClause)
