@@ -1496,5 +1496,13 @@ namespace ELKSDD
 -- §EXTENDED SUFFICIENT BOOL CONDITION FOR IsTreeFriendlyAxiom (round 25)
 #print axioms ALCHOIQContext.axiomIsTreeFriendlySomeBool25
 #print axioms ALCHOIQContext.axiomIsTreeFriendlySomeBool25_implies_treeFriendly
+-- §BOOL CHECK FOR DISJUNCT 31 (TreeTrueRHS-LHS ∀R.IsConjOfAtomsOrTop)
+#print axioms ALCHOIQContext.axiomIsTTRHSLhsUnivConjOfAtomsOrTop
+#print axioms ALCHOIQContext.axiomIsTTRHSLhsUnivConjOfAtomsOrTop_iff
+-- §EXTENDED SUFFICIENT BOOL CONDITION FOR IsTreeFriendlyAxiom (round 26)
+-- ** With this round, every one of the 33 disjuncts of `IsTreeFriendlyAxiom`
+-- has a sufficient Bool counterpart. **
+#print axioms ALCHOIQContext.axiomIsTreeFriendlySomeBool26
+#print axioms ALCHOIQContext.axiomIsTreeFriendlySomeBool26_implies_treeFriendly
 
 end ELKSDD

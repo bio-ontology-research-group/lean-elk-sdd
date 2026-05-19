@@ -6256,6 +6256,54 @@ theorem axiomIsTTRHSLhsUnivConjOfAtoms_iff (ax : ALCHOQ.Axiom) :
     exact ⟨(treeTrueRHSBool_iff lhs).mpr hL,
            (isConjOfAtomsBool_iff filler).mpr hF⟩
 
+/-- **Bool check for `(lhs, ∀R.filler) ∧ TreeTrueRHS lhs ∧ IsConjOfAtomsOrTop filler`.**
+    Tree-friendly disjunct 31 — universal-restriction RHS with a
+    structurally-True LHS and a conj-of-atoms-or-top filler
+    (mixed atom/top leaves). -/
+def axiomIsTTRHSLhsUnivConjOfAtomsOrTop (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.2 with
+  | ALCHOQ.Concept.univ _ filler =>
+      treeTrueRHSBool ax.1 && isConjOfAtomsOrTopBool filler
+  | _ => false
+
+/-- Characterization of the `(TreeTrueRHS-lhs, ∀R.IsConjOfAtomsOrTop-filler)`
+    axiom shape (disjunct 31 of `IsTreeFriendlyAxiom`). -/
+theorem axiomIsTTRHSLhsUnivConjOfAtomsOrTop_iff (ax : ALCHOQ.Axiom) :
+    axiomIsTTRHSLhsUnivConjOfAtomsOrTop ax = true ↔
+    ∃ lhs : ALCHOQ.Concept, ∃ R : Nat, ∃ filler : ALCHOQ.Concept,
+      ax = (lhs, ALCHOQ.Concept.univ R filler) ∧
+      TreeTrueRHS lhs ∧ IsConjOfAtomsOrTop filler := by
+  unfold axiomIsTTRHSLhsUnivConjOfAtomsOrTop
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c2 with
+    | univ R filler =>
+      simp only at h
+      rw [Bool.and_eq_true] at h
+      obtain ⟨hL, hF⟩ := h
+      exact ⟨c1, R, filler, rfl,
+             (treeTrueRHSBool_iff c1).mp hL,
+             (isConjOfAtomsOrTopBool_iff filler).mp hF⟩
+    | atom _ => simp at h
+    | top => simp at h
+    | bot => simp at h
+    | nom _ => simp at h
+    | neg _ => simp at h
+    | conj _ _ => simp at h
+    | disj _ _ => simp at h
+    | exist _ _ => simp at h
+    | atLeast _ _ _ => simp at h
+    | atMost _ _ _ => simp at h
+    | hasSelf _ => simp at h
+  · rintro ⟨lhs, R, filler, hEq, hL, hF⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    rw [h1, h2]
+    simp only
+    rw [Bool.and_eq_true]
+    exact ⟨(treeTrueRHSBool_iff lhs).mpr hL,
+           (isConjOfAtomsOrTopBool_iff filler).mpr hF⟩
+
 /-- **Bool check for `(LHS, ≥1 R.D) ∧ TreeTrueRHS D` axiom shape.**
     Tree-friendly disjunct: number-restriction analogue of
     `∃R.TreeTrueRHS-filler` — the extended `axiomTriggersRole` fires
@@ -14165,6 +14213,42 @@ theorem axiomIsTreeFriendlySomeBool25_implies_treeFriendly
         Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
         Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
         Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inl h2
+
+/-- **Extended combined Bool check (round 26)** — adds
+    `axiomIsTTRHSLhsUnivConjOfAtomsOrTop` (disjunct 31: TreeTrueRHS-LHS
+    ∀R.IsConjOfAtomsOrTop-filler) to the prior 35-way Bool check.
+    **With this round, every one of the 33 disjuncts of
+    `IsTreeFriendlyAxiom` has a sufficient Bool counterpart.** -/
+def axiomIsTreeFriendlySomeBool26 (ax : ALCHOQ.Axiom) : Bool :=
+  axiomIsTreeFriendlySomeBool25 ax ||
+  axiomIsTTRHSLhsUnivConjOfAtomsOrTop ax
+
+/-- Implication for the round-26 Bool check.   **All 33 disjuncts
+    of `IsTreeFriendlyAxiom` are now covered Bool-decidably.** -/
+theorem axiomIsTreeFriendlySomeBool26_implies_treeFriendly
+    (ax : ALCHOQ.Axiom) :
+    axiomIsTreeFriendlySomeBool26 ax = true → IsTreeFriendlyAxiom ax := by
+  intro h
+  classical
+  unfold axiomIsTreeFriendlySomeBool26 at h
+  by_cases h1 : axiomIsTreeFriendlySomeBool25 ax = true
+  · exact axiomIsTreeFriendlySomeBool25_implies_treeFriendly ax h1
+  have h2 : axiomIsTTRHSLhsUnivConjOfAtomsOrTop ax = true := by
+    have hAll : (axiomIsTreeFriendlySomeBool25 ax ||
+                 axiomIsTTRHSLhsUnivConjOfAtomsOrTop ax) = true := h
+    rw [Bool.or_eq_true] at hAll
+    rcases hAll with hAll | hAll
+    · exact absurd hAll h1
+    · exact hAll
+  rw [axiomIsTTRHSLhsUnivConjOfAtomsOrTop_iff] at h2
+  -- disjunct 31: TreeTrueRHS-LHS ∀R.IsConjOfAtomsOrTop-filler
+  -- — 30 Or.inr's then Or.inl
+  exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inl h2
 
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
