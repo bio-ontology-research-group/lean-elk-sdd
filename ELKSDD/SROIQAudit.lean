@@ -1567,6 +1567,9 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.HerbrandPropertyOverWithRBox
 #print axioms ALCHOIQContext.IsCanonicalSeedOverWithRBox
 #print axioms ALCHOIQContext.canonicalSeedOver_partial_easy_conjuncts
+#print axioms ALCHOIQContext.treeFriendly_isCanonicalSeedOver_of_treeRefutationOver_canonicalSeedOver
+#print axioms ALCHOIQContext.tenacucala_theorem2_full_treeFriendly
+#print axioms ALCHOIQContext.tenacucala_completeness_thm2_full_treeFriendly
 #print axioms ALCHOIQContext.tenacucala_theorem2_full_conditional
 #print axioms ALCHOIQContext.tenacucala_completeness_thm2_full_conditional
 

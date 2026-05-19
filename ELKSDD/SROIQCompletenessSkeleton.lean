@@ -16299,6 +16299,76 @@ theorem canonicalSeedOver_partial_easy_conjuncts
   ⟨canonicalSeedOver_vr_in_contexts sig O,
    canonicalSeedOver_sound sig O⟩
 
+/-- **Bridge to `IsCanonicalSeedOver` for the signature-aware seed
+    `canonicalSeedOver sig O`.**   Combines the unconditional easy
+    conjuncts with the bridge
+    `treeFriendly_herbrandPropertyOver_of_treeRefutationOver`,
+    yielding `IsCanonicalSeedOver sig O (canonicalSeedOver sig O)`
+    modulo (a) the Bool-decidable tree-friendliness of `O`, and
+    (b) the §6.3.4 tree refutation property over `sig` on the
+    `canonicalSeedOver` seed.   Analogue of the existing
+    `treeFriendly_isCanonicalSeedOver_of_treeRefutationOver_canonicalSeedOf`,
+    refitted to the goal-shape seed. -/
+theorem treeFriendly_isCanonicalSeedOver_of_treeRefutationOver_canonicalSeedOver
+    (sig : List Nat) (O : Ontology)
+    (hBool : treeFriendlyTBoxBool O = true)
+    (hRef : TreeRefutationPropertyOver sig O (canonicalSeedOver sig O)) :
+    IsCanonicalSeedOver sig O (canonicalSeedOver sig O) :=
+  ⟨canonicalSeedOver_vr_in_contexts sig O,
+   canonicalSeedOver_sound sig O,
+   treeFriendly_herbrandPropertyOver_of_treeRefutationOver
+     sig O (canonicalSeedOver sig O) hBool hRef⟩
+
+/-- **Tena-Cucala Theorem 2 under the named §6.3.4 obligations**:
+    `IsCanonicalSeedOver sig O (canonicalSeedOver sig O)` for every
+    SROIQ ontology `O`, modulo (a) Bool-decidable tree-friendliness
+    of every axiom of `O`, and (b) the tree refutation property
+    over `sig` on the `canonicalSeedOver` seed.   The two hypotheses
+    are precisely the framework's intrinsic restriction (tree-friendly
+    axiom shape) and the substantive §6.3.4 thesis content (the
+    multi-level Herbrand refutation induction).
+
+    The unconditional form requires constructively discharging the
+    `TreeRefutationPropertyOver` hypothesis per disjunct of
+    `IsTreeFriendlyAxiom` — the accumulating multi-iteration target. -/
+theorem tenacucala_theorem2_full_treeFriendly
+    (sig : List Nat) (O : Ontology) (rbox : SROIQ.RBox)
+    (_hSig : OntologyConceptsSubset sig O)
+    (_hRBoxSat : SROIQRBoxSatisfiable rbox)
+    (hBool : treeFriendlyTBoxBool O = true)
+    (hRef : TreeRefutationPropertyOver sig O (canonicalSeedOver sig O)) :
+    IsCanonicalSeedOver sig O (canonicalSeedOver sig O) :=
+  treeFriendly_isCanonicalSeedOver_of_treeRefutationOver_canonicalSeedOver
+    sig O hBool hRef
+
+/-- **Headline completeness Theorem 2 under the named §6.3.4
+    obligations.**   Derived from `tenacucala_theorem2_full_treeFriendly`
+    by the standard contraposition route. -/
+theorem tenacucala_completeness_thm2_full_treeFriendly
+    (sig : List Nat) (O : Ontology) (rbox : SROIQ.RBox)
+    (hSig : OntologyConceptsSubset sig O)
+    (hRBoxSat : SROIQRBoxSatisfiable rbox)
+    (hBool : treeFriendlyTBoxBool O = true)
+    (hRef : TreeRefutationPropertyOver sig O (canonicalSeedOver sig O))
+    (Q : QueryClause) (hQsig : QueryReferencesSignature sig Q)
+    (hEnt : entailsQuery O Q) :
+    ∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOver sig O) D →
+      FullSaturated D →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta} := by
+  classical
+  intro D hDeriv hSat
+  by_contra hNoExists
+  have hNoSubsumer : ∀ c ∈ D.S D.vr,
+      ¬ subsumes c {body := Q.Gamma, head := Q.Delta} := by
+    intro c hcIn hSub; exact hNoExists ⟨c, hcIn, hSub⟩
+  have hIsCS :=
+    tenacucala_theorem2_full_treeFriendly sig O rbox hSig hRBoxSat hBool hRef
+  obtain ⟨α, _inhα, I, γ, φ, vx, vy, hISatO, hRefQ⟩ :=
+    hIsCS.2.2 D hDeriv hSat Q hQsig hNoSubsumer
+  exact hRefQ (hEnt I γ φ hISatO vx vy)
+
 /-- **CONDITIONAL form of the full Tena-Cucala Theorem 2 (one half).**
     Given the §6.3.4 Herbrand obligation
     `HerbrandPropertyOverWithRBox sig O rbox (canonicalSeedOver sig O)`
