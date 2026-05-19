@@ -1528,5 +1528,7 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.treeFriendlyTBoxBool_satisfies_empty
 #print axioms ALCHOIQContext.treeFriendly_herbrandProperty_of_treeRefutation_empty
 #print axioms ALCHOIQContext.treeFriendly_herbrandPropertyOver_of_treeRefutationOver_empty
+-- §HEADLINE DICHOTOMY: literal goal FALSE + refined goal ATTAINABLE
+#print axioms ALCHOIQContext.tenacucala_theorem2_dichotomy
 
 end ELKSDD

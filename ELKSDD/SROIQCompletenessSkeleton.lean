@@ -14429,6 +14429,45 @@ theorem treeFriendly_herbrandPropertyOver_of_treeRefutationOver_empty
   treeFriendly_herbrandPropertyOver_of_treeRefutationOver
     sig [] D_seed treeFriendlyTBoxBool_empty hRef
 
+/-- **HEADLINE DICHOTOMY — literal goal FALSE + refined goal ATTAINABLE.**
+    Single bundled named result capturing the precise status of the
+    Tena-Cucala Theorem 2 formalization:
+
+    (a)  **Literal goal is FALSE.**  The naive statement
+         `∀ O, IsCanonicalSeed O (canonicalSeedOf O)` is provably
+         disprovable already at `O = []` — the tautological query
+         `A ⊑ A` is unsubsumed in the empty seed yet admits no
+         countermodel (`not_isCanonicalSeed_canonicalSeedOf_empty`).
+
+    (b)  **Refined goal is conditionally attainable.**  For every
+         signature `sig` and every ontology `O` such that the
+         Bool-decidable check `treeFriendlyTBoxBool O = true` holds,
+         the §6.3.4 obligation `TreeRefutationPropertyOver sig O
+         (canonicalSeedOf O)` suffices to deliver the refined
+         `IsCanonicalSeedOver sig O (canonicalSeedOf O)`.
+
+    (c)  **Refined goal is unconditionally attainable for a worked
+         fragment.**  For atomic-subsumption-only `O` over its
+         intrinsic signature, the *total* function
+         `canonicalSeedFromOntology` produces a canonical seed
+         in the `IsCanonicalSeedAtomConjDisj` sense, with no
+         §6.3.4 dependency. -/
+theorem tenacucala_theorem2_dichotomy :
+    -- (a) Literal goal for empty O is FALSE.
+    (¬ IsCanonicalSeed [] (canonicalSeedOf [])) ∧
+    -- (b) Refined goal is conditionally attainable for tree-friendly O.
+    (∀ (sig : List Nat) (O : Ontology),
+       treeFriendlyTBoxBool O = true →
+       TreeRefutationPropertyOver sig O (canonicalSeedOf O) →
+       IsCanonicalSeedOver sig O (canonicalSeedOf O)) ∧
+    -- (c) Refined goal is unconditionally attainable for atom-atom O.
+    (∀ (O : Ontology), IsAtomicSubsumptionOnly O →
+       IsCanonicalSeedAtomConjDisj (ontologyConceptSig O) O
+         (canonicalSeedFromOntology O)) :=
+  ⟨not_isCanonicalSeed_canonicalSeedOf_empty,
+   treeFriendly_isCanonicalSeedOver_of_treeRefutationOver_canonicalSeedOf,
+   isCanonicalSeedAtomConjDisj_canonicalSeedFromOntology⟩
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at
