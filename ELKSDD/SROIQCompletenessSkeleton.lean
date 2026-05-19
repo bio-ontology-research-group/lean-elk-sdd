@@ -10540,6 +10540,40 @@ theorem entailsQuery_empty_implies_unsat
     exact (queryClause_empty_eval_false I _ hEval)
   · left; exact hSatO
 
+/-- **Bool check for atom-atom axiom shape.** -/
+def axiomIsAtomAtom (ax : ALCHOQ.Concept × ALCHOQ.Concept) : Bool :=
+  match ax.1, ax.2 with
+  | ALCHOQ.Concept.atom _, ALCHOQ.Concept.atom _ => true
+  | _, _ => false
+
+/-- Characterization. -/
+theorem axiomIsAtomAtom_iff (ax : ALCHOQ.Concept × ALCHOQ.Concept) :
+    axiomIsAtomAtom ax = true ↔
+    ∃ A B : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.atom B) := by
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 <;> (try simp [axiomIsAtomAtom] at h) <;>
+      (cases c2 <;> simp [axiomIsAtomAtom] at h)
+    rename_i A B
+    exact ⟨A, B, rfl⟩
+  · rintro ⟨A, B, hEq⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    subst h1; subst h2
+    rfl
+
+/-- **Decidable instance for `IsAtomicSubsumptionOnly`.**   Via the
+    Bool check `axiomIsAtomAtom`, the atom-atom-only ontology
+    predicate becomes algorithmically decidable. -/
+instance : DecidablePred IsAtomicSubsumptionOnly := by
+  intro O
+  unfold IsAtomicSubsumptionOnly
+  refine decidable_of_iff (O.all axiomIsAtomAtom) ?_
+  rw [List.all_eq_true]
+  constructor
+  · intro h ax hax; exact (axiomIsAtomAtom_iff ax).mp (h ax hax)
+  · intro h ax hax; exact (axiomIsAtomAtom_iff ax).mpr (h ax hax)
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at

@@ -1287,5 +1287,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.CLit.refsSig_iff
 -- §EMPTY QUERY ENTAILMENT FORCES UNSATISFIABILITY
 #print axioms ALCHOIQContext.entailsQuery_empty_implies_unsat
+-- §DECIDABILITY OF IsAtomicSubsumptionOnly
+#print axioms ALCHOIQContext.axiomIsAtomAtom
+#print axioms ALCHOIQContext.axiomIsAtomAtom_iff
 
 end ELKSDD
