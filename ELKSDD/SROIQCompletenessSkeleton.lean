@@ -13893,6 +13893,37 @@ theorem axiomIsTreeFriendlySomeBool18_implies_treeFriendly
         Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
         Or.inl h2
 
+/-- **Extended combined Bool check (round 19)** — adds
+    `axiomIsConjAtomAtomExistAtom` (disjunct 26) to the prior
+    28-way Bool check. -/
+def axiomIsTreeFriendlySomeBool19 (ax : ALCHOQ.Axiom) : Bool :=
+  axiomIsTreeFriendlySomeBool18 ax ||
+  axiomIsConjAtomAtomExistAtom ax
+
+/-- Implication for the round-19 Bool check. -/
+theorem axiomIsTreeFriendlySomeBool19_implies_treeFriendly
+    (ax : ALCHOQ.Axiom) :
+    axiomIsTreeFriendlySomeBool19 ax = true → IsTreeFriendlyAxiom ax := by
+  intro h
+  classical
+  unfold axiomIsTreeFriendlySomeBool19 at h
+  by_cases h1 : axiomIsTreeFriendlySomeBool18 ax = true
+  · exact axiomIsTreeFriendlySomeBool18_implies_treeFriendly ax h1
+  have h2 : axiomIsConjAtomAtomExistAtom ax = true := by
+    have hAll : (axiomIsTreeFriendlySomeBool18 ax ||
+                 axiomIsConjAtomAtomExistAtom ax) = true := h
+    rw [Bool.or_eq_true] at hAll
+    rcases hAll with hAll | hAll
+    · exact absurd hAll h1
+    · exact hAll
+  rw [axiomIsConjAtomAtomExistAtom_iff] at h2
+  -- disjunct 26: conj-LHS ∃R.atom B — 25 Or.inr's then Or.inl
+  exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inl h2
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at
