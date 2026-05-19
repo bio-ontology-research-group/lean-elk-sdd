@@ -1571,6 +1571,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.tenacucala_theorem2_countermodel
 #print axioms ALCHOIQContext.tenacucala_theorem2_dual_directions
 #print axioms ALCHOIQContext.tenacucala_theorem2_dual_directions_exampleAtomChain
+#print axioms ALCHOIQContext.tenacucala_theorem2_survey
+#print axioms ALCHOIQContext.tenacucala_theorem2_survey_exampleAtomChain
 -- §FINAL-GOAL SCAFFOLDING (Tena-Cucala 2021 Theorem 2 for SROIQ)
 #print axioms ALCHOIQContext.OntologyConceptsSubset
 #print axioms ALCHOIQContext.SROIQRBoxSatisfiable

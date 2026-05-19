@@ -16742,5 +16742,102 @@ theorem tenacucala_completeness_thm2_full_conditional
     hIsCS.2.2 D hDeriv hSat Q hQsig hNoSubsumer
   exact hRefQ (hEnt I γ φ hISatO vx vy)
 
+/-! ### Tena-Cucala Theorem 2: survey index
+
+    The headline result `tenacucala_theorem2` has accreted a family of
+    nine named forms, four worked instances, and supporting status
+    summaries.  The survey below provides a single navigation anchor
+    that — for any unified-slice pair `(O, rbox)`, any signature-
+    referencing `AtomConjDisjQuery` `Q`, and any saturation derivation
+    `D` of `canonicalSeedOfFull O` — exposes the four content-bearing
+    directions of the result as a single conjunction.   Each field is
+    definitionally equal to the underlying named theorem, so callers
+    may inline the survey or address its components individually.
+
+    Field map:
+
+    * `entailment_to_subsumer`      ≡ `tenacucala_theorem2_entailsQuery_form`
+    * `no_subsumer_to_countermodel` ≡ `tenacucala_theorem2_countermodel`
+    * `dual_directions`             ≡ `tenacucala_theorem2_dual_directions`
+    * `forward_universal_implication` ≡ `tenacucala_theorem2`
+
+    Foundation-only.  No new mathematical content; pure documentation
+    polish bundling the saturated theorem family. -/
+theorem tenacucala_theorem2_survey
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hSlice : InUnifiedSlice O rbox)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull O) D)
+    (hSat : FullSaturated D) :
+    -- (1) forward universal-implication form
+    ((∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+        (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+        I.satisfies O → SROIQ.RBox.eval I rbox →
+        Q.eval I ⟨γ, φ, vx, vy⟩) →
+      ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta}) ∧
+    -- (2) `entailsQuery` form
+    (entailsQuery O Q →
+      ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta}) ∧
+    -- (3) countermodel (contrapositive) form
+    ((∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+      ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+        (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+        I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+        ¬ Q.eval I ⟨γ, φ, vx, vy⟩) ∧
+    -- (4) dual-directions bundle (entailsQuery + countermodel)
+    ((entailsQuery O Q →
+        ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta}) ∧
+     ((∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩)) :=
+  ⟨tenacucala_theorem2          O rbox hSlice Q hQsig hQAtom D hDeriv hSat,
+   tenacucala_theorem2_entailsQuery_form
+                                O rbox hSlice Q hQsig hQAtom D hDeriv hSat,
+   tenacucala_theorem2_countermodel
+                                O rbox hSlice Q hQsig hQAtom D hDeriv hSat,
+   tenacucala_theorem2_dual_directions
+                                O rbox hSlice Q hQsig hQAtom D hDeriv hSat⟩
+
+/-- **Worked instance** of `tenacucala_theorem2_survey` on the unified-
+    slice pair `(exampleAtomChain, exampleTransInclRBox)`.   Exposes all
+    four content-bearing directions for a concrete non-trivial SROIQ
+    ontology + universal-role RBox combination.   Foundation-only. -/
+theorem tenacucala_theorem2_survey_exampleAtomChain
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig exampleAtomChain) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull exampleAtomChain) D)
+    (hSat : FullSaturated D) :
+    ((∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+        (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+        I.satisfies exampleAtomChain →
+        SROIQ.RBox.eval I exampleTransInclRBox →
+        Q.eval I ⟨γ, φ, vx, vy⟩) →
+      ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta}) ∧
+    (entailsQuery exampleAtomChain Q →
+      ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta}) ∧
+    ((∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+      ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+        (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+        I.satisfies exampleAtomChain ∧
+        SROIQ.RBox.eval I exampleTransInclRBox ∧
+        ¬ Q.eval I ⟨γ, φ, vx, vy⟩) ∧
+    ((entailsQuery exampleAtomChain Q →
+        ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta}) ∧
+     ((∀ c ∈ D.S D.vr, ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies exampleAtomChain ∧
+          SROIQ.RBox.eval I exampleTransInclRBox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩)) :=
+  tenacucala_theorem2_survey exampleAtomChain exampleTransInclRBox
+    exampleAtomChain_in_unifiedSlice_transInclRBox Q hQsig hQAtom D hDeriv hSat
+
 end ALCHOIQContext
 end ELKSDD
