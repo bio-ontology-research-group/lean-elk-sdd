@@ -15913,5 +15913,50 @@ theorem isCanonicalSeed_canonicalSeedOfFull_partial_exampleAtomChain :
     exampleAtomChain exampleTransInclRBox
     exampleAtomChain_in_unifiedSlice_transInclRBox
 
+/-- **Whole-TBox Bool check for the universal-role family slice.**
+    Mirrors `isELOrAllVacuousOnlyBool` for the
+    `IsELOrUniversalRoleVacuousOnly` predicate. -/
+def isELOrUniversalRoleVacuousOnlyBool (O : Ontology) : Bool :=
+  O.all axiomIsELOrUniversalRoleVacuousShape
+
+/-- `isELOrUniversalRoleVacuousOnlyBool O = true ↔
+     IsELOrUniversalRoleVacuousOnly O`. -/
+theorem isELOrUniversalRoleVacuousOnlyBool_iff (O : Ontology) :
+    isELOrUniversalRoleVacuousOnlyBool O = true ↔
+    IsELOrUniversalRoleVacuousOnly O := by
+  unfold isELOrUniversalRoleVacuousOnlyBool IsELOrUniversalRoleVacuousOnly
+  rw [List.all_eq_true]
+  constructor
+  · intro h ax hax
+    exact (axiomIsELOrUniversalRoleVacuousShape_iff ax).mp (h ax hax)
+  · intro h ax hax
+    exact (axiomIsELOrUniversalRoleVacuousShape_iff ax).mpr (h ax hax)
+
+/-- **Bool-driven dispatch into the universal-role-family partial
+    canonical seed.**   Given a Bool-checkable universal-role
+    family membership and any universal-roles-compatible RBox,
+    the partial-IsCanonicalSeed bundle holds for `canonicalSeedOfFull O`.
+    No caller-supplied `IsELOrUniversalRoleVacuousOnly` proof term
+    required. -/
+theorem partial_isCanonicalSeed_canonicalSeedOfFull_of_isELOrUniversalRoleVacuousOnlyBool
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hBool : isELOrUniversalRoleVacuousOnlyBool O = true)
+    (hRBox : RBoxCompatibleWithUniversalRoles rbox) :
+    (canonicalSeedOfFull O).vr ∈ (canonicalSeedOfFull O).contexts ∧
+    (∃ CD : DerivedClauses, isSound O (canonicalSeedOfFull O) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig O) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  isCanonicalSeed_canonicalSeedOfFull_partial_isELOrUniversalRoleVacuousOnly
+    O rbox ((isELOrUniversalRoleVacuousOnlyBool_iff O).mp hBool) hRBox
+
 end ALCHOIQContext
 end ELKSDD

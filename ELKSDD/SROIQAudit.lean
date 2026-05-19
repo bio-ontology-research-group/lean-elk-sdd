@@ -1536,5 +1536,9 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isELOrAllVacuousOnlyBool
 #print axioms ALCHOIQContext.isELOrAllVacuousOnlyBool_iff
 #print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_of_isELOrAllVacuousOnlyBool
+-- §BOOL-DRIVEN DISPATCH FOR THE UNIVERSAL-ROLE FAMILY
+#print axioms ALCHOIQContext.isELOrUniversalRoleVacuousOnlyBool
+#print axioms ALCHOIQContext.isELOrUniversalRoleVacuousOnlyBool_iff
+#print axioms ALCHOIQContext.partial_isCanonicalSeed_canonicalSeedOfFull_of_isELOrUniversalRoleVacuousOnlyBool
 
 end ELKSDD
