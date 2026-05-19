@@ -1232,5 +1232,10 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.RemainingSaturationCompletenessObligation
 #print axioms ALCHOIQContext.remaining_obligation_iff_unconditional
 #print axioms ALCHOIQContext.progress_capstone
+-- §TWO-CELL RESIDUAL VIA NACD MERGE
+#print axioms ALCHOIQContext.GapCell_NACD_simple
+#print axioms ALCHOIQContext.gapCell_NACD_iff_split
+#print axioms ALCHOIQContext.extensionGap_two_cell_residual
+#print axioms ALCHOIQContext.two_cells_imply_unconditional_IsCanonicalSeed
 
 end ELKSDD

@@ -9849,6 +9849,65 @@ theorem progress_capstone :
    remaining_obligation_iff_unconditional,
    extensionGap_three_cell_residual_simple_via_four⟩
 
+/-- **Merged non-AtomConjDisj-sig cell.**   Combines the slice-eligible
+    and non-slice-eligible non-AtomConjDisj-sig cells into a single
+    universally-quantified cell over arbitrary `O`.   This is the
+    cleaner reorganization of the residual: the slice-eligibility
+    axis is irrelevant in the non-AtomConjDisj-sig branch. -/
+def GapCell_NACD_simple : Prop :=
+  ∀ (O : Ontology) (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      ¬ (QueryReferencesSignature (ontologyConceptSig O) Q ∧
+         AtomConjDisjQuery Q) →
+      entailsQuery O Q →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- The merged non-AtomConjDisj-sig cell decomposes into the two
+    slice-eligibility-split simplified cells. -/
+theorem gapCell_NACD_iff_split :
+    GapCell_NACD_simple ↔
+    GapCell_SE_NACD_simple ∧ GapCell_NSE_NACD_simple := by
+  constructor
+  · intro hCell
+    refine ⟨?_, ?_⟩
+    · intro O _hO D hDeriv hSat Q hPQ hEnt
+      exact hCell O D hDeriv hSat Q hPQ hEnt
+    · intro O _hO D hDeriv hSat Q hPQ hEnt
+      exact hCell O D hDeriv hSat Q hPQ hEnt
+  · rintro ⟨hSE, hNSE⟩ O D hDeriv hSat Q hPQ hEnt
+    classical
+    by_cases hO : SliceEligibleOntology O
+    · exact hSE O hO D hDeriv hSat Q hPQ hEnt
+    · exact hNSE O hO D hDeriv hSat Q hPQ hEnt
+
+/-- **Two-cell residual.**   Reorganizing the three-cell residual,
+    the gap is equivalent to the conjunction of just two cells:
+    the merged non-AtomConjDisj-sig cell, plus the
+    `non-slice-eligible, AtomConjDisj-sig` cell. -/
+theorem extensionGap_two_cell_residual :
+    UnconditionalSCExtensionGap ↔
+    GapCell_NACD_simple ∧ GapCell_NSE_ACD_simple := by
+  rw [extensionGap_three_cell_residual_simple_via_four,
+      gapCell_NACD_iff_split]
+  constructor
+  · rintro ⟨hSE_NACD, hNSE_ACD, hNSE_NACD⟩
+    exact ⟨⟨hSE_NACD, hNSE_NACD⟩, hNSE_ACD⟩
+  · rintro ⟨⟨hSE_NACD, hNSE_NACD⟩, hNSE_ACD⟩
+    exact ⟨hSE_NACD, hNSE_ACD, hNSE_NACD⟩
+
+/-- **Two-cell bridge to `UnconditionalIsCanonicalSeed`.**
+    Discharging the two consolidated cells yields the literal
+    unconditional theorem. -/
+theorem two_cells_imply_unconditional_IsCanonicalSeed
+    (hNACD : GapCell_NACD_simple)
+    (hNSE_ACD : GapCell_NSE_ACD_simple) :
+    UnconditionalIsCanonicalSeed := by
+  have hGap : UnconditionalSCExtensionGap :=
+    extensionGap_two_cell_residual.mpr ⟨hNACD, hNSE_ACD⟩
+  exact extensionGap_implies_unconditional_IsCanonicalSeed hGap
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
