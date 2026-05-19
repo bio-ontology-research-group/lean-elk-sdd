@@ -14284,6 +14284,67 @@ theorem treeFriendlyTBoxBool_satisfies
     treeFriendlyTBoxBool_implies_treeFriendlyTBox O hBool
   exact elHerbrandInterpTree_satisfies_O_tree_friendly O Q hTF
 
+/-- **Tree-Herbrand refutation property.**   The named residual
+    obligation needed to lift `treeFriendlyTBoxBool O = true` to
+    `HerbrandProperty O D_seed`: for every saturated derivative `D`
+    of `D_seed` and every query `Q` unsubsumed at the root, there
+    is a valuation under which the tree-Herbrand interpretation
+    falsifies `Q`.   The §6.3.4 multi-level induction in the
+    Tena-Cucala thesis discharges exactly this property. -/
+def TreeRefutationProperty (O : Ontology) (D_seed : ContextStructure) : Prop :=
+  ∀ (D : ContextStructure),
+    FullDerivation D_seed D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      (∀ c ∈ D.S D.vr,
+         ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+      ∃ (γ : Indu → HerbrandTree O)
+        (φ : FunSym → HerbrandTree O → HerbrandTree O)
+        (vx vy : HerbrandTree O),
+        ¬ QueryClause.eval (elHerbrandInterpTree O Q)
+            ⟨γ, φ, vx, vy⟩ Q
+
+/-- **Bridge: tree-friendly TBox + tree refutation ⇒ HerbrandProperty.**
+    The Bool-checkable tree-friendliness of `O` discharges the
+    "model satisfies `O`" half of `HerbrandProperty` (via
+    `treeFriendlyTBoxBool_satisfies`), so the only residual content
+    needed is the refutation half — packaged as
+    `TreeRefutationProperty`.   Together they give the
+    Tena-Cucala Herbrand property for `D_seed`.
+
+    This isolates exactly the multi-session §6.3.4 obligation:
+    everything else in the literal goal `IsCanonicalSeed O D_seed`
+    can be discharged Bool-decidably modulo `TreeRefutationProperty`. -/
+theorem treeFriendly_herbrandProperty_of_treeRefutation
+    (O : Ontology) (D_seed : ContextStructure)
+    (hBool : treeFriendlyTBoxBool O = true)
+    (hRef : TreeRefutationProperty O D_seed) :
+    HerbrandProperty O D_seed := by
+  intro D hDeriv hSat Q hNoSub
+  obtain ⟨γ, φ, vx, vy, hRefQ⟩ := hRef D hDeriv hSat Q hNoSub
+  refine ⟨HerbrandTree O, ⟨HerbrandTree.root⟩,
+          elHerbrandInterpTree O Q, γ, φ, vx, vy, ?_, hRefQ⟩
+  exact treeFriendlyTBoxBool_satisfies O Q hBool
+
+/-- **IsCanonicalSeed bridge: tree-friendly + tree refutation
+    ⇒ IsCanonicalSeed.**   Combines the three conjuncts:
+    (i) `vr ∈ contexts` from `canonicalSeedOf_vr_in_contexts`,
+    (ii) soundness from `canonicalSeedOf_sound`,
+    (iii) HerbrandProperty from `treeFriendly_herbrandProperty_of_treeRefutation`.
+
+    With `treeFriendlyTBoxBool` Bool-checkable on the input and
+    `TreeRefutationProperty` named as the single residual
+    obligation, every conjunct of `IsCanonicalSeed` is either
+    discharged unconditionally or pinned to a single named
+    §6.3.4 obligation — a tight localisation of the literal goal. -/
+theorem treeFriendly_isCanonicalSeed_of_treeRefutation
+    (O : Ontology)
+    (hBool : treeFriendlyTBoxBool O = true)
+    (hRef : TreeRefutationProperty O (canonicalSeedOf O)) :
+    IsCanonicalSeed O (canonicalSeedOf O) :=
+  ⟨canonicalSeedOf_vr_in_contexts O,
+   canonicalSeedOf_sound O,
+   treeFriendly_herbrandProperty_of_treeRefutation O (canonicalSeedOf O) hBool hRef⟩
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at

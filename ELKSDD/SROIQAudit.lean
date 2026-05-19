@@ -1508,5 +1508,10 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.treeFriendlyTBoxBool
 #print axioms ALCHOIQContext.treeFriendlyTBoxBool_implies_treeFriendlyTBox
 #print axioms ALCHOIQContext.treeFriendlyTBoxBool_satisfies
+-- §BRIDGE: tree-friendly TBox + tree refutation ⇒ HerbrandProperty ⇒ IsCanonicalSeed
+-- Localises the literal goal to a single named §6.3.4 obligation.
+#print axioms ALCHOIQContext.TreeRefutationProperty
+#print axioms ALCHOIQContext.treeFriendly_herbrandProperty_of_treeRefutation
+#print axioms ALCHOIQContext.treeFriendly_isCanonicalSeed_of_treeRefutation
 
 end ELKSDD
