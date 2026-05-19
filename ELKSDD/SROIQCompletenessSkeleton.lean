@@ -10770,6 +10770,28 @@ instance : DecidablePred RBoxCompatibleWithEmptyRoles := by
   unfold RBoxCompatibleWithEmptyRoles
   exact inferInstance
 
+/-- **Decidable instance for `RAxiomCompatibleWithUniversalRoles`.**
+    Pattern matching on the SROIQ RAxiom shapes: `asym`, `irrefl`,
+    and `disj` are `False`; all other shapes are `True`. -/
+instance : DecidablePred RAxiomCompatibleWithUniversalRoles := by
+  intro ax
+  cases ax with
+  | asym _ => exact isFalse (fun h => h)
+  | irrefl _ => exact isFalse (fun h => h)
+  | disj _ _ => exact isFalse (fun h => h)
+  | incl _ _ => exact isTrue trivial
+  | trans _ => exact isTrue trivial
+  | sym _ => exact isTrue trivial
+  | refl _ => exact isTrue trivial
+  | inv _ _ => exact isTrue trivial
+  | chain _ _ => exact isTrue trivial
+
+/-- **Decidable instance for `RBoxCompatibleWithUniversalRoles`.** -/
+instance : DecidablePred RBoxCompatibleWithUniversalRoles := by
+  intro rbox
+  unfold RBoxCompatibleWithUniversalRoles
+  exact inferInstance
+
 /-- **Decidable instance for `IsELOrVacuousOnly`.**   Six axiom
     shapes, all Bool-checkable. -/
 instance : DecidablePred IsELOrVacuousOnly := by
