@@ -1198,5 +1198,11 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.UnconditionalSCExtensionGapOnNonSliceEligible
 #print axioms ALCHOIQContext.extensionGap_decomposes_along_sliceEligibility
 #print axioms ALCHOIQContext.extensionGap_components_imply_unconditional_IsCanonicalSeed
+-- §GAP DECOMPOSITION ALONG QUERY SHAPE
+#print axioms ALCHOIQContext.UnconditionalSCExtensionGapOnAtomConjDisjQuery
+#print axioms ALCHOIQContext.UnconditionalSCExtensionGapOnNonAtomConjDisjQuery
+#print axioms ALCHOIQContext.extensionGap_decomposes_along_atomConjDisjQuery
+#print axioms ALCHOIQContext.extensionGapOnAtomConjDisjQuery_reduces_to_nonSliceEligible
+#print axioms ALCHOIQContext.extensionGap_combined_decomposition
 
 end ELKSDD

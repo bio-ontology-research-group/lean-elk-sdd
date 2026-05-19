@@ -9374,6 +9374,115 @@ theorem extensionGap_components_imply_unconditional_IsCanonicalSeed
     (extensionGap_decomposes_along_sliceEligibility).mpr ⟨hSE, hNSE⟩
   exact extensionGap_implies_unconditional_IsCanonicalSeed hGap
 
+/-- **Named gap restricted to AtomConjDisj signature-referencing queries.**
+    Orthogonal to the slice-eligibility split: the gap predicate
+    quantified over queries that are AtomConjDisj-signature-referencing.
+    The remaining piece is `UnconditionalSCExtensionGapOnNonAtomConjDisjQuery`. -/
+def UnconditionalSCExtensionGapOnAtomConjDisjQuery : Prop :=
+  ∀ (O : Ontology) (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      QueryReferencesSignature (ontologyConceptSig O) Q →
+      AtomConjDisjQuery Q →
+      entailsQuery O Q →
+      ¬ (∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox ∧
+          QueryReferencesSignature (ontologyConceptSig O) Q ∧
+          AtomConjDisjQuery Q) →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- **Named gap restricted to queries that are NOT AtomConjDisj-signature-
+    referencing.**   Complementary to the AtomConjDisj-signature gap. -/
+def UnconditionalSCExtensionGapOnNonAtomConjDisjQuery : Prop :=
+  ∀ (O : Ontology) (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      ¬ (QueryReferencesSignature (ontologyConceptSig O) Q ∧
+         AtomConjDisjQuery Q) →
+      entailsQuery O Q →
+      ¬ (∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox ∧
+          QueryReferencesSignature (ontologyConceptSig O) Q ∧
+          AtomConjDisjQuery Q) →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- **Gap decomposition along query AtomConjDisj-signature shape.**
+    Orthogonal to the slice-eligibility decomposition. -/
+theorem extensionGap_decomposes_along_atomConjDisjQuery :
+    UnconditionalSCExtensionGap ↔
+    (UnconditionalSCExtensionGapOnAtomConjDisjQuery ∧
+     UnconditionalSCExtensionGapOnNonAtomConjDisjQuery) := by
+  constructor
+  · intro hGap
+    refine ⟨?_, ?_⟩
+    · intro O D hDeriv hSat Q _hQsig _hQAtom hEnt hNeg
+      exact hGap O D hDeriv hSat Q hEnt hNeg
+    · intro O D hDeriv hSat Q _hNotPQ hEnt hNeg
+      exact hGap O D hDeriv hSat Q hEnt hNeg
+  · rintro ⟨hACD, hNACD⟩ O D hDeriv hSat Q hEnt hNeg
+    classical
+    by_cases hPQ : QueryReferencesSignature (ontologyConceptSig O) Q ∧
+                   AtomConjDisjQuery Q
+    · exact hACD O D hDeriv hSat Q hPQ.1 hPQ.2 hEnt hNeg
+    · exact hNACD O D hDeriv hSat Q hPQ hEnt hNeg
+
+/-- **The AtomConjDisj-signature branch of the gap is vacuously
+    discharged.**   Its negation premise (`¬ ∃ rbox, InUnifiedSlice O
+    rbox ∧ QRefSig ∧ AtomConjDisj`) combined with the AtomConjDisj-
+    signature hypotheses on Q implies `¬ ∃ rbox, InUnifiedSlice O rbox`,
+    which is exactly the predicate `¬ SliceEligibleOntology O` —
+    *if* we additionally assume there is no in-slice witness for O.
+    But the entire branch is only entered when the slice/QRefSig/
+    AtomConjDisj witness doesn't exist, so given the QRefSig and
+    AtomConjDisj hypotheses, the negation forces `¬ ∃ rbox, InUnifiedSlice
+    O rbox`, i.e. `¬ SliceEligibleOntology O` (modulo the converse
+    of `inUnifiedSlice_exists_of_sliceEligible`).   Discharging this
+    branch is therefore equivalent to handling AtomConjDisj queries
+    on non-slice-eligible O. -/
+theorem extensionGapOnAtomConjDisjQuery_reduces_to_nonSliceEligible
+    (hRes : ∀ (O : Ontology), ¬ SliceEligibleOntology O →
+              ∀ (D : ContextStructure),
+                FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+                ∀ (Q : QueryClause),
+                  QueryReferencesSignature (ontologyConceptSig O) Q →
+                  AtomConjDisjQuery Q →
+                  entailsQuery O Q →
+                  ∃ c ∈ D.S D.vr,
+                    subsumes c {body := Q.Gamma, head := Q.Delta}) :
+    UnconditionalSCExtensionGapOnAtomConjDisjQuery := by
+  intro O D hDeriv hSat Q hQsig hQAtom hEnt hNeg
+  -- The negation `hNeg` says no `rbox` witnesses `InUnifiedSlice O rbox ∧
+  -- QRefSig ∧ AtomConjDisj`.  Since `hQsig` and `hQAtom` already hold,
+  -- the negation reduces to `∀ rbox, ¬ InUnifiedSlice O rbox`.
+  have hNoSlice : ∀ rbox : SROIQ.RBox, ¬ InUnifiedSlice O rbox := by
+    intro rbox hSlice
+    exact hNeg ⟨rbox, hSlice, hQsig, hQAtom⟩
+  -- This in turn says `O` is not slice-eligible.
+  have hNotEligible : ¬ SliceEligibleOntology O := by
+    intro hO
+    obtain ⟨rbox, hSlice⟩ := inUnifiedSlice_exists_of_sliceEligible O hO
+    exact hNoSlice rbox hSlice
+  exact hRes O hNotEligible D hDeriv hSat Q hQsig hQAtom hEnt
+
+/-- **Two-axis decomposition of the gap.**   Combining slice-
+    eligibility and AtomConjDisj-signature decompositions produces
+    a clean structural carve-up of `UnconditionalSCExtensionGap`
+    along two orthogonal axes.   Since the (slice-eligible,
+    AtomConjDisj-signature) cell is already discharged, the residual
+    gap is in the three remaining cells. -/
+theorem extensionGap_combined_decomposition :
+    UnconditionalSCExtensionGap ↔
+    (UnconditionalSCExtensionGapOnSliceEligible ∧
+     UnconditionalSCExtensionGapOnNonSliceEligible) ∧
+    (UnconditionalSCExtensionGapOnAtomConjDisjQuery ∧
+     UnconditionalSCExtensionGapOnNonAtomConjDisjQuery) := by
+  constructor
+  · intro hGap
+    exact ⟨extensionGap_decomposes_along_sliceEligibility.mp hGap,
+           extensionGap_decomposes_along_atomConjDisjQuery.mp hGap⟩
+  · rintro ⟨hSE_split, _hACD_split⟩
+    exact extensionGap_decomposes_along_sliceEligibility.mpr hSE_split
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
