@@ -1406,5 +1406,8 @@ namespace ELKSDD
 -- §AXIOM-SHAPE BOOL CHECK FOR (LHS, ≥1 R.IsConjOfAtomsOrTop filler)
 #print axioms ALCHOIQContext.axiomIsAnyLHSAtLeast1ConjOfAtomsOrTop
 #print axioms ALCHOIQContext.axiomIsAnyLHSAtLeast1ConjOfAtomsOrTop_iff
+-- §AXIOM-SHAPE BOOL CHECK FOR (atom A, ∃R.IsConjOfAtoms filler)
+#print axioms ALCHOIQContext.axiomIsAtomExistConjOfAtoms
+#print axioms ALCHOIQContext.axiomIsAtomExistConjOfAtoms_iff
 
 end ELKSDD
