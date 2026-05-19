@@ -1365,5 +1365,7 @@ namespace ELKSDD
 -- §EMPTY-ONTOLOGY HERBRAND-TREE FULL CHARACTERIZATION
 #print axioms ALCHOIQContext.herbrandTree_empty_only_root
 #print axioms ALCHOIQContext.elHerbrandInterpTree_empty_any_atom_iff
+-- §EMPTY-ONTOLOGY TREE HERBRAND ROLE CHARACTERIZATION
+#print axioms ALCHOIQContext.elHerbrandInterpTree_empty_no_roles
 
 end ELKSDD

@@ -6217,6 +6217,21 @@ theorem elHerbrandInterpTree_empty_any_atom_iff
   subst hp
   exact elHerbrandInterpTree_empty_root_iff_body_atom Q B
 
+/-- **No role edges in the empty-ontology tree Herbrand.**   Every
+    node of `HerbrandTree []` is the root (no successor edges
+    exist since successors are introduced by axioms in `O`).   The
+    `ext_role` definition returns `False` for `y = root`, so no
+    role edges hold.   Completes the empty-ontology tree-Herbrand
+    semantic characterization: only the body atoms hold at the
+    single root node, and no roles connect anything. -/
+theorem elHerbrandInterpTree_empty_no_roles
+    (Q : QueryClause) (R : Nat) (x y : HerbrandTree []) :
+    ¬ (elHerbrandInterpTree [] Q).ext_role R x y := by
+  intro h
+  have hy : y = HerbrandTree.root := herbrandTree_empty_only_root y
+  subst hy
+  exact h
+
 /-- `(conj (atom A₁) (atom A₂), atom B) ∈ O`: by `step_conj`. -/
 theorem elHerbrandInterpTree_sat_conj_atom
     (O : Ontology) (Q : QueryClause)
