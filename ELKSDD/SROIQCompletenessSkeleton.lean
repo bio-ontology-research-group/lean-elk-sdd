@@ -13742,6 +13742,36 @@ theorem axiomIsTreeFriendlySomeBool13_implies_treeFriendly
         Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
         Or.inr <| Or.inl h2
 
+/-- **Extended combined Bool check (round 14)** — adds
+    `axiomIsAnyLHSAtLeast1TreeTrueRHS` (disjunct 21) to the
+    prior 23-way Bool check. -/
+def axiomIsTreeFriendlySomeBool14 (ax : ALCHOQ.Axiom) : Bool :=
+  axiomIsTreeFriendlySomeBool13 ax ||
+  axiomIsAnyLHSAtLeast1TreeTrueRHS ax
+
+/-- Implication for the round-14 Bool check. -/
+theorem axiomIsTreeFriendlySomeBool14_implies_treeFriendly
+    (ax : ALCHOQ.Axiom) :
+    axiomIsTreeFriendlySomeBool14 ax = true → IsTreeFriendlyAxiom ax := by
+  intro h
+  classical
+  unfold axiomIsTreeFriendlySomeBool14 at h
+  by_cases h1 : axiomIsTreeFriendlySomeBool13 ax = true
+  · exact axiomIsTreeFriendlySomeBool13_implies_treeFriendly ax h1
+  have h2 : axiomIsAnyLHSAtLeast1TreeTrueRHS ax = true := by
+    have hAll : (axiomIsTreeFriendlySomeBool13 ax ||
+                 axiomIsAnyLHSAtLeast1TreeTrueRHS ax) = true := h
+    rw [Bool.or_eq_true] at hAll
+    rcases hAll with hAll | hAll
+    · exact absurd hAll h1
+    · exact hAll
+  rw [axiomIsAnyLHSAtLeast1TreeTrueRHS_iff] at h2
+  -- disjunct 21: anyLHS-≥1.TreeTrueRHS — 20 Or.inr's then Or.inl
+  exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inl h2
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at
