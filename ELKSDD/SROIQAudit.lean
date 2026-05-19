@@ -1530,5 +1530,7 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.treeFriendly_herbrandPropertyOver_of_treeRefutationOver_empty
 -- §HEADLINE DICHOTOMY: literal goal FALSE + refined goal ATTAINABLE
 #print axioms ALCHOIQContext.tenacucala_theorem2_dichotomy
+-- §EXTENDED DICHOTOMY: all worked unconditional fragments together
+#print axioms ALCHOIQContext.tenacucala_theorem2_extended_dichotomy
 
 end ELKSDD

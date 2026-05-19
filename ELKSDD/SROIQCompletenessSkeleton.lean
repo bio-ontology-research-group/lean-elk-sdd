@@ -14468,6 +14468,54 @@ theorem tenacucala_theorem2_dichotomy :
    treeFriendly_isCanonicalSeedOver_of_treeRefutationOver_canonicalSeedOf,
    isCanonicalSeedAtomConjDisj_canonicalSeedFromOntology⟩
 
+/-- **EXTENDED DICHOTOMY — broader unconditional fragment coverage.**
+    Strengthens `tenacucala_theorem2_dichotomy` by exposing every
+    *unconditional* `IsCanonicalSeedAtomConjDisj` fragment proved
+    in this file, all over the total `canonicalSeedELConjFromOntology`
+    or `canonicalSeedFromOntology`:
+
+    (c1)  `IsAtomicSubsumptionOnly O` — atom-atom axioms only.
+    (c2)  `IsELConjOnly O` — EL conjunctive shapes (atom-atom + atom-bot
+          + atom⊓atom→atom).
+    (c3)  `IsELOrVacuousOnly O` — EL plus Herbrand-vacuous extensions.
+    (c4)  `IsELOrAllVacuousOnly O` — the maximal slice attainable
+          without successor-context introduction.
+
+    Each branch yields `IsCanonicalSeedAtomConjDisj (ontologyConceptSig O) O
+    (canonicalSeedELConjFromOntology O)` *unconditionally* — no
+    §6.3.4 obligation, no Bool premise, no per-O hypothesis beyond
+    the ontology-shape predicate. -/
+theorem tenacucala_theorem2_extended_dichotomy :
+    -- (a) Literal goal FALSE.
+    (¬ IsCanonicalSeed [] (canonicalSeedOf [])) ∧
+    -- (b) Tree-friendly conditional bridge to refined goal.
+    (∀ (sig : List Nat) (O : Ontology),
+       treeFriendlyTBoxBool O = true →
+       TreeRefutationPropertyOver sig O (canonicalSeedOf O) →
+       IsCanonicalSeedOver sig O (canonicalSeedOf O)) ∧
+    -- (c1) Atom-atom O: refined goal unconditional.
+    (∀ (O : Ontology), IsAtomicSubsumptionOnly O →
+       IsCanonicalSeedAtomConjDisj (ontologyConceptSig O) O
+         (canonicalSeedFromOntology O)) ∧
+    -- (c2) ELConj O: refined goal unconditional.
+    (∀ (O : Ontology), IsELConjOnly O →
+       IsCanonicalSeedAtomConjDisj (ontologyConceptSig O) O
+         (canonicalSeedELConjFromOntology O)) ∧
+    -- (c3) ELOrVacuous O: refined goal unconditional.
+    (∀ (O : Ontology), IsELOrVacuousOnly O →
+       IsCanonicalSeedAtomConjDisj (ontologyConceptSig O) O
+         (canonicalSeedELConjFromOntology O)) ∧
+    -- (c4) ELOrAllVacuous O: maximal-slice unconditional.
+    (∀ (O : Ontology), IsELOrAllVacuousOnly O →
+       IsCanonicalSeedAtomConjDisj (ontologyConceptSig O) O
+         (canonicalSeedELConjFromOntology O)) :=
+  ⟨not_isCanonicalSeed_canonicalSeedOf_empty,
+   treeFriendly_isCanonicalSeedOver_of_treeRefutationOver_canonicalSeedOf,
+   isCanonicalSeedAtomConjDisj_canonicalSeedFromOntology,
+   isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology,
+   isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology_vacuous,
+   isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology_allVacuous⟩
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at
