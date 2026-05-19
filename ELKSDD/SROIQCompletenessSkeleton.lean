@@ -10615,6 +10615,63 @@ instance : DecidablePred IsAtomicOrBotOnly := by
     · exact Bool.or_eq_true _ _ |>.mpr (Or.inl ((axiomIsAtomAtom_iff ax).mpr h1))
     · exact Bool.or_eq_true _ _ |>.mpr (Or.inr ((axiomIsAtomBot_iff ax).mpr h2))
 
+/-- **Bool check for conj-atom shape.**   `(conj (atom A₁) (atom A₂),
+    atom B)` axioms. -/
+def axiomIsConjAtomAtom (ax : ALCHOQ.Concept × ALCHOQ.Concept) : Bool :=
+  match ax.1, ax.2 with
+  | ALCHOQ.Concept.conj (ALCHOQ.Concept.atom _) (ALCHOQ.Concept.atom _),
+    ALCHOQ.Concept.atom _ => true
+  | _, _ => false
+
+/-- Characterization for conj-atom-atom. -/
+theorem axiomIsConjAtomAtom_iff (ax : ALCHOQ.Concept × ALCHOQ.Concept) :
+    axiomIsConjAtomAtom ax = true ↔
+    ∃ A₁ A₂ B : Nat,
+      ax = (ALCHOQ.Concept.conj
+              (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+            ALCHOQ.Concept.atom B) := by
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 <;> (try simp [axiomIsConjAtomAtom] at h)
+    rename_i d1 d2
+    cases d1 <;> (try simp [axiomIsConjAtomAtom] at h)
+    cases d2 <;> (try simp [axiomIsConjAtomAtom] at h)
+    cases c2 <;> (try simp [axiomIsConjAtomAtom] at h)
+    rename_i A₁ A₂ B
+    exact ⟨A₁, A₂, B, rfl⟩
+  · rintro ⟨A₁, A₂, B, hEq⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    subst h1; subst h2
+    rfl
+
+/-- **Decidable instance for `IsELConjOnly`.**   The EL fragment is
+    decidable: each axiom must fall into one of three Bool-checkable
+    shapes (atom-atom, atom-bot, conj-atom-atom). -/
+instance : DecidablePred IsELConjOnly := by
+  intro O
+  unfold IsELConjOnly
+  refine decidable_of_iff
+    (O.all (fun ax => axiomIsAtomAtom ax ||
+                       axiomIsAtomBot ax ||
+                       axiomIsConjAtomAtom ax)) ?_
+  rw [List.all_eq_true]
+  constructor
+  · intro h ax hax
+    have hOr := h ax hax
+    rcases Bool.or_eq_true _ _ |>.mp hOr with h12 | h3
+    · rcases Bool.or_eq_true _ _ |>.mp h12 with h1 | h2
+      · exact Or.inl ((axiomIsAtomAtom_iff ax).mp h1)
+      · exact Or.inr (Or.inl ((axiomIsAtomBot_iff ax).mp h2))
+    · exact Or.inr (Or.inr ((axiomIsConjAtomAtom_iff ax).mp h3))
+  · intro h ax hax
+    rcases h ax hax with h1 | h2 | h3
+    · exact Bool.or_eq_true _ _ |>.mpr (Or.inl
+        (Bool.or_eq_true _ _ |>.mpr (Or.inl ((axiomIsAtomAtom_iff ax).mpr h1))))
+    · exact Bool.or_eq_true _ _ |>.mpr (Or.inl
+        (Bool.or_eq_true _ _ |>.mpr (Or.inr ((axiomIsAtomBot_iff ax).mpr h2))))
+    · exact Bool.or_eq_true _ _ |>.mpr (Or.inr ((axiomIsConjAtomAtom_iff ax).mpr h3))
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at
