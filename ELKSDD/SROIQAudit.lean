@@ -1204,5 +1204,14 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.extensionGap_decomposes_along_atomConjDisjQuery
 #print axioms ALCHOIQContext.extensionGapOnAtomConjDisjQuery_reduces_to_nonSliceEligible
 #print axioms ALCHOIQContext.extensionGap_combined_decomposition
+-- §FOUR-CELL DECOMPOSITION + THREE-CELL RESIDUAL
+#print axioms ALCHOIQContext.GapCell_SE_ACD
+#print axioms ALCHOIQContext.GapCell_SE_NACD
+#print axioms ALCHOIQContext.GapCell_NSE_ACD
+#print axioms ALCHOIQContext.GapCell_NSE_NACD
+#print axioms ALCHOIQContext.gapCell_SE_ACD_holds
+#print axioms ALCHOIQContext.extensionGap_four_cell_decomposition
+#print axioms ALCHOIQContext.extensionGap_three_cell_residual
+#print axioms ALCHOIQContext.three_cells_imply_unconditional_IsCanonicalSeed
 
 end ELKSDD

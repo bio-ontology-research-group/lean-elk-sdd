@@ -9483,6 +9483,143 @@ theorem extensionGap_combined_decomposition :
   · rintro ⟨hSE_split, _hACD_split⟩
     exact extensionGap_decomposes_along_sliceEligibility.mpr hSE_split
 
+-- ============================================================
+-- §FOUR-CELL DECOMPOSITION OF THE GAP
+--
+-- Define the four orthogonal cells produced by the slice-eligibility
+-- × query-shape carve-up, and show the gap is equivalent to their
+-- conjunction.  The (slice-eligible, AtomConjDisj-signature) cell is
+-- the cell already discharged unconditionally; the residual gap is
+-- the conjunction of the remaining three cells.
+-- ============================================================
+
+/-- Cell (1/4): slice-eligible O, AtomConjDisj-signature Q. -/
+def GapCell_SE_ACD : Prop :=
+  ∀ (O : Ontology), SliceEligibleOntology O →
+  ∀ (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      QueryReferencesSignature (ontologyConceptSig O) Q →
+      AtomConjDisjQuery Q →
+      entailsQuery O Q →
+      ¬ (∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox ∧
+          QueryReferencesSignature (ontologyConceptSig O) Q ∧
+          AtomConjDisjQuery Q) →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- Cell (2/4): slice-eligible O, non-AtomConjDisj-signature Q. -/
+def GapCell_SE_NACD : Prop :=
+  ∀ (O : Ontology), SliceEligibleOntology O →
+  ∀ (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      ¬ (QueryReferencesSignature (ontologyConceptSig O) Q ∧
+         AtomConjDisjQuery Q) →
+      entailsQuery O Q →
+      ¬ (∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox ∧
+          QueryReferencesSignature (ontologyConceptSig O) Q ∧
+          AtomConjDisjQuery Q) →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- Cell (3/4): non-slice-eligible O, AtomConjDisj-signature Q. -/
+def GapCell_NSE_ACD : Prop :=
+  ∀ (O : Ontology), ¬ SliceEligibleOntology O →
+  ∀ (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      QueryReferencesSignature (ontologyConceptSig O) Q →
+      AtomConjDisjQuery Q →
+      entailsQuery O Q →
+      ¬ (∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox ∧
+          QueryReferencesSignature (ontologyConceptSig O) Q ∧
+          AtomConjDisjQuery Q) →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- Cell (4/4): non-slice-eligible O, non-AtomConjDisj-signature Q. -/
+def GapCell_NSE_NACD : Prop :=
+  ∀ (O : Ontology), ¬ SliceEligibleOntology O →
+  ∀ (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      ¬ (QueryReferencesSignature (ontologyConceptSig O) Q ∧
+         AtomConjDisjQuery Q) →
+      entailsQuery O Q →
+      ¬ (∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox ∧
+          QueryReferencesSignature (ontologyConceptSig O) Q ∧
+          AtomConjDisjQuery Q) →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- **The (slice-eligible, AtomConjDisj-signature) cell holds
+    unconditionally** — its negation premise contradicts the
+    slice/Q-shape witness produced from slice-eligibility + the
+    hypotheses on Q. -/
+theorem gapCell_SE_ACD_holds : GapCell_SE_ACD := by
+  intro O hO D hDeriv hSat Q hQsig hQAtom hEnt hNeg
+  exact extensionGap_sliceEligible_holds_on_AtomConjDisj
+    O hO D hDeriv hSat Q hEnt hQsig hQAtom hNeg
+
+/-- **Four-cell decomposition of the gap.**   The full
+    `UnconditionalSCExtensionGap` is equivalent to the conjunction
+    of its four orthogonal cells.   This is the explicit
+    structural carve-up. -/
+theorem extensionGap_four_cell_decomposition :
+    UnconditionalSCExtensionGap ↔
+    GapCell_SE_ACD ∧ GapCell_SE_NACD ∧
+    GapCell_NSE_ACD ∧ GapCell_NSE_NACD := by
+  constructor
+  · intro hGap
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro O _ D hDeriv hSat Q _ _ hEnt hNeg
+      exact hGap O D hDeriv hSat Q hEnt hNeg
+    · intro O _ D hDeriv hSat Q _ hEnt hNeg
+      exact hGap O D hDeriv hSat Q hEnt hNeg
+    · intro O _ D hDeriv hSat Q _ _ hEnt hNeg
+      exact hGap O D hDeriv hSat Q hEnt hNeg
+    · intro O _ D hDeriv hSat Q _ hEnt hNeg
+      exact hGap O D hDeriv hSat Q hEnt hNeg
+  · rintro ⟨hSE_ACD, hSE_NACD, hNSE_ACD, hNSE_NACD⟩
+    intro O D hDeriv hSat Q hEnt hNeg
+    classical
+    by_cases hO : SliceEligibleOntology O
+    · by_cases hPQ : QueryReferencesSignature (ontologyConceptSig O) Q ∧
+                     AtomConjDisjQuery Q
+      · exact hSE_ACD O hO D hDeriv hSat Q hPQ.1 hPQ.2 hEnt hNeg
+      · exact hSE_NACD O hO D hDeriv hSat Q hPQ hEnt hNeg
+    · by_cases hPQ : QueryReferencesSignature (ontologyConceptSig O) Q ∧
+                     AtomConjDisjQuery Q
+      · exact hNSE_ACD O hO D hDeriv hSat Q hPQ.1 hPQ.2 hEnt hNeg
+      · exact hNSE_NACD O hO D hDeriv hSat Q hPQ hEnt hNeg
+
+/-- **Three-cell residual: dropping the discharged cell**.
+    Since `GapCell_SE_ACD` is `gapCell_SE_ACD_holds`-discharged, the
+    full gap reduces to the conjunction of the three remaining cells. -/
+theorem extensionGap_three_cell_residual :
+    UnconditionalSCExtensionGap ↔
+    GapCell_SE_NACD ∧ GapCell_NSE_ACD ∧ GapCell_NSE_NACD := by
+  rw [extensionGap_four_cell_decomposition]
+  constructor
+  · rintro ⟨_, hSE_NACD, hNSE_ACD, hNSE_NACD⟩
+    exact ⟨hSE_NACD, hNSE_ACD, hNSE_NACD⟩
+  · rintro ⟨hSE_NACD, hNSE_ACD, hNSE_NACD⟩
+    exact ⟨gapCell_SE_ACD_holds, hSE_NACD, hNSE_ACD, hNSE_NACD⟩
+
+/-- **Three-cell bridge to `UnconditionalIsCanonicalSeed`.**
+    Discharging the three undischarged cells (with the
+    `(slice-eligible, AtomConjDisj-signature)` cell already proved)
+    yields the literal unconditional theorem. -/
+theorem three_cells_imply_unconditional_IsCanonicalSeed
+    (hSE_NACD : GapCell_SE_NACD)
+    (hNSE_ACD : GapCell_NSE_ACD)
+    (hNSE_NACD : GapCell_NSE_NACD) :
+    UnconditionalIsCanonicalSeed := by
+  have hGap : UnconditionalSCExtensionGap :=
+    extensionGap_three_cell_residual.mpr ⟨hSE_NACD, hNSE_ACD, hNSE_NACD⟩
+  exact extensionGap_implies_unconditional_IsCanonicalSeed hGap
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
