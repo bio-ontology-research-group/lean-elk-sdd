@@ -5501,6 +5501,71 @@ inductive IsConjOfAtomsOrTop : ALCHOQ.Concept → Prop where
       IsConjOfAtomsOrTop C₁ → IsConjOfAtomsOrTop C₂ →
       IsConjOfAtomsOrTop (ALCHOQ.Concept.conj C₁ C₂)
 
+/-- **Bool-valued check for `IsConjOfAtomsOrTop`.**   Recurses through
+    nested `conj` constructors, accepting `atom _` or `top` leaves. -/
+def isConjOfAtomsOrTopBool : ALCHOQ.Concept → Bool
+  | ALCHOQ.Concept.atom _ => true
+  | ALCHOQ.Concept.top => true
+  | ALCHOQ.Concept.conj C₁ C₂ =>
+      isConjOfAtomsOrTopBool C₁ && isConjOfAtomsOrTopBool C₂
+  | _ => false
+
+/-- Characterization. -/
+theorem isConjOfAtomsOrTopBool_iff (C : ALCHOQ.Concept) :
+    isConjOfAtomsOrTopBool C = true ↔ IsConjOfAtomsOrTop C := by
+  induction C with
+  | atom _ => exact ⟨fun _ => IsConjOfAtomsOrTop.atom, fun _ => rfl⟩
+  | top => exact ⟨fun _ => IsConjOfAtomsOrTop.top, fun _ => rfl⟩
+  | bot =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsOrTopBool] at h
+    · cases h
+  | nom _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsOrTopBool] at h
+    · cases h
+  | neg _ _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsOrTopBool] at h
+    · cases h
+  | conj C₁ C₂ ih₁ ih₂ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsOrTopBool, Bool.and_eq_true] at h
+      exact IsConjOfAtomsOrTop.conj (ih₁.mp h.1) (ih₂.mp h.2)
+    · cases h with
+      | conj h₁ h₂ =>
+        simp [isConjOfAtomsOrTopBool, Bool.and_eq_true]
+        exact ⟨ih₁.mpr h₁, ih₂.mpr h₂⟩
+  | disj _ _ _ _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsOrTopBool] at h
+    · cases h
+  | exist _ _ _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsOrTopBool] at h
+    · cases h
+  | univ _ _ _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsOrTopBool] at h
+    · cases h
+  | atLeast _ _ _ _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsOrTopBool] at h
+    · cases h
+  | atMost _ _ _ _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsOrTopBool] at h
+    · cases h
+  | hasSelf _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsOrTopBool] at h
+    · cases h
+
+/-- **Decidable instance for `IsConjOfAtomsOrTop`.** -/
+instance : DecidablePred IsConjOfAtomsOrTop :=
+  fun C => decidable_of_iff (isConjOfAtomsOrTopBool C = true)
+    (isConjOfAtomsOrTopBool_iff C)
+
 /-- Tree-shaped Herbrand domain over an ontology `O`.   `root`
     is the universal point; `succ p ax hAx` is the unique
     successor of `p` introduced by axiom `ax ∈ O`.
