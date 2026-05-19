@@ -16299,6 +16299,69 @@ theorem canonicalSeedOver_partial_easy_conjuncts
   ⟨canonicalSeedOver_vr_in_contexts sig O,
    canonicalSeedOver_sound sig O⟩
 
+/-- **STATUS SUMMARY for the final goal `tenacucala_theorem2_full`.**
+
+    The literal goal
+    ``∀ sig O rbox, OntologyConceptsSubset sig O → SROIQRBoxSatisfiable rbox →
+      IsCanonicalSeedOver sig O (canonicalSeedOver sig O)``
+    is *structurally* obstructed.  The framework documentation at the
+    `canonicalSeedFromOntology` block (§FINAL-TOTAL) records three
+    obstacles:
+
+      (a) Concept normalisation (Tena-Cucala §5.2) is needed to make
+          the seed emit clauses for non-atom-atom axioms — otherwise
+          the seed is too weak to subsume entailed queries with
+          disjunctions, number restrictions, nominals, etc.
+      (b) `HerbrandPropertyOver` quantifies over arbitrary `QueryClause`,
+          which includes queries with role-atom and individual-equality
+          literals; the empty-ontology Herbrand-tree apparatus is
+          tuned to concept atoms only.
+      (c) `QueryReferencesSignature sig Q` constrains concept names
+          but not role/equality literals; the latter span an unbounded
+          space that no finite seed can cover.
+
+    Combined obstacle: `S(D.vr)` is finite (`List CClause`) but the
+    space of unsubsumed sig-restricted queries is infinite in shape
+    (over `Nat` role symbols × literal shapes).   The structural
+    impossibility witness `not_isCanonicalSeed_canonicalSeedOf_empty`
+    (line 2367) makes this concrete for the no-signature variant.
+
+    What IS unconditionally attainable in this framework:
+
+      • Conjuncts (i) and (ii) of `IsCanonicalSeedOver` for arbitrary `O`
+        (`canonicalSeedOver_partial_easy_conjuncts`).
+      • Conjunct (iii) modulo the named §6.3.4 obligation
+        `TreeRefutationPropertyOver sig O (canonicalSeedOver sig O)` plus
+        Bool tree-friendliness of `O`
+        (`treeFriendly_isCanonicalSeedOver_of_treeRefutationOver_canonicalSeedOver`).
+      • The full bundle, restricted to `AtomConjDisjQuery` and the
+        slice-eligible TBox + RBox fragments
+        (the `partial_isCanonicalSeed_of_sliceEligibleBool` family).
+      • The full bundle, restricted to atom-atom-only `O` with the
+        intrinsic signature on the closure-extended seed
+        `canonicalSeedFromOntology`
+        (`isCanonicalSeedAtomConjDisj_canonicalSeedFromOntology`). -/
+theorem final_goal_status_summary_tenacucala_theorem2_full :
+    -- (i)+(ii) unconditionally for every sig, O.
+    (∀ (sig : List Nat) (O : Ontology),
+       (canonicalSeedOver sig O).vr ∈ (canonicalSeedOver sig O).contexts ∧
+       (∃ CD : DerivedClauses, isSound O (canonicalSeedOver sig O) CD)) ∧
+    -- (iii) via the named §6.3.4 obligation + Bool tree-friendliness.
+    (∀ (sig : List Nat) (O : Ontology),
+       treeFriendlyTBoxBool O = true →
+       TreeRefutationPropertyOver sig O (canonicalSeedOver sig O) →
+       HerbrandPropertyOver sig O (canonicalSeedOver sig O)) ∧
+    -- (Full bundle) atom-atom-only `O` over the intrinsic signature
+    -- on the closure-extended seed, unconditionally.
+    (∀ (O : Ontology), IsAtomicSubsumptionOnly O →
+       IsCanonicalSeedAtomConjDisj (ontologyConceptSig O) O
+         (canonicalSeedFromOntology O)) :=
+  ⟨fun sig O => canonicalSeedOver_partial_easy_conjuncts sig O,
+   fun sig O hBool hRef =>
+     treeFriendly_herbrandPropertyOver_of_treeRefutationOver
+       sig O (canonicalSeedOver sig O) hBool hRef,
+   isCanonicalSeedAtomConjDisj_canonicalSeedFromOntology⟩
+
 /-- **Bridge to `IsCanonicalSeedOver` for the signature-aware seed
     `canonicalSeedOver sig O`.**   Combines the unconditional easy
     conjuncts with the bridge
