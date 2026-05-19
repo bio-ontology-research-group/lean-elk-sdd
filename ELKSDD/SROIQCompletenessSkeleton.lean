@@ -7878,6 +7878,252 @@ instance : DecidablePred HerbrandFalseLHS :=
 instance : DecidablePred HerbrandTrueRHS :=
   fun C => decidable_of_iff _ (herbrandTrueRHSBool_iff C)
 
+-- Bool-valued counterparts for `HerbrandFalseLHS_universal` /
+-- `HerbrandTrueRHS_universal`.   Pattern order mirrors the Prop-valued
+-- defs so the iff lemma can dispatch case-by-case.
+mutual
+def herbrandFalseLHSUniversalBool : ALCHOQ.Concept → Bool
+  | .bot                         => true
+  | .atLeast (_ + 2) _ _         => true
+  | .conj C₁ C₂                  =>
+      herbrandFalseLHSUniversalBool C₁ || herbrandFalseLHSUniversalBool C₂
+  | .disj C₁ C₂                  =>
+      herbrandFalseLHSUniversalBool C₁ && herbrandFalseLHSUniversalBool C₂
+  | .neg C                       => herbrandTrueRHSUniversalBool C
+  | .exist _ C                   => herbrandFalseLHSUniversalBool C
+  | .univ _ C                    => herbrandFalseLHSUniversalBool C
+  | .atLeast 1 _ C               => herbrandFalseLHSUniversalBool C
+  | .atMost 0 _ C                => herbrandTrueRHSUniversalBool C
+  | _                            => false
+
+def herbrandTrueRHSUniversalBool : ALCHOQ.Concept → Bool
+  | .top                         => true
+  | .nom _                       => true
+  | .hasSelf _                   => true
+  | .atLeast 0 _ _               => true
+  | .atMost (_ + 1) _ _          => true
+  | .conj D₁ D₂                  =>
+      herbrandTrueRHSUniversalBool D₁ && herbrandTrueRHSUniversalBool D₂
+  | .disj D₁ D₂                  =>
+      herbrandTrueRHSUniversalBool D₁ || herbrandTrueRHSUniversalBool D₂
+  | .neg D                       => herbrandFalseLHSUniversalBool D
+  | .exist _ D                   => herbrandTrueRHSUniversalBool D
+  | .univ _ D                    => herbrandTrueRHSUniversalBool D
+  | .atLeast 1 _ D               => herbrandTrueRHSUniversalBool D
+  | .atMost 0 _ D                => herbrandFalseLHSUniversalBool D
+  | _                            => false
+end
+
+/-- **Joint correctness of the universal-role Bool counterparts.**
+    Both Bool-valued functions agree with their `Prop`-valued
+    universal-role originals on every concept. -/
+theorem herbrand_universal_bool_iff (C : ALCHOQ.Concept) :
+    (herbrandFalseLHSUniversalBool C = true ↔ HerbrandFalseLHS_universal C) ∧
+    (herbrandTrueRHSUniversalBool C = true ↔ HerbrandTrueRHS_universal C) := by
+  induction C with
+  | atom _ =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h; simp [herbrandFalseLHSUniversalBool] at h
+    · intro h; simp [HerbrandFalseLHS_universal] at h
+    · intro h; simp [herbrandTrueRHSUniversalBool] at h
+    · intro h; simp [HerbrandTrueRHS_universal] at h
+  | top =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h; simp [herbrandFalseLHSUniversalBool] at h
+    · intro h; simp [HerbrandFalseLHS_universal] at h
+    · intro _; trivial
+    · intro _; rfl
+  | bot =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro _; trivial
+    · intro _; rfl
+    · intro h; simp [herbrandTrueRHSUniversalBool] at h
+    · intro h; simp [HerbrandTrueRHS_universal] at h
+  | nom _ =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h; simp [herbrandFalseLHSUniversalBool] at h
+    · intro h; simp [HerbrandFalseLHS_universal] at h
+    · intro _; trivial
+    · intro _; rfl
+  | neg C ih =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h
+      simp only [herbrandFalseLHSUniversalBool] at h
+      simp only [HerbrandFalseLHS_universal]
+      exact ih.2.mp h
+    · intro h
+      simp only [HerbrandFalseLHS_universal] at h
+      simp only [herbrandFalseLHSUniversalBool]
+      exact ih.2.mpr h
+    · intro h
+      simp only [herbrandTrueRHSUniversalBool] at h
+      simp only [HerbrandTrueRHS_universal]
+      exact ih.1.mp h
+    · intro h
+      simp only [HerbrandTrueRHS_universal] at h
+      simp only [herbrandTrueRHSUniversalBool]
+      exact ih.1.mpr h
+  | conj C₁ C₂ ih₁ ih₂ =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h
+      simp only [herbrandFalseLHSUniversalBool, Bool.or_eq_true] at h
+      simp only [HerbrandFalseLHS_universal]
+      rcases h with h1 | h2
+      · exact Or.inl (ih₁.1.mp h1)
+      · exact Or.inr (ih₂.1.mp h2)
+    · intro h
+      simp only [HerbrandFalseLHS_universal] at h
+      simp only [herbrandFalseLHSUniversalBool, Bool.or_eq_true]
+      rcases h with h1 | h2
+      · exact Or.inl (ih₁.1.mpr h1)
+      · exact Or.inr (ih₂.1.mpr h2)
+    · intro h
+      simp only [herbrandTrueRHSUniversalBool, Bool.and_eq_true] at h
+      simp only [HerbrandTrueRHS_universal]
+      exact ⟨ih₁.2.mp h.1, ih₂.2.mp h.2⟩
+    · intro h
+      simp only [HerbrandTrueRHS_universal] at h
+      simp only [herbrandTrueRHSUniversalBool, Bool.and_eq_true]
+      exact ⟨ih₁.2.mpr h.1, ih₂.2.mpr h.2⟩
+  | disj C₁ C₂ ih₁ ih₂ =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h
+      simp only [herbrandFalseLHSUniversalBool, Bool.and_eq_true] at h
+      simp only [HerbrandFalseLHS_universal]
+      exact ⟨ih₁.1.mp h.1, ih₂.1.mp h.2⟩
+    · intro h
+      simp only [HerbrandFalseLHS_universal] at h
+      simp only [herbrandFalseLHSUniversalBool, Bool.and_eq_true]
+      exact ⟨ih₁.1.mpr h.1, ih₂.1.mpr h.2⟩
+    · intro h
+      simp only [herbrandTrueRHSUniversalBool, Bool.or_eq_true] at h
+      simp only [HerbrandTrueRHS_universal]
+      rcases h with h1 | h2
+      · exact Or.inl (ih₁.2.mp h1)
+      · exact Or.inr (ih₂.2.mp h2)
+    · intro h
+      simp only [HerbrandTrueRHS_universal] at h
+      simp only [herbrandTrueRHSUniversalBool, Bool.or_eq_true]
+      rcases h with h1 | h2
+      · exact Or.inl (ih₁.2.mpr h1)
+      · exact Or.inr (ih₂.2.mpr h2)
+  | exist _ C ih =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h
+      simp only [herbrandFalseLHSUniversalBool] at h
+      simp only [HerbrandFalseLHS_universal]
+      exact ih.1.mp h
+    · intro h
+      simp only [HerbrandFalseLHS_universal] at h
+      simp only [herbrandFalseLHSUniversalBool]
+      exact ih.1.mpr h
+    · intro h
+      simp only [herbrandTrueRHSUniversalBool] at h
+      simp only [HerbrandTrueRHS_universal]
+      exact ih.2.mp h
+    · intro h
+      simp only [HerbrandTrueRHS_universal] at h
+      simp only [herbrandTrueRHSUniversalBool]
+      exact ih.2.mpr h
+  | univ _ C ih =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h
+      simp only [herbrandFalseLHSUniversalBool] at h
+      simp only [HerbrandFalseLHS_universal]
+      exact ih.1.mp h
+    · intro h
+      simp only [HerbrandFalseLHS_universal] at h
+      simp only [herbrandFalseLHSUniversalBool]
+      exact ih.1.mpr h
+    · intro h
+      simp only [herbrandTrueRHSUniversalBool] at h
+      simp only [HerbrandTrueRHS_universal]
+      exact ih.2.mp h
+    · intro h
+      simp only [HerbrandTrueRHS_universal] at h
+      simp only [herbrandTrueRHSUniversalBool]
+      exact ih.2.mpr h
+  | atLeast n _ C ih =>
+    match n with
+    | 0 =>
+      refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+      · intro h; simp [herbrandFalseLHSUniversalBool] at h
+      · intro h; simp [HerbrandFalseLHS_universal] at h
+      · intro _; trivial
+      · intro _; rfl
+    | 1 =>
+      refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+      · intro h
+        simp only [herbrandFalseLHSUniversalBool] at h
+        simp only [HerbrandFalseLHS_universal]
+        exact ih.1.mp h
+      · intro h
+        simp only [HerbrandFalseLHS_universal] at h
+        simp only [herbrandFalseLHSUniversalBool]
+        exact ih.1.mpr h
+      · intro h
+        simp only [herbrandTrueRHSUniversalBool] at h
+        simp only [HerbrandTrueRHS_universal]
+        exact ih.2.mp h
+      · intro h
+        simp only [HerbrandTrueRHS_universal] at h
+        simp only [herbrandTrueRHSUniversalBool]
+        exact ih.2.mpr h
+    | n + 2 =>
+      refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+      · intro _; trivial
+      · intro _; rfl
+      · intro h; simp [herbrandTrueRHSUniversalBool] at h
+      · intro h; simp [HerbrandTrueRHS_universal] at h
+  | atMost n _ C ih =>
+    match n with
+    | 0 =>
+      refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+      · intro h
+        simp only [herbrandFalseLHSUniversalBool] at h
+        simp only [HerbrandFalseLHS_universal]
+        exact ih.2.mp h
+      · intro h
+        simp only [HerbrandFalseLHS_universal] at h
+        simp only [herbrandFalseLHSUniversalBool]
+        exact ih.2.mpr h
+      · intro h
+        simp only [herbrandTrueRHSUniversalBool] at h
+        simp only [HerbrandTrueRHS_universal]
+        exact ih.1.mp h
+      · intro h
+        simp only [HerbrandTrueRHS_universal] at h
+        simp only [herbrandTrueRHSUniversalBool]
+        exact ih.1.mpr h
+    | n + 1 =>
+      refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+      · intro h; simp [herbrandFalseLHSUniversalBool] at h
+      · intro h; simp [HerbrandFalseLHS_universal] at h
+      · intro _; trivial
+      · intro _; rfl
+  | hasSelf _ =>
+    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    · intro h; simp [herbrandFalseLHSUniversalBool] at h
+    · intro h; simp [HerbrandFalseLHS_universal] at h
+    · intro _; trivial
+    · intro _; rfl
+
+theorem herbrandFalseLHSUniversalBool_iff (C : ALCHOQ.Concept) :
+    herbrandFalseLHSUniversalBool C = true ↔ HerbrandFalseLHS_universal C :=
+  (herbrand_universal_bool_iff C).1
+
+theorem herbrandTrueRHSUniversalBool_iff (C : ALCHOQ.Concept) :
+    herbrandTrueRHSUniversalBool C = true ↔ HerbrandTrueRHS_universal C :=
+  (herbrand_universal_bool_iff C).2
+
+/-- **Decidable instance for `HerbrandFalseLHS_universal`.** -/
+instance : DecidablePred HerbrandFalseLHS_universal :=
+  fun C => decidable_of_iff _ (herbrandFalseLHSUniversalBool_iff C)
+
+/-- **Decidable instance for `HerbrandTrueRHS_universal`.** -/
+instance : DecidablePred HerbrandTrueRHS_universal :=
+  fun C => decidable_of_iff _ (herbrandTrueRHSUniversalBool_iff C)
+
 /-- **Bool check for `(atom A, C) ∧ IsConjOfAtoms C` axiom shape.**
     Used in the n-ary RHS conjunction disjunct of `IsELOrAllVacuousOnly`. -/
 def axiomIsAtomConjOfAtoms (ax : ALCHOQ.Concept × ALCHOQ.Concept) : Bool :=

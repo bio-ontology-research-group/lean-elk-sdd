@@ -1327,5 +1327,11 @@ namespace ELKSDD
 -- §FULL DECIDABLE IsELOrAllVacuousOnly
 #print axioms ALCHOIQContext.axiomIsELOrAllVacuousShape
 #print axioms ALCHOIQContext.axiomIsELOrAllVacuousShape_iff
+-- §UNIVERSAL-ROLE HERBRAND BOOL COUNTERPARTS
+#print axioms ALCHOIQContext.herbrandFalseLHSUniversalBool
+#print axioms ALCHOIQContext.herbrandTrueRHSUniversalBool
+#print axioms ALCHOIQContext.herbrand_universal_bool_iff
+#print axioms ALCHOIQContext.herbrandFalseLHSUniversalBool_iff
+#print axioms ALCHOIQContext.herbrandTrueRHSUniversalBool_iff
 
 end ELKSDD
