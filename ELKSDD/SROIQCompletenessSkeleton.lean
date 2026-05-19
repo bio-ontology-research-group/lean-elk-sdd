@@ -16050,5 +16050,73 @@ theorem partial_isCanonicalSeed_canonicalSeedOfFull_exampleAtomChain_via_bool :
     exampleAtomChain exampleTransInclRBox (by decide)
     exampleTransInclRBox_compat
 
+/-- **Worked instance** of `partial_isCanonicalSeed_of_sliceEligibleBool`
+    on `exampleELConj`.   Passes the slice-eligible Bool check by
+    `decide` via the all-vacuous branch. -/
+theorem partial_isCanonicalSeed_exampleELConj_via_sliceEligibleBool :
+    (canonicalSeedOfFull exampleELConj).vr ∈
+      (canonicalSeedOfFull exampleELConj).contexts ∧
+    (∃ CD : DerivedClauses,
+       isSound exampleELConj (canonicalSeedOfFull exampleELConj) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull exampleELConj) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig exampleELConj) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies exampleELConj ∧
+          SROIQ.RBox.eval I ([] : SROIQ.RBox) ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  partial_isCanonicalSeed_of_sliceEligibleBool exampleELConj (by decide)
+
+/-- **Worked instance** of `partial_isCanonicalSeed_of_sliceEligibleBool`
+    on `exampleVacuous`. -/
+theorem partial_isCanonicalSeed_exampleVacuous_via_sliceEligibleBool :
+    (canonicalSeedOfFull exampleVacuous).vr ∈
+      (canonicalSeedOfFull exampleVacuous).contexts ∧
+    (∃ CD : DerivedClauses,
+       isSound exampleVacuous (canonicalSeedOfFull exampleVacuous) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull exampleVacuous) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig exampleVacuous) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies exampleVacuous ∧
+          SROIQ.RBox.eval I ([] : SROIQ.RBox) ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  partial_isCanonicalSeed_of_sliceEligibleBool exampleVacuous (by decide)
+
+/-- **Worked instance** of `partial_isCanonicalSeed_of_sliceEligibleBool`
+    on `exampleAtomChain` with the *empty* RBox.   Demonstrates that
+    the same ontology that was paired with the non-trivial
+    `exampleTransInclRBox` via the universal-role branch also
+    discharges via the slice-eligible Bool dispatch (and the empty
+    RBox). -/
+theorem partial_isCanonicalSeed_exampleAtomChain_via_sliceEligibleBool :
+    (canonicalSeedOfFull exampleAtomChain).vr ∈
+      (canonicalSeedOfFull exampleAtomChain).contexts ∧
+    (∃ CD : DerivedClauses,
+       isSound exampleAtomChain (canonicalSeedOfFull exampleAtomChain) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull exampleAtomChain) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig exampleAtomChain) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies exampleAtomChain ∧
+          SROIQ.RBox.eval I ([] : SROIQ.RBox) ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  partial_isCanonicalSeed_of_sliceEligibleBool exampleAtomChain (by decide)
+
 end ALCHOIQContext
 end ELKSDD

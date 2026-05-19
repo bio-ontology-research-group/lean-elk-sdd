@@ -1549,5 +1549,9 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isSliceEligibleOntologyBool
 #print axioms ALCHOIQContext.isSliceEligibleOntologyBool_iff
 #print axioms ALCHOIQContext.partial_isCanonicalSeed_of_sliceEligibleBool
+-- §WORKED INSTANCES OF SLICE-ELIGIBLE BOOL DISPATCH (via `decide`)
+#print axioms ALCHOIQContext.partial_isCanonicalSeed_exampleELConj_via_sliceEligibleBool
+#print axioms ALCHOIQContext.partial_isCanonicalSeed_exampleVacuous_via_sliceEligibleBool
+#print axioms ALCHOIQContext.partial_isCanonicalSeed_exampleAtomChain_via_sliceEligibleBool
 
 end ELKSDD
