@@ -10513,6 +10513,14 @@ instance (O : Ontology) (Q : QueryClause)
   unfold InDischargedRegion
   exact inferInstance
 
+/-- **Decidability of clause subsumption.**   `subsumes c' c` is the
+    conjunction `body c' ⊆ body c ∧ head c' ⊆ head c`, both of
+    which are decidable on finite lists with decidable equality on
+    `BLit` and `CLit`. -/
+instance (c' c : CClause) : Decidable (subsumes c' c) := by
+  unfold subsumes
+  exact inferInstance
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at
