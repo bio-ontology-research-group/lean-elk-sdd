@@ -1532,5 +1532,9 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.tenacucala_theorem2_dichotomy
 -- §EXTENDED DICHOTOMY: all worked unconditional fragments together
 #print axioms ALCHOIQContext.tenacucala_theorem2_extended_dichotomy
+-- §BOOL-DRIVEN DISPATCH FOR THE REFINED GOAL (no per-O hypothesis term)
+#print axioms ALCHOIQContext.isELOrAllVacuousOnlyBool
+#print axioms ALCHOIQContext.isELOrAllVacuousOnlyBool_iff
+#print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_of_isELOrAllVacuousOnlyBool
 
 end ELKSDD

@@ -14468,6 +14468,38 @@ theorem tenacucala_theorem2_dichotomy :
    treeFriendly_isCanonicalSeedOver_of_treeRefutationOver_canonicalSeedOf,
    isCanonicalSeedAtomConjDisj_canonicalSeedFromOntology⟩
 
+/-- **Whole-TBox Bool check for the maximal `IsELOrAllVacuousOnly`
+    slice.**   The Bool counterpart of `IsELOrAllVacuousOnly`, used
+    to drive a *fully Bool-decidable* dispatch into the unconditional
+    refined goal. -/
+def isELOrAllVacuousOnlyBool (O : Ontology) : Bool :=
+  O.all axiomIsELOrAllVacuousShape
+
+/-- `isELOrAllVacuousOnlyBool O = true ↔ IsELOrAllVacuousOnly O`. -/
+theorem isELOrAllVacuousOnlyBool_iff (O : Ontology) :
+    isELOrAllVacuousOnlyBool O = true ↔ IsELOrAllVacuousOnly O := by
+  unfold isELOrAllVacuousOnlyBool IsELOrAllVacuousOnly
+  rw [List.all_eq_true]
+  constructor
+  · intro h ax hax
+    exact (axiomIsELOrAllVacuousShape_iff ax).mp (h ax hax)
+  · intro h ax hax
+    exact (axiomIsELOrAllVacuousShape_iff ax).mpr (h ax hax)
+
+/-- **Bool-driven dispatch into the refined goal.**   Any ontology
+    whose maximal-slice Bool check returns `true` enjoys
+    `IsCanonicalSeedAtomConjDisj` over its intrinsic signature
+    *unconditionally and Bool-decidably*: no caller-supplied
+    `IsELOrAllVacuousOnly` proof term required — the Bool check
+    is sufficient. -/
+theorem isCanonicalSeedAtomConjDisj_of_isELOrAllVacuousOnlyBool
+    (O : Ontology)
+    (hBool : isELOrAllVacuousOnlyBool O = true) :
+    IsCanonicalSeedAtomConjDisj (ontologyConceptSig O) O
+      (canonicalSeedELConjFromOntology O) :=
+  isCanonicalSeedAtomConjDisj_canonicalSeedELConjFromOntology_allVacuous
+    O ((isELOrAllVacuousOnlyBool_iff O).mp hBool)
+
 /-- **EXTENDED DICHOTOMY — broader unconditional fragment coverage.**
     Strengthens `tenacucala_theorem2_dichotomy` by exposing every
     *unconditional* `IsCanonicalSeedAtomConjDisj` fragment proved
