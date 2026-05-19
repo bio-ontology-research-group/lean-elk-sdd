@@ -1222,5 +1222,11 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.gapCell_NSE_NACD_iff_simple
 #print axioms ALCHOIQContext.extensionGap_three_cell_residual_simple
 #print axioms ALCHOIQContext.three_simple_cells_imply_unconditional_IsCanonicalSeed
+-- §SIMPLIFIED FORM OF THE DISCHARGED CELL + FOUR-CELL SIMPLIFIED CARVE-UP
+#print axioms ALCHOIQContext.GapCell_SE_ACD_simple
+#print axioms ALCHOIQContext.gapCell_SE_ACD_simple_holds
+#print axioms ALCHOIQContext.gapCell_SE_ACD_iff_simple
+#print axioms ALCHOIQContext.extensionGap_four_cell_decomposition_simple
+#print axioms ALCHOIQContext.extensionGap_three_cell_residual_simple_via_four
 
 end ELKSDD

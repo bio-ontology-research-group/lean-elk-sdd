@@ -9739,6 +9739,74 @@ theorem three_simple_cells_imply_unconditional_IsCanonicalSeed
     extensionGap_three_cell_residual_simple.mpr ⟨hSE_NACD, hNSE_ACD, hNSE_NACD⟩
   exact extensionGap_implies_unconditional_IsCanonicalSeed hGap
 
+/-- **Simplified discharged cell**: (slice-eligible, AtomConjDisj-sig)
+    cell with the redundant negation premise dropped — the
+    discharged cell of the four-cell carve-up. -/
+def GapCell_SE_ACD_simple : Prop :=
+  ∀ (O : Ontology), SliceEligibleOntology O →
+  ∀ (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      QueryReferencesSignature (ontologyConceptSig O) Q →
+      AtomConjDisjQuery Q →
+      entailsQuery O Q →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- **The simplified discharged cell holds.**   On slice-eligible O
+    + AtomConjDisj-sig Q with `entailsQuery O Q`, the restricted SC
+    machinery directly produces the subsumer. -/
+theorem gapCell_SE_ACD_simple_holds : GapCell_SE_ACD_simple := by
+  intro O hO D hDeriv hSat Q hQsig hQAtom hEnt
+  obtain ⟨rbox, hSlice⟩ := inUnifiedSlice_exists_of_sliceEligible O hO
+  have hEntWithRBox :
+      ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+        (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+        I.satisfies O → SROIQ.RBox.eval I rbox →
+        Q.eval I ⟨γ, φ, vx, vy⟩ :=
+    fun α _inh I γ φ vx vy hSatO _ => hEnt I γ φ hSatO vx vy
+  exact saturationCompletenessAtomConjDisjUnifiedSlice_holds
+    O rbox hSlice D hDeriv hSat Q hQsig hQAtom hEntWithRBox
+
+/-- **The simplified discharged cell is equivalent to the original
+    discharged cell.**   Both are unconditionally provable
+    (the simplified form via `gapCell_SE_ACD_simple_holds`, the
+    original via vacuous discharge of its impossible negation
+    premise under the cell's other hypotheses), so the iff is
+    trivially provable from either side. -/
+theorem gapCell_SE_ACD_iff_simple :
+    GapCell_SE_ACD ↔ GapCell_SE_ACD_simple := by
+  constructor
+  · intro _hCell
+    exact gapCell_SE_ACD_simple_holds
+  · intro hCell O hO D hDeriv hSat Q hQsig hQAtom hEnt _hNeg
+    exact hCell O hO D hDeriv hSat Q hQsig hQAtom hEnt
+
+/-- **Four-cell decomposition in simplified form.**   The full gap
+    is equivalent to the conjunction of the four simplified cells. -/
+theorem extensionGap_four_cell_decomposition_simple :
+    UnconditionalSCExtensionGap ↔
+    GapCell_SE_ACD_simple ∧ GapCell_SE_NACD_simple ∧
+    GapCell_NSE_ACD_simple ∧ GapCell_NSE_NACD_simple := by
+  rw [extensionGap_four_cell_decomposition,
+      gapCell_SE_ACD_iff_simple,
+      gapCell_SE_NACD_iff_simple,
+      gapCell_NSE_ACD_iff_simple,
+      gapCell_NSE_NACD_iff_simple]
+
+/-- **Three-cell residual in simplified form via four-cell carve-up.**
+    The discharged simplified cell `gapCell_SE_ACD_simple_holds` is
+    used to factor it out from the four-cell decomposition. -/
+theorem extensionGap_three_cell_residual_simple_via_four :
+    UnconditionalSCExtensionGap ↔
+    GapCell_SE_NACD_simple ∧ GapCell_NSE_ACD_simple ∧ GapCell_NSE_NACD_simple := by
+  rw [extensionGap_four_cell_decomposition_simple]
+  constructor
+  · rintro ⟨_, hSE_NACD, hNSE_ACD, hNSE_NACD⟩
+    exact ⟨hSE_NACD, hNSE_ACD, hNSE_NACD⟩
+  · rintro ⟨hSE_NACD, hNSE_ACD, hNSE_NACD⟩
+    exact ⟨gapCell_SE_ACD_simple_holds, hSE_NACD, hNSE_ACD, hNSE_NACD⟩
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
