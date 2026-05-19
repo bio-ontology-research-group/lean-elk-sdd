@@ -1336,5 +1336,8 @@ namespace ELKSDD
 -- §FULL DECIDABLE IsELOrUniversalRoleVacuousOnly
 #print axioms ALCHOIQContext.axiomIsELOrUniversalRoleVacuousShape
 #print axioms ALCHOIQContext.axiomIsELOrUniversalRoleVacuousShape_iff
+-- §THREE-CELL DISJUNCTIVE FORM OF PerOResidualHerbrand
+#print axioms ALCHOIQContext.perOResidualHerbrand_iff_disjunctive
+#print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_iff_disjunctive_perO
 
 end ELKSDD

@@ -11080,6 +11080,73 @@ theorem unconditional_IsCanonicalSeed_iff_universal_perOResidual :
   · intro hRes O
     exact (isCanonicalSeed_canonicalSeedOfFull_iff_perOResidual O).mpr (hRes O)
 
+/-- **Three-cell disjunctive form of `PerOResidualHerbrand`.**
+    Equivalent reformulation of the per-O residual via DeMorgan on
+    `¬ InDischargedRegion`: the obligation splits into three cells
+    along the three failure modes of the discharged region (the
+    ontology is not slice-eligible, the query falls outside the
+    ontology's concept signature, or the query has a non-AtomConjDisj
+    shape). -/
+theorem perOResidualHerbrand_iff_disjunctive (O : Ontology) :
+    PerOResidualHerbrand O ↔
+    (∀ (D : ContextStructure),
+       FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+       ∀ (Q : QueryClause),
+         (¬ SliceEligibleOntology O ∨
+          ¬ QueryReferencesSignature (ontologyConceptSig O) Q ∨
+          ¬ AtomConjDisjQuery Q) →
+         (∀ c ∈ D.S D.vr,
+            ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+         ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+           (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+           I.satisfies O ∧ ¬ Q.eval I ⟨γ, φ, vx, vy⟩) := by
+  unfold PerOResidualHerbrand InDischargedRegion
+  constructor
+  · intro h D hDeriv hSat Q hDisj hNoSub
+    apply h D hDeriv hSat Q ?_ hNoSub
+    rintro ⟨hSE, hSig, hACD⟩
+    rcases hDisj with h | h | h
+    · exact h hSE
+    · exact h hSig
+    · exact h hACD
+  · intro h D hDeriv hSat Q hNotIn hNoSub
+    classical
+    apply h D hDeriv hSat Q ?_ hNoSub
+    by_cases hSE : SliceEligibleOntology O
+    · by_cases hSig : QueryReferencesSignature (ontologyConceptSig O) Q
+      · by_cases hACD : AtomConjDisjQuery Q
+        · exact absurd ⟨hSE, hSig, hACD⟩ hNotIn
+        · exact Or.inr (Or.inr hACD)
+      · exact Or.inr (Or.inl hSig)
+    · exact Or.inl hSE
+
+/-- **Universal-quantified three-cell residual iff the literal goal.**
+    Composing the disjunctive form with the universal-quantified
+    bridge: `UnconditionalIsCanonicalSeed` is equivalent to the
+    per-O three-cell disjunctive residual quantified over all
+    ontologies. -/
+theorem unconditional_IsCanonicalSeed_iff_disjunctive_perO :
+    UnconditionalIsCanonicalSeed ↔
+    (∀ (O : Ontology) (D : ContextStructure),
+       FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+       ∀ (Q : QueryClause),
+         (¬ SliceEligibleOntology O ∨
+          ¬ QueryReferencesSignature (ontologyConceptSig O) Q ∨
+          ¬ AtomConjDisjQuery Q) →
+         (∀ c ∈ D.S D.vr,
+            ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+         ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+           (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+           I.satisfies O ∧ ¬ Q.eval I ⟨γ, φ, vx, vy⟩) := by
+  rw [unconditional_IsCanonicalSeed_iff_universal_perOResidual]
+  constructor
+  · intro h O
+    exact (perOResidualHerbrand_iff_disjunctive O).mp (h O)
+  · intro h O
+    exact (perOResidualHerbrand_iff_disjunctive O).mpr
+      (fun D hDeriv hSat Q hDisj hNoSub =>
+        h O D hDeriv hSat Q hDisj hNoSub)
+
 /-- **Empty query is always falsifiable.**   The query
     `Q.Gamma = [], Q.Delta = []` has `Q.eval = True → False = False`,
     so every interpretation falsifies it. -/
