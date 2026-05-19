@@ -1567,6 +1567,7 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.tenacucala_theorem2_exampleELConj
 #print axioms ALCHOIQContext.tenacucala_theorem2_exampleVacuous
 #print axioms ALCHOIQContext.tenacucala_theorem2_exampleAtomChain_emptyRBox
+#print axioms ALCHOIQContext.tenacucala_theorem2_entailsQuery_form
 -- §FINAL-GOAL SCAFFOLDING (Tena-Cucala 2021 Theorem 2 for SROIQ)
 #print axioms ALCHOIQContext.OntologyConceptsSubset
 #print axioms ALCHOIQContext.SROIQRBoxSatisfiable

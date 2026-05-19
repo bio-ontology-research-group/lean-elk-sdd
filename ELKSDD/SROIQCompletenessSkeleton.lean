@@ -16375,6 +16375,32 @@ theorem tenacucala_theorem2_exampleAtomChain_emptyRBox
     exampleAtomChain_in_unifiedSlice_emptyRBox
     Q hQsig hQAtom D hDeriv hSat hEntail
 
+/-- **Tena-Cucala Theorem 2 in `entailsQuery` form** — the standard
+    formulation using the framework's pre-defined `entailsQuery O Q`
+    predicate (Tarskian entailment over arbitrary inhabited types).
+    Direct consequence of `tenacucala_theorem2` by feeding
+    `entailsQuery O Q` through the per-interpretation specialisation
+    and inhabiting the type argument.
+
+    This is the thesis-form completeness statement: for every
+    tree-friendly SROIQ ontology `O` paired with a unified-slice-
+    compatible RBox `rbox` and every normalised query `Q` referencing
+    `O`'s signature, if every model of `O` satisfies `Q`, then the
+    saturation contains a subsumer. -/
+theorem tenacucala_theorem2_entailsQuery_form
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hSlice : InUnifiedSlice O rbox)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull O) D)
+    (hSat : FullSaturated D)
+    (hEnt : entailsQuery O Q) :
+    ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  tenacucala_theorem2 O rbox hSlice Q hQsig hQAtom D hDeriv hSat
+    (fun _ _ I γ φ vx vy hIO _hIRBox => hEnt I γ φ hIO vx vy)
+
 -- ============================================================
 -- §FINAL-GOAL.  Statement scaffolding for the full Tena-Cucala
 -- (2021) Theorem 2.
