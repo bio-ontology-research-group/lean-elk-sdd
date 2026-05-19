@@ -15978,6 +15978,50 @@ theorem isCanonicalSeedAtomConjDisj_exampleVacuous_via_bool :
   isCanonicalSeedAtomConjDisj_of_isELOrAllVacuousOnlyBool
     exampleVacuous (by decide)
 
+/-- **Whole-TBox Bool check for `SliceEligibleOntology`.**   Returns
+    `true` iff the ontology lies in either maximal slice
+    (`IsELOrAllVacuousOnly` ∨ `IsELOrUniversalRoleVacuousOnly`),
+    via the disjunction of the two Bool aggregators. -/
+def isSliceEligibleOntologyBool (O : Ontology) : Bool :=
+  isELOrAllVacuousOnlyBool O || isELOrUniversalRoleVacuousOnlyBool O
+
+/-- `isSliceEligibleOntologyBool O = true ↔ SliceEligibleOntology O`. -/
+theorem isSliceEligibleOntologyBool_iff (O : Ontology) :
+    isSliceEligibleOntologyBool O = true ↔ SliceEligibleOntology O := by
+  unfold isSliceEligibleOntologyBool SliceEligibleOntology
+  rw [Bool.or_eq_true]
+  constructor
+  · rintro (h | h)
+    · exact Or.inl ((isELOrAllVacuousOnlyBool_iff O).mp h)
+    · exact Or.inr ((isELOrUniversalRoleVacuousOnlyBool_iff O).mp h)
+  · rintro (h | h)
+    · exact Or.inl ((isELOrAllVacuousOnlyBool_iff O).mpr h)
+    · exact Or.inr ((isELOrUniversalRoleVacuousOnlyBool_iff O).mpr h)
+
+/-- **Bool-driven dispatch into the slice-eligible partial canonical
+    seed.**   Given only `isSliceEligibleOntologyBool O = true`,
+    conclude the partial-IsCanonicalSeed bundle over
+    `canonicalSeedOfFull O` for the empty RBox.   No caller-supplied
+    `SliceEligibleOntology` proof term required. -/
+theorem partial_isCanonicalSeed_of_sliceEligibleBool
+    (O : Ontology)
+    (hBool : isSliceEligibleOntologyBool O = true) :
+    (canonicalSeedOfFull O).vr ∈ (canonicalSeedOfFull O).contexts ∧
+    (∃ CD : DerivedClauses, isSound O (canonicalSeedOfFull O) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig O) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies O ∧ SROIQ.RBox.eval I ([] : SROIQ.RBox) ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  partial_isCanonicalSeed_of_sliceEligible O
+    ((isSliceEligibleOntologyBool_iff O).mp hBool)
+
 /-- **Worked instance** of
     `partial_isCanonicalSeed_canonicalSeedOfFull_of_isELOrUniversalRoleVacuousOnlyBool`
     on `exampleAtomChain` + `exampleTransInclRBox`.   The

@@ -1545,5 +1545,9 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_exampleVacuous_via_bool
 -- §WORKED EXAMPLE FOR THE UNIVERSAL-ROLE FAMILY BOOL DISPATCH
 #print axioms ALCHOIQContext.partial_isCanonicalSeed_canonicalSeedOfFull_exampleAtomChain_via_bool
+-- §SLICE-ELIGIBLE BOOL CHECK + DISPATCH INTO PARTIAL CANONICAL SEED
+#print axioms ALCHOIQContext.isSliceEligibleOntologyBool
+#print axioms ALCHOIQContext.isSliceEligibleOntologyBool_iff
+#print axioms ALCHOIQContext.partial_isCanonicalSeed_of_sliceEligibleBool
 
 end ELKSDD
