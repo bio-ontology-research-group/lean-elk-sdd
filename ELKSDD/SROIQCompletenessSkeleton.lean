@@ -6300,6 +6300,14 @@ def axiomIsDisjAtomAtomExistAtom (ax : ALCHOQ.Axiom) : Bool :=
     ALCHOQ.Concept.exist _ (ALCHOQ.Concept.atom _) => true
   | _, _ => false
 
+/-- **Bool check for `(top, C) ∧ IsConjOfAtoms C` axiom shape.**
+    Tree-friendly disjunct: `top` LHS with n-ary conjunction of
+    atoms RHS — generalizes `axiomIsTopConj`. -/
+def axiomIsTopConjOfAtoms (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.1 with
+  | ALCHOQ.Concept.top => isConjOfAtomsBool ax.2
+  | _ => false
+
 /-- Characterization of the `(LHS, ≥1 R.TreeTrueRHS-filler)` axiom shape. -/
 theorem axiomIsAnyLHSAtLeast1TreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     axiomIsAnyLHSAtLeast1TreeTrueRHS ax = true ↔
@@ -6330,6 +6338,34 @@ theorem axiomIsAnyLHSAtLeast1TreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     have h2 : c2 = ALCHOQ.Concept.atLeast 1 R D := (Prod.mk.inj hEq).2
     rw [h2]
     exact (treeTrueRHSBool_iff D).mpr hD
+
+/-- Characterization of the `(top, IsConjOfAtoms C)` axiom shape. -/
+theorem axiomIsTopConjOfAtoms_iff (ax : ALCHOQ.Axiom) :
+    axiomIsTopConjOfAtoms ax = true ↔
+    ∃ C : ALCHOQ.Concept,
+      ax = (ALCHOQ.Concept.top, C) ∧ IsConjOfAtoms C := by
+  unfold axiomIsTopConjOfAtoms
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 with
+    | top => exact ⟨c2, rfl, (isConjOfAtomsBool_iff c2).mp h⟩
+    | atom _ => simp [axiomIsTopConjOfAtoms] at h
+    | bot => simp [axiomIsTopConjOfAtoms] at h
+    | nom _ => simp [axiomIsTopConjOfAtoms] at h
+    | neg _ => simp [axiomIsTopConjOfAtoms] at h
+    | conj _ _ => simp [axiomIsTopConjOfAtoms] at h
+    | disj _ _ => simp [axiomIsTopConjOfAtoms] at h
+    | exist _ _ => simp [axiomIsTopConjOfAtoms] at h
+    | univ _ _ => simp [axiomIsTopConjOfAtoms] at h
+    | atLeast _ _ _ => simp [axiomIsTopConjOfAtoms] at h
+    | atMost _ _ _ => simp [axiomIsTopConjOfAtoms] at h
+    | hasSelf _ => simp [axiomIsTopConjOfAtoms] at h
+  · rintro ⟨C, hEq, hC⟩
+    have h1 : c1 = ALCHOQ.Concept.top := (Prod.mk.inj hEq).1
+    have h2 : c2 = C := (Prod.mk.inj hEq).2
+    rw [h1, h2]
+    exact (isConjOfAtomsBool_iff C).mpr hC
 
 /-- Characterization of the `(disj (atom A₁) (atom A₂), ∃R.atom B)` shape. -/
 theorem axiomIsDisjAtomAtomExistAtom_iff (ax : ALCHOQ.Axiom) :
