@@ -1285,5 +1285,7 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.CLit.refsSig
 #print axioms ALCHOIQContext.BLit.refsSig_iff
 #print axioms ALCHOIQContext.CLit.refsSig_iff
+-- §EMPTY QUERY ENTAILMENT FORCES UNSATISFIABILITY
+#print axioms ALCHOIQContext.entailsQuery_empty_implies_unsat
 
 end ELKSDD

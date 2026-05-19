@@ -10521,6 +10521,25 @@ instance (c' c : CClause) : Decidable (subsumes c' c) := by
   unfold subsumes
   exact inferInstance
 
+/-- **`entailsQuery O ⟨[], []⟩` implies O is unsatisfiable.**   The
+    empty query has `Q.eval I A = False` for every interpretation
+    (by `queryClause_empty_eval_false`), so its semantic entailment
+    forces `O` to admit no model.   Contrapositive: a satisfiable
+    `O` never entails the empty query. -/
+theorem entailsQuery_empty_implies_unsat
+    (O : Ontology) (hEnt : entailsQuery O ⟨[], []⟩) :
+    ∀ {α : Type} (I : Interp α) (γ : Indu → α) (φ : FunSym → α → α),
+      ¬ I.satisfies O ∨ (∀ vx vy : α, False) := by
+  intro α I γ φ
+  classical
+  by_cases hSatO : I.satisfies O
+  · right
+    intro vx vy
+    have hEval : QueryClause.eval I ⟨γ, φ, vx, vy⟩ ⟨[], []⟩ :=
+      hEnt I γ φ hSatO vx vy
+    exact (queryClause_empty_eval_false I _ hEval)
+  · left; exact hSatO
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at
