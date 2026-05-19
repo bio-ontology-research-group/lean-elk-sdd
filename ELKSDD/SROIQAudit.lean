@@ -1436,5 +1436,8 @@ namespace ELKSDD
 -- §EXTENDED SUFFICIENT BOOL CONDITION FOR IsTreeFriendlyAxiom (round 6)
 #print axioms ALCHOIQContext.axiomIsTreeFriendlySomeBool6
 #print axioms ALCHOIQContext.axiomIsTreeFriendlySomeBool6_implies_treeFriendly
+-- §EXTENDED SUFFICIENT BOOL CONDITION FOR IsTreeFriendlyAxiom (round 7)
+#print axioms ALCHOIQContext.axiomIsTreeFriendlySomeBool7
+#print axioms ALCHOIQContext.axiomIsTreeFriendlySomeBool7_implies_treeFriendly
 
 end ELKSDD
