@@ -1249,5 +1249,9 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.gapCell_outside_iff_outsideInDischargedRegion
 #print axioms ALCHOIQContext.extensionGap_outsideInDischargedRegion
 #print axioms ALCHOIQContext.outsideInDischargedRegion_implies_unconditional_IsCanonicalSeed
+-- §BIDIRECTIONAL EQUIVALENCES: LITERAL GOAL ↔ EXTENSION GAP / OUTSIDE-DISCHARGED-REGION
+#print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_implies_extensionGap
+#print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_iff_outsideInDischargedRegion
+#print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_iff_extensionGap
 
 end ELKSDD

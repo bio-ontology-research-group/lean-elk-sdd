@@ -10036,6 +10036,46 @@ theorem outsideInDischargedRegion_implies_unconditional_IsCanonicalSeed
     extensionGap_outsideInDischargedRegion.mpr hOut
   exact extensionGap_implies_unconditional_IsCanonicalSeed hGap
 
+/-- **Reverse direction: the literal goal implies the extension gap.**
+    `UnconditionalIsCanonicalSeed` (which gives us
+    `HerbrandProperty O (canonicalSeedOfFull O)` for every `O`)
+    plus `entailsQuery O Q` produces a subsumer in the saturation
+    by classical contradiction:  HerbrandProperty would yield a
+    counter-model contradicting `entailsQuery O Q`. -/
+theorem unconditional_IsCanonicalSeed_implies_extensionGap :
+    UnconditionalIsCanonicalSeed → UnconditionalSCExtensionGap := by
+  intro hUncond O D hDeriv hSat Q hEnt _hNeg
+  classical
+  by_contra hNoSub
+  push_neg at hNoSub
+  have hCS : IsCanonicalSeed O (canonicalSeedOfFull O) := hUncond O
+  have hHP : HerbrandProperty O (canonicalSeedOfFull O) := hCS.2.2
+  obtain ⟨α, _inh, I, γ, φ, vx, vy, hSatO, hNotEval⟩ :=
+    hHP D hDeriv hSat Q hNoSub
+  exact hNotEval (hEnt I γ φ hSatO vx vy)
+
+/-- **Bidirectional equivalence.**   The literal goal
+    `UnconditionalIsCanonicalSeed` is logically equivalent to the
+    single-cell residual obligation `GapCell_OutsideInDischargedRegion`.
+    Together with `inDischargedRegion_implies_subsumed` (the
+    discharged side), this makes the §6.3.4 obligation precisely
+    characterizable as a single named bidirectional pair. -/
+theorem unconditional_IsCanonicalSeed_iff_outsideInDischargedRegion :
+    UnconditionalIsCanonicalSeed ↔ GapCell_OutsideInDischargedRegion := by
+  constructor
+  · intro hUncond
+    have hGap : UnconditionalSCExtensionGap :=
+      unconditional_IsCanonicalSeed_implies_extensionGap hUncond
+    exact extensionGap_outsideInDischargedRegion.mp hGap
+  · exact outsideInDischargedRegion_implies_unconditional_IsCanonicalSeed
+
+/-- **Bidirectional equivalence: literal goal iff extension gap.**
+    Both forms of the §6.3.4 obligation are logically equivalent. -/
+theorem unconditional_IsCanonicalSeed_iff_extensionGap :
+    UnconditionalIsCanonicalSeed ↔ UnconditionalSCExtensionGap := by
+  rw [unconditional_IsCanonicalSeed_iff_outsideInDischargedRegion,
+      ← extensionGap_outsideInDischargedRegion]
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
