@@ -1376,5 +1376,8 @@ namespace ELKSDD
 -- §SUFFICIENT BOOL CONDITION FOR IsTreeFriendlyAxiom
 #print axioms ALCHOIQContext.axiomIsTreeFriendlySomeBool
 #print axioms ALCHOIQContext.axiomIsTreeFriendlySomeBool_implies_treeFriendly
+-- §AXIOM-SHAPE BOOL CHECK FOR (top, ∀R.atom B)
+#print axioms ALCHOIQContext.axiomIsTopUnivAtom
+#print axioms ALCHOIQContext.axiomIsTopUnivAtom_iff
 
 end ELKSDD

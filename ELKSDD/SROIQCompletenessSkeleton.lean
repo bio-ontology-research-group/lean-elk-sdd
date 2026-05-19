@@ -6043,6 +6043,14 @@ def axiomIsTopExistAtom (ax : ALCHOQ.Axiom) : Bool :=
   | ALCHOQ.Concept.top, ALCHOQ.Concept.exist _ (ALCHOQ.Concept.atom _) => true
   | _, _ => false
 
+/-- **Bool check for `(top, ∀R.atom B)` axiom shape.**
+    Tree-friendly disjunct: universal-RHS shape with `top` LHS
+    and an atom filler — vacuously satisfied at every successor. -/
+def axiomIsTopUnivAtom (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.1, ax.2 with
+  | ALCHOQ.Concept.top, ALCHOQ.Concept.univ _ (ALCHOQ.Concept.atom _) => true
+  | _, _ => false
+
 /-- Characterization of the `(top, ∃R.atom B)` axiom shape. -/
 theorem axiomIsTopExistAtom_iff (ax : ALCHOQ.Axiom) :
     axiomIsTopExistAtom ax = true ↔
@@ -6092,6 +6100,60 @@ theorem axiomIsTopExistAtom_iff (ax : ALCHOQ.Axiom) :
     | atLeast _ _ _ => simp [axiomIsTopExistAtom] at h
     | atMost _ _ _ => simp [axiomIsTopExistAtom] at h
     | hasSelf _ => simp [axiomIsTopExistAtom] at h
+  · rintro ⟨R, B, hEq⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    subst h1; subst h2
+    rfl
+
+/-- Characterization of the `(top, ∀R.atom B)` axiom shape. -/
+theorem axiomIsTopUnivAtom_iff (ax : ALCHOQ.Axiom) :
+    axiomIsTopUnivAtom ax = true ↔
+    ∃ R B : Nat,
+      ax = (ALCHOQ.Concept.top,
+            ALCHOQ.Concept.univ R (ALCHOQ.Concept.atom B)) := by
+  unfold axiomIsTopUnivAtom
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 with
+    | top =>
+      cases c2 with
+      | univ R filler =>
+        cases filler with
+        | atom B => exact ⟨R, B, rfl⟩
+        | top => simp at h
+        | bot => simp at h
+        | nom _ => simp at h
+        | neg _ => simp at h
+        | conj _ _ => simp at h
+        | disj _ _ => simp at h
+        | exist _ _ => simp at h
+        | univ _ _ => simp at h
+        | atLeast _ _ _ => simp at h
+        | atMost _ _ _ => simp at h
+        | hasSelf _ => simp at h
+      | atom _ => simp at h
+      | top => simp at h
+      | bot => simp at h
+      | nom _ => simp at h
+      | neg _ => simp at h
+      | conj _ _ => simp at h
+      | disj _ _ => simp at h
+      | exist _ _ => simp at h
+      | atLeast _ _ _ => simp at h
+      | atMost _ _ _ => simp at h
+      | hasSelf _ => simp at h
+    | atom _ => simp [axiomIsTopUnivAtom] at h
+    | bot => simp [axiomIsTopUnivAtom] at h
+    | nom _ => simp [axiomIsTopUnivAtom] at h
+    | neg _ => simp [axiomIsTopUnivAtom] at h
+    | conj _ _ => simp [axiomIsTopUnivAtom] at h
+    | disj _ _ => simp [axiomIsTopUnivAtom] at h
+    | exist _ _ => simp [axiomIsTopUnivAtom] at h
+    | univ _ _ => simp [axiomIsTopUnivAtom] at h
+    | atLeast _ _ _ => simp [axiomIsTopUnivAtom] at h
+    | atMost _ _ _ => simp [axiomIsTopUnivAtom] at h
+    | hasSelf _ => simp [axiomIsTopUnivAtom] at h
   · rintro ⟨R, B, hEq⟩
     obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
     subst h1; subst h2
