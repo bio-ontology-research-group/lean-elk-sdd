@@ -6218,6 +6218,14 @@ def axiomIsAnyLHSAtLeast1TreeTrueRHS (ax : ALCHOQ.Axiom) : Bool :=
   | ALCHOQ.Concept.atLeast 1 _ D => treeTrueRHSBool D
   | _ => false
 
+/-- **Bool check for `(LHS, ≥1 R.atom B)` axiom shape.**
+    Tree-friendly disjunct: number-restriction with single-atom
+    filler — covers atom-only ≥1 cases. -/
+def axiomIsAnyLHSAtLeast1Atom (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.2 with
+  | ALCHOQ.Concept.atLeast 1 _ (ALCHOQ.Concept.atom _) => true
+  | _ => false
+
 /-- Characterization of the `(LHS, ≥1 R.TreeTrueRHS-filler)` axiom shape. -/
 theorem axiomIsAnyLHSAtLeast1TreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     axiomIsAnyLHSAtLeast1TreeTrueRHS ax = true ↔
@@ -6248,6 +6256,50 @@ theorem axiomIsAnyLHSAtLeast1TreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     have h2 : c2 = ALCHOQ.Concept.atLeast 1 R D := (Prod.mk.inj hEq).2
     rw [h2]
     exact (treeTrueRHSBool_iff D).mpr hD
+
+/-- Characterization of the `(LHS, ≥1 R.atom B)` axiom shape. -/
+theorem axiomIsAnyLHSAtLeast1Atom_iff (ax : ALCHOQ.Axiom) :
+    axiomIsAnyLHSAtLeast1Atom ax = true ↔
+    ∃ LHS : ALCHOQ.Concept, ∃ R B : Nat,
+      ax = (LHS, ALCHOQ.Concept.atLeast 1 R (ALCHOQ.Concept.atom B)) := by
+  unfold axiomIsAnyLHSAtLeast1Atom
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c2 with
+    | atom _ => simp at h
+    | top => simp at h
+    | bot => simp at h
+    | nom _ => simp at h
+    | neg _ => simp at h
+    | conj _ _ => simp at h
+    | disj _ _ => simp at h
+    | exist _ _ => simp at h
+    | univ _ _ => simp at h
+    | atLeast n R filler =>
+      match n with
+      | 0 => simp [axiomIsAnyLHSAtLeast1Atom] at h
+      | 1 =>
+        cases filler with
+        | atom B => exact ⟨c1, R, B, rfl⟩
+        | top => simp [axiomIsAnyLHSAtLeast1Atom] at h
+        | bot => simp [axiomIsAnyLHSAtLeast1Atom] at h
+        | nom _ => simp [axiomIsAnyLHSAtLeast1Atom] at h
+        | neg _ => simp [axiomIsAnyLHSAtLeast1Atom] at h
+        | conj _ _ => simp [axiomIsAnyLHSAtLeast1Atom] at h
+        | disj _ _ => simp [axiomIsAnyLHSAtLeast1Atom] at h
+        | exist _ _ => simp [axiomIsAnyLHSAtLeast1Atom] at h
+        | univ _ _ => simp [axiomIsAnyLHSAtLeast1Atom] at h
+        | atLeast _ _ _ => simp [axiomIsAnyLHSAtLeast1Atom] at h
+        | atMost _ _ _ => simp [axiomIsAnyLHSAtLeast1Atom] at h
+        | hasSelf _ => simp [axiomIsAnyLHSAtLeast1Atom] at h
+      | n + 2 => simp [axiomIsAnyLHSAtLeast1Atom] at h
+    | atMost _ _ _ => simp at h
+    | hasSelf _ => simp at h
+  · rintro ⟨LHS, R, B, hEq⟩
+    have h2 : c2 = ALCHOQ.Concept.atLeast 1 R (ALCHOQ.Concept.atom B) :=
+      (Prod.mk.inj hEq).2
+    rw [h2]
 
 /-- Atoms forced at a `succ _ ax _` node by **universal-restriction
     propagation** from O.   Any axiom `(lhs, ∀R.filler) ∈ O` whose
