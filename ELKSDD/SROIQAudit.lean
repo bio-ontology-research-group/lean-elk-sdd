@@ -1310,5 +1310,12 @@ namespace ELKSDD
 -- §AXIOM SHAPE CHECK FOR (atom A, IsConjOfAtoms C)
 #print axioms ALCHOIQContext.axiomIsAtomConjOfAtoms
 #print axioms ALCHOIQContext.axiomIsAtomConjOfAtoms_iff
+-- §MORE AXIOM SHAPE Bool CHECKS for IsELOrAllVacuousOnly
+#print axioms ALCHOIQContext.axiomIsTopAtom
+#print axioms ALCHOIQContext.axiomIsTopAtom_iff
+#print axioms ALCHOIQContext.axiomIsAtomConjAtomAtom
+#print axioms ALCHOIQContext.axiomIsAtomConjAtomAtom_iff
+#print axioms ALCHOIQContext.axiomIsDisjAtomAtomAtom
+#print axioms ALCHOIQContext.axiomIsDisjAtomAtomAtom_iff
 
 end ELKSDD
