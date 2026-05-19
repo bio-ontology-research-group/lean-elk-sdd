@@ -15978,5 +15978,33 @@ theorem isCanonicalSeedAtomConjDisj_exampleVacuous_via_bool :
   isCanonicalSeedAtomConjDisj_of_isELOrAllVacuousOnlyBool
     exampleVacuous (by decide)
 
+/-- **Worked instance** of
+    `partial_isCanonicalSeed_canonicalSeedOfFull_of_isELOrUniversalRoleVacuousOnlyBool`
+    on `exampleAtomChain` + `exampleTransInclRBox`.   The
+    universal-role family Bool check passes by `decide`, the
+    RBox-compatibility witness `exampleTransInclRBox_compat`
+    completes the pair, and the partial canonical-seed bundle
+    follows. -/
+theorem partial_isCanonicalSeed_canonicalSeedOfFull_exampleAtomChain_via_bool :
+    (canonicalSeedOfFull exampleAtomChain).vr ∈
+      (canonicalSeedOfFull exampleAtomChain).contexts ∧
+    (∃ CD : DerivedClauses,
+       isSound exampleAtomChain (canonicalSeedOfFull exampleAtomChain) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull exampleAtomChain) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig exampleAtomChain) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies exampleAtomChain ∧
+          SROIQ.RBox.eval I exampleTransInclRBox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  partial_isCanonicalSeed_canonicalSeedOfFull_of_isELOrUniversalRoleVacuousOnlyBool
+    exampleAtomChain exampleTransInclRBox (by decide)
+    exampleTransInclRBox_compat
+
 end ALCHOIQContext
 end ELKSDD

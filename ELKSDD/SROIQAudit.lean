@@ -1543,5 +1543,7 @@ namespace ELKSDD
 -- §WORKED EXAMPLES USING THE NEW BOOL DISPATCH (via `decide`)
 #print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_exampleELConj_via_bool
 #print axioms ALCHOIQContext.isCanonicalSeedAtomConjDisj_exampleVacuous_via_bool
+-- §WORKED EXAMPLE FOR THE UNIVERSAL-ROLE FAMILY BOOL DISPATCH
+#print axioms ALCHOIQContext.partial_isCanonicalSeed_canonicalSeedOfFull_exampleAtomChain_via_bool
 
 end ELKSDD
