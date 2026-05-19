@@ -7989,6 +7989,93 @@ theorem axiomIsDisjAtomAtomAtom_iff (ax : ALCHOQ.Concept × ALCHOQ.Concept) :
     subst h1; subst h2
     rfl
 
+/-- **Bool check for `(conj atom atom, conj atom atom)`.** -/
+def axiomIsConjConj (ax : ALCHOQ.Concept × ALCHOQ.Concept) : Bool :=
+  match ax.1, ax.2 with
+  | ALCHOQ.Concept.conj (ALCHOQ.Concept.atom _) (ALCHOQ.Concept.atom _),
+    ALCHOQ.Concept.conj (ALCHOQ.Concept.atom _) (ALCHOQ.Concept.atom _) => true
+  | _, _ => false
+
+theorem axiomIsConjConj_iff (ax : ALCHOQ.Concept × ALCHOQ.Concept) :
+    axiomIsConjConj ax = true ↔
+    ∃ A₁ A₂ B C : Nat,
+      ax = (ALCHOQ.Concept.conj (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+            ALCHOQ.Concept.conj (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C)) := by
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 <;> (try simp [axiomIsConjConj] at h)
+    rename_i d1 d2
+    cases d1 <;> (try simp [axiomIsConjConj] at h)
+    cases d2 <;> (try simp [axiomIsConjConj] at h)
+    cases c2 <;> (try simp [axiomIsConjConj] at h)
+    rename_i e1 e2
+    cases e1 <;> (try simp [axiomIsConjConj] at h)
+    cases e2 <;> (try simp [axiomIsConjConj] at h)
+    rename_i A₁ A₂ B C
+    exact ⟨A₁, A₂, B, C, rfl⟩
+  · rintro ⟨A₁, A₂, B, C, hEq⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    subst h1; subst h2
+    rfl
+
+/-- **Bool check for `(disj atom atom, conj atom atom)`.** -/
+def axiomIsDisjConj (ax : ALCHOQ.Concept × ALCHOQ.Concept) : Bool :=
+  match ax.1, ax.2 with
+  | ALCHOQ.Concept.disj (ALCHOQ.Concept.atom _) (ALCHOQ.Concept.atom _),
+    ALCHOQ.Concept.conj (ALCHOQ.Concept.atom _) (ALCHOQ.Concept.atom _) => true
+  | _, _ => false
+
+theorem axiomIsDisjConj_iff (ax : ALCHOQ.Concept × ALCHOQ.Concept) :
+    axiomIsDisjConj ax = true ↔
+    ∃ A₁ A₂ B C : Nat,
+      ax = (ALCHOQ.Concept.disj (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂),
+            ALCHOQ.Concept.conj (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C)) := by
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 <;> (try simp [axiomIsDisjConj] at h)
+    rename_i d1 d2
+    cases d1 <;> (try simp [axiomIsDisjConj] at h)
+    cases d2 <;> (try simp [axiomIsDisjConj] at h)
+    cases c2 <;> (try simp [axiomIsDisjConj] at h)
+    rename_i e1 e2
+    cases e1 <;> (try simp [axiomIsDisjConj] at h)
+    cases e2 <;> (try simp [axiomIsDisjConj] at h)
+    rename_i A₁ A₂ B C
+    exact ⟨A₁, A₂, B, C, rfl⟩
+  · rintro ⟨A₁, A₂, B, C, hEq⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    subst h1; subst h2
+    rfl
+
+/-- **Bool check for `(top, conj atom atom)`.** -/
+def axiomIsTopConj (ax : ALCHOQ.Concept × ALCHOQ.Concept) : Bool :=
+  match ax.1, ax.2 with
+  | ALCHOQ.Concept.top,
+    ALCHOQ.Concept.conj (ALCHOQ.Concept.atom _) (ALCHOQ.Concept.atom _) => true
+  | _, _ => false
+
+theorem axiomIsTopConj_iff (ax : ALCHOQ.Concept × ALCHOQ.Concept) :
+    axiomIsTopConj ax = true ↔
+    ∃ B C : Nat,
+      ax = (ALCHOQ.Concept.top,
+            ALCHOQ.Concept.conj (ALCHOQ.Concept.atom B) (ALCHOQ.Concept.atom C)) := by
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 <;> (try simp [axiomIsTopConj] at h)
+    cases c2 <;> (try simp [axiomIsTopConj] at h)
+    rename_i d1 d2
+    cases d1 <;> (try simp [axiomIsTopConj] at h)
+    cases d2 <;> (try simp [axiomIsTopConj] at h)
+    rename_i B C
+    exact ⟨B, C, rfl⟩
+  · rintro ⟨B, C, hEq⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    subst h1; subst h2
+    rfl
+
 
 /-- **Combined Herbrand-falsifies / Herbrand-trivialises lemma.**
     Proved simultaneously by structural induction on the concept so
