@@ -1558,5 +1558,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.isSliceEligibleBothBool_iff
 #print axioms ALCHOIQContext.partial_isCanonicalSeed_of_sliceEligibleBothBool_emptyFamily
 #print axioms ALCHOIQContext.partial_isCanonicalSeed_of_sliceEligibleBothBool_universalFamily
+-- §WORKED EXAMPLES OF DUAL-FAMILY BOOL DISPATCH ON `exampleAtomChain`
+#print axioms ALCHOIQContext.partial_isCanonicalSeed_exampleAtomChain_via_sliceEligibleBothBool_emptyRBox
+#print axioms ALCHOIQContext.partial_isCanonicalSeed_exampleAtomChain_via_sliceEligibleBothBool_universalRBox
 
 end ELKSDD

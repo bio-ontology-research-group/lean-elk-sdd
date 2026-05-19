@@ -16184,5 +16184,56 @@ theorem partial_isCanonicalSeed_exampleAtomChain_via_sliceEligibleBool :
           ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
   partial_isCanonicalSeed_of_sliceEligibleBool exampleAtomChain (by decide)
 
+/-- **Worked instance** of
+    `partial_isCanonicalSeed_of_sliceEligibleBothBool_emptyFamily` on
+    `exampleAtomChain` with the empty RBox.   Both the Bool slice
+    eligibility check and the empty-roles RBox compatibility discharge
+    by `decide` — exercising the dual-family Bool dispatch on the
+    empty-RBox branch. -/
+theorem partial_isCanonicalSeed_exampleAtomChain_via_sliceEligibleBothBool_emptyRBox :
+    (canonicalSeedOfFull exampleAtomChain).vr ∈
+      (canonicalSeedOfFull exampleAtomChain).contexts ∧
+    (∃ CD : DerivedClauses,
+       isSound exampleAtomChain (canonicalSeedOfFull exampleAtomChain) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull exampleAtomChain) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig exampleAtomChain) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies exampleAtomChain ∧
+          SROIQ.RBox.eval I ([] : SROIQ.RBox) ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  partial_isCanonicalSeed_of_sliceEligibleBothBool_emptyFamily
+    exampleAtomChain ([] : SROIQ.RBox) (by decide) (by decide)
+
+/-- **Worked instance** of
+    `partial_isCanonicalSeed_of_sliceEligibleBothBool_universalFamily`
+    on `exampleAtomChain` with the universal-roles
+    `exampleTransInclRBox`.   Both the Bool slice eligibility check
+    and the universal-roles RBox compatibility discharge by `decide`. -/
+theorem partial_isCanonicalSeed_exampleAtomChain_via_sliceEligibleBothBool_universalRBox :
+    (canonicalSeedOfFull exampleAtomChain).vr ∈
+      (canonicalSeedOfFull exampleAtomChain).contexts ∧
+    (∃ CD : DerivedClauses,
+       isSound exampleAtomChain (canonicalSeedOfFull exampleAtomChain) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull exampleAtomChain) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig exampleAtomChain) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies exampleAtomChain ∧
+          SROIQ.RBox.eval I exampleTransInclRBox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  partial_isCanonicalSeed_of_sliceEligibleBothBool_universalFamily
+    exampleAtomChain exampleTransInclRBox (by decide) (by decide)
+
 end ALCHOIQContext
 end ELKSDD
