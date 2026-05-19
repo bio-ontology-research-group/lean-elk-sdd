@@ -10418,6 +10418,83 @@ instance : DecidablePred AtomConjDisjQuery := by
     · intro l hl; exact (BLit.isAtomX_iff l).mpr (hG l hl)
     · intro l hl; exact (CLit.isAtomX_iff l).mpr (hD l hl)
 
+/-- **Per-literal signature check.**   `BLit.refsSig sig l` is true
+    iff `l` either is not an `atomTrue (atom A t)` literal or its
+    concept symbol is in `sig`. -/
+def BLit.refsSig (sig : List Nat) : BLit → Bool
+  | BLit.atomTrue (PTerm.atom A _) => decide (A ∈ sig)
+  | _ => true
+
+/-- **Per-literal signature check (head form).** -/
+def CLit.refsSig (sig : List Nat) : CLit → Bool
+  | CLit.atomTrue (PTerm.atom A _) => decide (A ∈ sig)
+  | _ => true
+
+/-- Characterization for body literals. -/
+theorem BLit.refsSig_iff (sig : List Nat) (l : BLit) :
+    l.refsSig sig = true ↔
+    ∀ A t, l = BLit.atomTrue (PTerm.atom A t) → A ∈ sig := by
+  constructor
+  · intro h A t hEq
+    subst hEq
+    simp [BLit.refsSig, decide_eq_true_iff] at h
+    exact h
+  · intro h
+    cases l with
+    | atomTrue p =>
+      cases p with
+      | ttrue => rfl
+      | atom A t =>
+        simp [BLit.refsSig, decide_eq_true_iff]
+        exact h A t rfl
+      | role _ _ _ => rfl
+    | uequ _ _ => rfl
+
+/-- Characterization for head literals. -/
+theorem CLit.refsSig_iff (sig : List Nat) (l : CLit) :
+    l.refsSig sig = true ↔
+    ∀ A t, l = CLit.atomTrue (PTerm.atom A t) → A ∈ sig := by
+  constructor
+  · intro h A t hEq
+    subst hEq
+    simp [CLit.refsSig, decide_eq_true_iff] at h
+    exact h
+  · intro h
+    cases l with
+    | atomTrue p =>
+      cases p with
+      | ttrue => rfl
+      | atom A t =>
+        simp [CLit.refsSig, decide_eq_true_iff]
+        exact h A t rfl
+      | role _ _ _ => rfl
+    | aeq _ => rfl
+
+/-- **Decidability of `QueryReferencesSignature`.**   The
+    signature-reference predicate is algorithmically decidable
+    using per-literal Bool checks. -/
+instance (sig : List Nat) :
+    DecidablePred (QueryReferencesSignature sig) := by
+  intro Q
+  unfold QueryReferencesSignature
+  refine decidable_of_iff
+    ((Q.Gamma.all (BLit.refsSig sig)) ∧
+     (Q.Delta.all (CLit.refsSig sig))) ?_
+  rw [List.all_eq_true, List.all_eq_true]
+  constructor
+  · intro ⟨hG, hD⟩
+    refine ⟨?_, ?_⟩
+    · intro A t hMem
+      exact (BLit.refsSig_iff sig _).mp (hG _ hMem) A t rfl
+    · intro A t hMem
+      exact (CLit.refsSig_iff sig _).mp (hD _ hMem) A t rfl
+  · intro ⟨hG, hD⟩
+    refine ⟨?_, ?_⟩
+    · intro l hl
+      exact (BLit.refsSig_iff sig l).mpr (fun A t hEq => hG A t (hEq ▸ hl))
+    · intro l hl
+      exact (CLit.refsSig_iff sig l).mpr (fun A t hEq => hD A t (hEq ▸ hl))
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at

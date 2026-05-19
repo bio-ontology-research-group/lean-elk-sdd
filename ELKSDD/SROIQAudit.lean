@@ -1280,5 +1280,10 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.CLit.isAtomX
 #print axioms ALCHOIQContext.BLit.isAtomX_iff
 #print axioms ALCHOIQContext.CLit.isAtomX_iff
+-- §DECIDABILITY FOR QueryReferencesSignature
+#print axioms ALCHOIQContext.BLit.refsSig
+#print axioms ALCHOIQContext.CLit.refsSig
+#print axioms ALCHOIQContext.BLit.refsSig_iff
+#print axioms ALCHOIQContext.CLit.refsSig_iff
 
 end ELKSDD
