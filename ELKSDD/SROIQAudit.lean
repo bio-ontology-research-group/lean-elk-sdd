@@ -1367,5 +1367,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.elHerbrandInterpTree_empty_any_atom_iff
 -- §EMPTY-ONTOLOGY TREE HERBRAND ROLE CHARACTERIZATION
 #print axioms ALCHOIQContext.elHerbrandInterpTree_empty_no_roles
+-- §EMPTY ONTOLOGY IS TREE-FRIENDLY + TREE HERBRAND SATISFIES IT
+#print axioms ALCHOIQContext.isTreeFriendlyTBox_empty
+#print axioms ALCHOIQContext.elHerbrandInterpTree_empty_satisfies
 
 end ELKSDD

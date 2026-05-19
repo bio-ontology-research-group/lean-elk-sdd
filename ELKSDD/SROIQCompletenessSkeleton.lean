@@ -7572,6 +7572,23 @@ theorem elHerbrandInterpTree_satisfies_O_tree_friendly
     obtain ⟨C, D, rfl, hD⟩ := hTopRHS
     exact elHerbrandInterpTree_sat_treeTrueRHS O Q C D hD hax p hLHS
 
+/-- **The empty ontology is trivially tree-friendly.**   Vacuously
+    true because `IsTreeFriendlyTBox` is a universal quantification
+    over `ax ∈ []`, which has no members. -/
+theorem isTreeFriendlyTBox_empty : IsTreeFriendlyTBox [] := by
+  intro ax hAx; exact absurd hAx List.not_mem_nil
+
+/-- **The empty-ontology tree Herbrand satisfies the empty ontology.**
+    Direct corollary of `isTreeFriendlyTBox_empty` and
+    `elHerbrandInterpTree_satisfies_O_tree_friendly`.   Concrete
+    witness model on the empty ontology that satisfies `[]`
+    (vacuously) and whose semantics is fully characterized by
+    `herbrandTree_empty_only_root`, `elHerbrandInterpTree_empty_any_atom_iff`,
+    and `elHerbrandInterpTree_empty_no_roles`. -/
+theorem elHerbrandInterpTree_empty_satisfies (Q : QueryClause) :
+    (elHerbrandInterpTree [] Q).satisfies [] :=
+  elHerbrandInterpTree_satisfies_O_tree_friendly [] Q isTreeFriendlyTBox_empty
+
 -- ============================================================
 -- §UNIVERSAL-ROLE VACUITY PREDICATES.  Concept shapes whose
 -- evaluation under `elHerbrandInterpUniversal` reduces to a
