@@ -5639,6 +5639,210 @@ def TreeTrueRHS : ALCHOQ.Concept → Prop
   | .atMost _ _ C              => TreeFalseLHS C
   | _                          => False
 
+-- Bool-valued counterparts for `TreeFalseLHS` / `TreeTrueRHS`.  No
+-- mutual block: `treeTrueRHSBool` calls `treeFalseLHSBool` only (on
+-- the atMost filler), and `treeFalseLHSBool` is self-contained.
+def treeFalseLHSBool : ALCHOQ.Concept → Bool
+  | .bot                       => true
+  | .hasSelf _                 => true
+  | .conj C₁ C₂                => treeFalseLHSBool C₁ || treeFalseLHSBool C₂
+  | .disj C₁ C₂                => treeFalseLHSBool C₁ && treeFalseLHSBool C₂
+  | .exist _ C                 => treeFalseLHSBool C
+  | .atLeast (_+1) _ C         => treeFalseLHSBool C
+  | _                          => false
+
+def treeTrueRHSBool : ALCHOQ.Concept → Bool
+  | .top                       => true
+  | .atLeast 0 _ _             => true
+  | .conj D₁ D₂                => treeTrueRHSBool D₁ && treeTrueRHSBool D₂
+  | .disj D₁ D₂                => treeTrueRHSBool D₁ || treeTrueRHSBool D₂
+  | .univ _ D                  => treeTrueRHSBool D
+  | .atMost _ _ C              => treeFalseLHSBool C
+  | _                          => false
+
+/-- **Correctness of `treeFalseLHSBool`.**   By structural induction. -/
+theorem treeFalseLHSBool_iff (C : ALCHOQ.Concept) :
+    treeFalseLHSBool C = true ↔ TreeFalseLHS C := by
+  induction C with
+  | atom _ =>
+    refine ⟨?_, ?_⟩
+    · intro h; simp [treeFalseLHSBool] at h
+    · intro h; simp [TreeFalseLHS] at h
+  | top =>
+    refine ⟨?_, ?_⟩
+    · intro h; simp [treeFalseLHSBool] at h
+    · intro h; simp [TreeFalseLHS] at h
+  | bot =>
+    refine ⟨?_, ?_⟩
+    · intro _; trivial
+    · intro _; rfl
+  | nom _ =>
+    refine ⟨?_, ?_⟩
+    · intro h; simp [treeFalseLHSBool] at h
+    · intro h; simp [TreeFalseLHS] at h
+  | neg _ _ =>
+    refine ⟨?_, ?_⟩
+    · intro h; simp [treeFalseLHSBool] at h
+    · intro h; simp [TreeFalseLHS] at h
+  | conj C₁ C₂ ih₁ ih₂ =>
+    refine ⟨?_, ?_⟩
+    · intro h
+      simp only [treeFalseLHSBool, Bool.or_eq_true] at h
+      simp only [TreeFalseLHS]
+      rcases h with h1 | h2
+      · exact Or.inl (ih₁.mp h1)
+      · exact Or.inr (ih₂.mp h2)
+    · intro h
+      simp only [TreeFalseLHS] at h
+      simp only [treeFalseLHSBool, Bool.or_eq_true]
+      rcases h with h1 | h2
+      · exact Or.inl (ih₁.mpr h1)
+      · exact Or.inr (ih₂.mpr h2)
+  | disj C₁ C₂ ih₁ ih₂ =>
+    refine ⟨?_, ?_⟩
+    · intro h
+      simp only [treeFalseLHSBool, Bool.and_eq_true] at h
+      simp only [TreeFalseLHS]
+      exact ⟨ih₁.mp h.1, ih₂.mp h.2⟩
+    · intro h
+      simp only [TreeFalseLHS] at h
+      simp only [treeFalseLHSBool, Bool.and_eq_true]
+      exact ⟨ih₁.mpr h.1, ih₂.mpr h.2⟩
+  | exist _ C ih =>
+    refine ⟨?_, ?_⟩
+    · intro h
+      simp only [treeFalseLHSBool] at h
+      simp only [TreeFalseLHS]
+      exact ih.mp h
+    · intro h
+      simp only [TreeFalseLHS] at h
+      simp only [treeFalseLHSBool]
+      exact ih.mpr h
+  | univ _ _ _ =>
+    refine ⟨?_, ?_⟩
+    · intro h; simp [treeFalseLHSBool] at h
+    · intro h; simp [TreeFalseLHS] at h
+  | atLeast n _ C ih =>
+    match n with
+    | 0 =>
+      refine ⟨?_, ?_⟩
+      · intro h; simp [treeFalseLHSBool] at h
+      · intro h; simp [TreeFalseLHS] at h
+    | n + 1 =>
+      refine ⟨?_, ?_⟩
+      · intro h
+        simp only [treeFalseLHSBool] at h
+        simp only [TreeFalseLHS]
+        exact ih.mp h
+      · intro h
+        simp only [TreeFalseLHS] at h
+        simp only [treeFalseLHSBool]
+        exact ih.mpr h
+  | atMost _ _ _ _ =>
+    refine ⟨?_, ?_⟩
+    · intro h; simp [treeFalseLHSBool] at h
+    · intro h; simp [TreeFalseLHS] at h
+  | hasSelf _ =>
+    refine ⟨?_, ?_⟩
+    · intro _; trivial
+    · intro _; rfl
+
+/-- **Correctness of `treeTrueRHSBool`.**   Uses `treeFalseLHSBool_iff`
+    on the atMost filler.   By structural induction. -/
+theorem treeTrueRHSBool_iff (D : ALCHOQ.Concept) :
+    treeTrueRHSBool D = true ↔ TreeTrueRHS D := by
+  induction D with
+  | atom _ =>
+    refine ⟨?_, ?_⟩
+    · intro h; simp [treeTrueRHSBool] at h
+    · intro h; simp [TreeTrueRHS] at h
+  | top =>
+    refine ⟨?_, ?_⟩
+    · intro _; trivial
+    · intro _; rfl
+  | bot =>
+    refine ⟨?_, ?_⟩
+    · intro h; simp [treeTrueRHSBool] at h
+    · intro h; simp [TreeTrueRHS] at h
+  | nom _ =>
+    refine ⟨?_, ?_⟩
+    · intro h; simp [treeTrueRHSBool] at h
+    · intro h; simp [TreeTrueRHS] at h
+  | neg _ _ =>
+    refine ⟨?_, ?_⟩
+    · intro h; simp [treeTrueRHSBool] at h
+    · intro h; simp [TreeTrueRHS] at h
+  | conj D₁ D₂ ih₁ ih₂ =>
+    refine ⟨?_, ?_⟩
+    · intro h
+      simp only [treeTrueRHSBool, Bool.and_eq_true] at h
+      simp only [TreeTrueRHS]
+      exact ⟨ih₁.mp h.1, ih₂.mp h.2⟩
+    · intro h
+      simp only [TreeTrueRHS] at h
+      simp only [treeTrueRHSBool, Bool.and_eq_true]
+      exact ⟨ih₁.mpr h.1, ih₂.mpr h.2⟩
+  | disj D₁ D₂ ih₁ ih₂ =>
+    refine ⟨?_, ?_⟩
+    · intro h
+      simp only [treeTrueRHSBool, Bool.or_eq_true] at h
+      simp only [TreeTrueRHS]
+      rcases h with h1 | h2
+      · exact Or.inl (ih₁.mp h1)
+      · exact Or.inr (ih₂.mp h2)
+    · intro h
+      simp only [TreeTrueRHS] at h
+      simp only [treeTrueRHSBool, Bool.or_eq_true]
+      rcases h with h1 | h2
+      · exact Or.inl (ih₁.mpr h1)
+      · exact Or.inr (ih₂.mpr h2)
+  | exist _ _ _ =>
+    refine ⟨?_, ?_⟩
+    · intro h; simp [treeTrueRHSBool] at h
+    · intro h; simp [TreeTrueRHS] at h
+  | univ _ D ih =>
+    refine ⟨?_, ?_⟩
+    · intro h
+      simp only [treeTrueRHSBool] at h
+      simp only [TreeTrueRHS]
+      exact ih.mp h
+    · intro h
+      simp only [TreeTrueRHS] at h
+      simp only [treeTrueRHSBool]
+      exact ih.mpr h
+  | atLeast n _ _ _ =>
+    match n with
+    | 0 =>
+      refine ⟨?_, ?_⟩
+      · intro _; trivial
+      · intro _; rfl
+    | _ + 1 =>
+      refine ⟨?_, ?_⟩
+      · intro h; simp [treeTrueRHSBool] at h
+      · intro h; simp [TreeTrueRHS] at h
+  | atMost _ _ C _ =>
+    refine ⟨?_, ?_⟩
+    · intro h
+      simp only [treeTrueRHSBool] at h
+      simp only [TreeTrueRHS]
+      exact (treeFalseLHSBool_iff C).mp h
+    · intro h
+      simp only [TreeTrueRHS] at h
+      simp only [treeTrueRHSBool]
+      exact (treeFalseLHSBool_iff C).mpr h
+  | hasSelf _ =>
+    refine ⟨?_, ?_⟩
+    · intro h; simp [treeTrueRHSBool] at h
+    · intro h; simp [TreeTrueRHS] at h
+
+/-- **Decidable instance for `TreeFalseLHS`.** -/
+instance : DecidablePred TreeFalseLHS :=
+  fun C => decidable_of_iff _ (treeFalseLHSBool_iff C)
+
+/-- **Decidable instance for `TreeTrueRHS`.** -/
+instance : DecidablePred TreeTrueRHS :=
+  fun D => decidable_of_iff _ (treeTrueRHSBool_iff D)
+
 /-- Atoms forced at a `succ _ ax _` node by **universal-restriction
     propagation** from O.   Any axiom `(lhs, ∀R.filler) ∈ O` whose
     LHS is structurally True at every tree node (`TreeTrueRHS lhs`)

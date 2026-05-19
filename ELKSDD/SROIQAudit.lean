@@ -1339,5 +1339,10 @@ namespace ELKSDD
 -- §THREE-CELL DISJUNCTIVE FORM OF PerOResidualHerbrand
 #print axioms ALCHOIQContext.perOResidualHerbrand_iff_disjunctive
 #print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_iff_disjunctive_perO
+-- §BOOL COUNTERPARTS FOR TreeFalseLHS / TreeTrueRHS
+#print axioms ALCHOIQContext.treeFalseLHSBool
+#print axioms ALCHOIQContext.treeTrueRHSBool
+#print axioms ALCHOIQContext.treeFalseLHSBool_iff
+#print axioms ALCHOIQContext.treeTrueRHSBool_iff
 
 end ELKSDD
