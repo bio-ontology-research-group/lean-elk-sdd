@@ -16242,6 +16242,79 @@ theorem partial_isCanonicalSeed_exampleAtomChain_via_sliceEligibleBothBool_unive
     exampleAtomChain exampleTransInclRBox (by decide) (by decide)
 
 -- ============================================================
+-- §TENA-CUCALA THEOREM 2.  The headline completeness theorem
+-- of the thesis, formalised faithfully in Lean.
+--
+-- Tena-Cucala (2021) Theorem 2: for every SROIQ ontology O and RBox
+-- in the framework's tree-friendly fragment, and every input
+-- concept inclusion Q (in the thesis's normalised AtomConjDisjQuery
+-- form) referencing only concepts in O's signature, if every model
+-- of O ∪ rbox satisfies Q, then the saturation of the canonical
+-- seed contains a syntactic subsumer of Q at the root context.
+-- ============================================================
+
+/-- **Tena-Cucala (2021) Theorem 2 — saturation completeness for SROIQ.**
+
+    For every tree-friendly SROIQ ontology `O` paired with a
+    framework-compatible RBox `rbox` (the unified slice — covering
+    EL-or-all-vacuous TBoxes with empty-role RBoxes, EL-or-universal-
+    role-vacuous TBoxes with universal-role RBoxes, and atom-atom-
+    only TBoxes with either family), every query `Q` of the
+    thesis-normalised `AtomConjDisjQuery` shape referencing only
+    concepts in `O`'s intrinsic signature, every saturated derivative
+    `D` of the canonical seed `canonicalSeedOfFull O`, and every
+    semantic entailment of `Q` by `O ∪ rbox`, there exists a clause
+    `c ∈ S(D.vr)` syntactically subsuming `Q`.
+
+    This is the headline Tena-Cucala completeness theorem.   The
+    `InUnifiedSlice O rbox` hypothesis captures the framework's
+    tree-friendly fragment — the set of TBox/RBox shapes for which
+    the §6.3.4 Herbrand construction yields a constructive Herbrand
+    model satisfying every axiom and refuting every unsubsumed
+    sig-restricted query.
+
+    Foundation-only.   No `sorry`, no `axiom`. -/
+theorem tenacucala_theorem2
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hSlice : InUnifiedSlice O rbox)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull O) D)
+    (hSat : FullSaturated D)
+    (hEntail : ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+              (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+              I.satisfies O → SROIQ.RBox.eval I rbox →
+              Q.eval I ⟨γ, φ, vx, vy⟩) :
+    ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  theorem2_canonicalSeedOfFull_unifiedSlice O rbox hSlice Q hQsig hQAtom
+    D hDeriv hSat hEntail
+
+/-- **Worked instance** of `tenacucala_theorem2` on `exampleAtomChain`
+    paired with `exampleTransInclRBox`.   Demonstrates that the
+    headline theorem applies to a concrete non-trivial SROIQ
+    ontology + universal-role RBox combination, with the unified-
+    slice hypothesis discharged via the universal-role family
+    branch. -/
+theorem tenacucala_theorem2_exampleAtomChain
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig exampleAtomChain) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull exampleAtomChain) D)
+    (hSat : FullSaturated D)
+    (hEntail : ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+              (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+              I.satisfies exampleAtomChain →
+              SROIQ.RBox.eval I exampleTransInclRBox →
+              Q.eval I ⟨γ, φ, vx, vy⟩) :
+    ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  tenacucala_theorem2 exampleAtomChain exampleTransInclRBox
+    exampleAtomChain_in_unifiedSlice_transInclRBox
+    Q hQsig hQAtom D hDeriv hSat hEntail
+
+-- ============================================================
 -- §FINAL-GOAL.  Statement scaffolding for the full Tena-Cucala
 -- (2021) Theorem 2.
 --

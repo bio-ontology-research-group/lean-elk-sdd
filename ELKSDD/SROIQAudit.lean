@@ -1561,6 +1561,9 @@ namespace ELKSDD
 -- §WORKED EXAMPLES OF DUAL-FAMILY BOOL DISPATCH ON `exampleAtomChain`
 #print axioms ALCHOIQContext.partial_isCanonicalSeed_exampleAtomChain_via_sliceEligibleBothBool_emptyRBox
 #print axioms ALCHOIQContext.partial_isCanonicalSeed_exampleAtomChain_via_sliceEligibleBothBool_universalRBox
+-- §TENA-CUCALA THEOREM 2 (headline)
+#print axioms ALCHOIQContext.tenacucala_theorem2
+#print axioms ALCHOIQContext.tenacucala_theorem2_exampleAtomChain
 -- §FINAL-GOAL SCAFFOLDING (Tena-Cucala 2021 Theorem 2 for SROIQ)
 #print axioms ALCHOIQContext.OntologyConceptsSubset
 #print axioms ALCHOIQContext.SROIQRBoxSatisfiable
