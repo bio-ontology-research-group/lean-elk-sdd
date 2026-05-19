@@ -1513,5 +1513,13 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.TreeRefutationProperty
 #print axioms ALCHOIQContext.treeFriendly_herbrandProperty_of_treeRefutation
 #print axioms ALCHOIQContext.treeFriendly_isCanonicalSeed_of_treeRefutation
+-- §BRIDGE (refined): tree-friendly + signature-restricted tree refutation
+-- ⇒ HerbrandPropertyOver ⇒ IsCanonicalSeedOver.   The refined goal is
+-- the one the Tena-Cucala framework actually delivers (the literal
+-- goal for empty O is provably FALSE — see
+-- `not_isCanonicalSeed_canonicalSeedOf_empty`).
+#print axioms ALCHOIQContext.TreeRefutationPropertyOver
+#print axioms ALCHOIQContext.treeFriendly_herbrandPropertyOver_of_treeRefutationOver
+#print axioms ALCHOIQContext.treeFriendly_isCanonicalSeedOver_of_treeRefutationOver_canonicalSeedOf
 
 end ELKSDD

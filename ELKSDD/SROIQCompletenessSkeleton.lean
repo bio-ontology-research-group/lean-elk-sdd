@@ -14345,6 +14345,57 @@ theorem treeFriendly_isCanonicalSeed_of_treeRefutation
    canonicalSeedOf_sound O,
    treeFriendly_herbrandProperty_of_treeRefutation O (canonicalSeedOf O) hBool hRef⟩
 
+/-- **Signature-restricted tree-refutation property.**   The refined
+    analogue of `TreeRefutationProperty`, restricted to queries
+    that mention only concepts in `sig`.   This restriction is
+    necessary because the *literal* goal
+    `IsCanonicalSeed [] (canonicalSeedOf [])` is FALSE
+    (`not_isCanonicalSeed_canonicalSeedOf_empty`) — the tautological
+    query `A ⊑ A` is unsubsumed yet refutation-impossible.   The
+    refined formulation `IsCanonicalSeedOver sig` is the one the
+    Tena-Cucala framework actually delivers. -/
+def TreeRefutationPropertyOver (sig : List Nat)
+    (O : Ontology) (D_seed : ContextStructure) : Prop :=
+  ∀ (D : ContextStructure),
+    FullDerivation D_seed D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      QueryReferencesSignature sig Q →
+      (∀ c ∈ D.S D.vr,
+         ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+      ∃ (γ : Indu → HerbrandTree O)
+        (φ : FunSym → HerbrandTree O → HerbrandTree O)
+        (vx vy : HerbrandTree O),
+        ¬ QueryClause.eval (elHerbrandInterpTree O Q)
+            ⟨γ, φ, vx, vy⟩ Q
+
+/-- **Bridge to the refined HerbrandPropertyOver.**   Combines
+    `treeFriendlyTBoxBool` (the model satisfies `O`) with the
+    signature-restricted refutation residual. -/
+theorem treeFriendly_herbrandPropertyOver_of_treeRefutationOver
+    (sig : List Nat) (O : Ontology) (D_seed : ContextStructure)
+    (hBool : treeFriendlyTBoxBool O = true)
+    (hRef : TreeRefutationPropertyOver sig O D_seed) :
+    HerbrandPropertyOver sig O D_seed := by
+  intro D hDeriv hSat Q hRefs hNoSub
+  obtain ⟨γ, φ, vx, vy, hRefQ⟩ := hRef D hDeriv hSat Q hRefs hNoSub
+  refine ⟨HerbrandTree O, ⟨HerbrandTree.root⟩,
+          elHerbrandInterpTree O Q, γ, φ, vx, vy, ?_, hRefQ⟩
+  exact treeFriendlyTBoxBool_satisfies O Q hBool
+
+/-- **Bridge to the refined IsCanonicalSeedOver** for the standard
+    `canonicalSeedOf` seed (without reflexive padding).   Combines
+    the three conjuncts: `vr ∈ contexts`, soundness, and the
+    signature-restricted HerbrandPropertyOver. -/
+theorem treeFriendly_isCanonicalSeedOver_of_treeRefutationOver_canonicalSeedOf
+    (sig : List Nat) (O : Ontology)
+    (hBool : treeFriendlyTBoxBool O = true)
+    (hRef : TreeRefutationPropertyOver sig O (canonicalSeedOf O)) :
+    IsCanonicalSeedOver sig O (canonicalSeedOf O) :=
+  ⟨canonicalSeedOf_vr_in_contexts O,
+   canonicalSeedOf_sound O,
+   treeFriendly_herbrandPropertyOver_of_treeRefutationOver
+     sig O (canonicalSeedOf O) hBool hRef⟩
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at
