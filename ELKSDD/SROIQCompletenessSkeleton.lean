@@ -16401,6 +16401,38 @@ theorem tenacucala_theorem2_entailsQuery_form
   tenacucala_theorem2 O rbox hSlice Q hQsig hQAtom D hDeriv hSat
     (fun _ _ I γ φ vx vy hIO _hIRBox => hEnt I γ φ hIO vx vy)
 
+/-- **Tena-Cucala Theorem 2 — countermodel form (contrapositive).**
+
+    The dual statement of `tenacucala_theorem2`: when no clause at the
+    root subsumes the query, the §6.3.4 Herbrand construction yields
+    a concrete model of `O ∪ rbox` that refutes `Q`.   This realises
+    the algorithmic content of the calculus — every unsubsumed query
+    has an explicit countermodel produced by the framework's
+    `canonicalSeedOfFull_herbrand_property_unifiedSlice` apparatus.
+
+    Together with `tenacucala_theorem2`, this gives the classical
+    iff: a query is semantically entailed *iff* the saturation
+    contains a subsumer.   The pair captures both the completeness
+    (entailment → subsumer) and the soundness-via-Herbrand-construction
+    (no subsumer → countermodel) directions of Tena-Cucala Theorem 2. -/
+theorem tenacucala_theorem2_countermodel
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hSlice : InUnifiedSlice O rbox)
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig O) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull O) D)
+    (hSat : FullSaturated D)
+    (hNoSubsumer : ∀ c ∈ D.S D.vr,
+                     ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) :
+    ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+      (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+      I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+      ¬ Q.eval I ⟨γ, φ, vx, vy⟩ :=
+  canonicalSeedOfFull_herbrand_property_unifiedSlice O rbox hSlice
+    D hDeriv hSat Q hQsig hQAtom hNoSubsumer
+
 -- ============================================================
 -- §FINAL-GOAL.  Statement scaffolding for the full Tena-Cucala
 -- (2021) Theorem 2.
