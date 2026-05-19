@@ -1307,5 +1307,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.herbrand_bool_iff
 #print axioms ALCHOIQContext.herbrandFalseLHSBool_iff
 #print axioms ALCHOIQContext.herbrandTrueRHSBool_iff
+-- §AXIOM SHAPE CHECK FOR (atom A, IsConjOfAtoms C)
+#print axioms ALCHOIQContext.axiomIsAtomConjOfAtoms
+#print axioms ALCHOIQContext.axiomIsAtomConjOfAtoms_iff
 
 end ELKSDD

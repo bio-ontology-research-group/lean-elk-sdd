@@ -7878,6 +7878,42 @@ instance : DecidablePred HerbrandFalseLHS :=
 instance : DecidablePred HerbrandTrueRHS :=
   fun C => decidable_of_iff _ (herbrandTrueRHSBool_iff C)
 
+/-- **Bool check for `(atom A, C) ∧ IsConjOfAtoms C` axiom shape.**
+    Used in the n-ary RHS conjunction disjunct of `IsELOrAllVacuousOnly`. -/
+def axiomIsAtomConjOfAtoms (ax : ALCHOQ.Concept × ALCHOQ.Concept) : Bool :=
+  match ax.1 with
+  | ALCHOQ.Concept.atom _ => isConjOfAtomsBool ax.2
+  | _ => false
+
+/-- Characterization. -/
+theorem axiomIsAtomConjOfAtoms_iff (ax : ALCHOQ.Concept × ALCHOQ.Concept) :
+    axiomIsAtomConjOfAtoms ax = true ↔
+    ∃ (A : Nat) (C : ALCHOQ.Concept),
+      ax = (ALCHOQ.Concept.atom A, C) ∧ IsConjOfAtoms C := by
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 with
+    | atom A =>
+      simp only [axiomIsAtomConjOfAtoms] at h
+      exact ⟨A, c2, rfl, (isConjOfAtomsBool_iff c2).mp h⟩
+    | top => simp [axiomIsAtomConjOfAtoms] at h
+    | bot => simp [axiomIsAtomConjOfAtoms] at h
+    | nom _ => simp [axiomIsAtomConjOfAtoms] at h
+    | neg _ => simp [axiomIsAtomConjOfAtoms] at h
+    | conj _ _ => simp [axiomIsAtomConjOfAtoms] at h
+    | disj _ _ => simp [axiomIsAtomConjOfAtoms] at h
+    | exist _ _ => simp [axiomIsAtomConjOfAtoms] at h
+    | univ _ _ => simp [axiomIsAtomConjOfAtoms] at h
+    | atLeast _ _ _ => simp [axiomIsAtomConjOfAtoms] at h
+    | atMost _ _ _ => simp [axiomIsAtomConjOfAtoms] at h
+    | hasSelf _ => simp [axiomIsAtomConjOfAtoms] at h
+  · rintro ⟨A, C, hEq, hCoA⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    subst h1; subst h2
+    simp only [axiomIsAtomConjOfAtoms]
+    exact (isConjOfAtomsBool_iff _).mpr hCoA
+
 
 /-- **Combined Herbrand-falsifies / Herbrand-trivialises lemma.**
     Proved simultaneously by structural induction on the concept so
