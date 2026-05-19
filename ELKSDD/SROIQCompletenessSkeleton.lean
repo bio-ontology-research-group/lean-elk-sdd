@@ -6308,6 +6308,15 @@ def axiomIsTopConjOfAtoms (ax : ALCHOQ.Axiom) : Bool :=
   | ALCHOQ.Concept.top => isConjOfAtomsBool ax.2
   | _ => false
 
+/-- **Bool check for `(conj (atom A₁) (atom A₂), C) ∧ IsConjOfAtoms C`.**
+    Tree-friendly disjunct: binary atom-atom conjunction LHS with
+    n-ary atom conjunction RHS — generalizes `axiomIsConjConj`. -/
+def axiomIsConjAtomAtomConjOfAtoms (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.1 with
+  | ALCHOQ.Concept.conj (ALCHOQ.Concept.atom _) (ALCHOQ.Concept.atom _) =>
+      isConjOfAtomsBool ax.2
+  | _ => false
+
 /-- Characterization of the `(LHS, ≥1 R.TreeTrueRHS-filler)` axiom shape. -/
 theorem axiomIsAnyLHSAtLeast1TreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     axiomIsAnyLHSAtLeast1TreeTrueRHS ax = true ↔
@@ -6338,6 +6347,65 @@ theorem axiomIsAnyLHSAtLeast1TreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     have h2 : c2 = ALCHOQ.Concept.atLeast 1 R D := (Prod.mk.inj hEq).2
     rw [h2]
     exact (treeTrueRHSBool_iff D).mpr hD
+
+/-- Characterization of the `(conj atom atom, IsConjOfAtoms)` shape. -/
+theorem axiomIsConjAtomAtomConjOfAtoms_iff (ax : ALCHOQ.Axiom) :
+    axiomIsConjAtomAtomConjOfAtoms ax = true ↔
+    ∃ A₁ A₂ : Nat, ∃ C : ALCHOQ.Concept,
+      ax = (ALCHOQ.Concept.conj
+              (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂), C) ∧
+      IsConjOfAtoms C := by
+  unfold axiomIsConjAtomAtomConjOfAtoms
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 with
+    | conj L R =>
+      cases L with
+      | atom A₁ =>
+        cases R with
+        | atom A₂ =>
+          exact ⟨A₁, A₂, c2, rfl, (isConjOfAtomsBool_iff c2).mp h⟩
+        | top => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+        | bot => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+        | nom _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+        | neg _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+        | conj _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+        | disj _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+        | exist _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+        | univ _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+        | atLeast _ _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+        | atMost _ _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+        | hasSelf _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+      | top => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+      | bot => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+      | nom _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+      | neg _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+      | conj _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+      | disj _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+      | exist _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+      | univ _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+      | atLeast _ _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+      | atMost _ _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+      | hasSelf _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+    | atom _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+    | top => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+    | bot => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+    | nom _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+    | neg _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+    | disj _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+    | exist _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+    | univ _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+    | atLeast _ _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+    | atMost _ _ _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+    | hasSelf _ => simp [axiomIsConjAtomAtomConjOfAtoms] at h
+  · rintro ⟨A₁, A₂, C, hEq, hC⟩
+    have h1 : c1 = ALCHOQ.Concept.conj
+                  (ALCHOQ.Concept.atom A₁) (ALCHOQ.Concept.atom A₂) :=
+      (Prod.mk.inj hEq).1
+    have h2 : c2 = C := (Prod.mk.inj hEq).2
+    rw [h1, h2]
+    exact (isConjOfAtomsBool_iff C).mpr hC
 
 /-- Characterization of the `(top, IsConjOfAtoms C)` axiom shape. -/
 theorem axiomIsTopConjOfAtoms_iff (ax : ALCHOQ.Axiom) :

@@ -1418,5 +1418,8 @@ namespace ELKSDD
 -- §AXIOM-SHAPE BOOL CHECK FOR (top, IsConjOfAtoms C)
 #print axioms ALCHOIQContext.axiomIsTopConjOfAtoms
 #print axioms ALCHOIQContext.axiomIsTopConjOfAtoms_iff
+-- §AXIOM-SHAPE BOOL CHECK FOR (conj atom atom, IsConjOfAtoms C)
+#print axioms ALCHOIQContext.axiomIsConjAtomAtomConjOfAtoms
+#print axioms ALCHOIQContext.axiomIsConjAtomAtomConjOfAtoms_iff
 
 end ELKSDD
