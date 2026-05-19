@@ -1379,5 +1379,8 @@ namespace ELKSDD
 -- §AXIOM-SHAPE BOOL CHECK FOR (top, ∀R.atom B)
 #print axioms ALCHOIQContext.axiomIsTopUnivAtom
 #print axioms ALCHOIQContext.axiomIsTopUnivAtom_iff
+-- §AXIOM-SHAPE BOOL CHECK FOR (top, ∀R.IsConjOfAtoms filler)
+#print axioms ALCHOIQContext.axiomIsTopUnivConjOfAtoms
+#print axioms ALCHOIQContext.axiomIsTopUnivConjOfAtoms_iff
 
 end ELKSDD

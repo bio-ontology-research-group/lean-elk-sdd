@@ -6051,6 +6051,14 @@ def axiomIsTopUnivAtom (ax : ALCHOQ.Axiom) : Bool :=
   | ALCHOQ.Concept.top, ALCHOQ.Concept.univ _ (ALCHOQ.Concept.atom _) => true
   | _, _ => false
 
+/-- **Bool check for `(top, ∀R.filler) ∧ IsConjOfAtoms filler`.**
+    Tree-friendly disjunct: universal-RHS shape with `top` LHS
+    and a conj-of-atoms filler. -/
+def axiomIsTopUnivConjOfAtoms (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.1, ax.2 with
+  | ALCHOQ.Concept.top, ALCHOQ.Concept.univ _ filler => isConjOfAtomsBool filler
+  | _, _ => false
+
 /-- Characterization of the `(top, ∃R.atom B)` axiom shape. -/
 theorem axiomIsTopExistAtom_iff (ax : ALCHOQ.Axiom) :
     axiomIsTopExistAtom ax = true ↔
@@ -6104,6 +6112,48 @@ theorem axiomIsTopExistAtom_iff (ax : ALCHOQ.Axiom) :
     obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
     subst h1; subst h2
     rfl
+
+/-- Characterization of the `(top, ∀R.IsConjOfAtoms-filler)` axiom shape. -/
+theorem axiomIsTopUnivConjOfAtoms_iff (ax : ALCHOQ.Axiom) :
+    axiomIsTopUnivConjOfAtoms ax = true ↔
+    ∃ R : Nat, ∃ filler : ALCHOQ.Concept,
+      ax = (ALCHOQ.Concept.top, ALCHOQ.Concept.univ R filler) ∧
+      IsConjOfAtoms filler := by
+  unfold axiomIsTopUnivConjOfAtoms
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 with
+    | top =>
+      cases c2 with
+      | univ R filler =>
+        exact ⟨R, filler, rfl, (isConjOfAtomsBool_iff filler).mp h⟩
+      | atom _ => simp at h
+      | top => simp at h
+      | bot => simp at h
+      | nom _ => simp at h
+      | neg _ => simp at h
+      | conj _ _ => simp at h
+      | disj _ _ => simp at h
+      | exist _ _ => simp at h
+      | atLeast _ _ _ => simp at h
+      | atMost _ _ _ => simp at h
+      | hasSelf _ => simp at h
+    | atom _ => simp [axiomIsTopUnivConjOfAtoms] at h
+    | bot => simp [axiomIsTopUnivConjOfAtoms] at h
+    | nom _ => simp [axiomIsTopUnivConjOfAtoms] at h
+    | neg _ => simp [axiomIsTopUnivConjOfAtoms] at h
+    | conj _ _ => simp [axiomIsTopUnivConjOfAtoms] at h
+    | disj _ _ => simp [axiomIsTopUnivConjOfAtoms] at h
+    | exist _ _ => simp [axiomIsTopUnivConjOfAtoms] at h
+    | univ _ _ => simp [axiomIsTopUnivConjOfAtoms] at h
+    | atLeast _ _ _ => simp [axiomIsTopUnivConjOfAtoms] at h
+    | atMost _ _ _ => simp [axiomIsTopUnivConjOfAtoms] at h
+    | hasSelf _ => simp [axiomIsTopUnivConjOfAtoms] at h
+  · rintro ⟨R, filler, hEq, hF⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    subst h1; subst h2
+    exact (isConjOfAtomsBool_iff filler).mpr hF
 
 /-- Characterization of the `(top, ∀R.atom B)` axiom shape. -/
 theorem axiomIsTopUnivAtom_iff (ax : ALCHOQ.Axiom) :
