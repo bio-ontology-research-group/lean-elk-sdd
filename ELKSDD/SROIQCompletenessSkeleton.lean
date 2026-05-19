@@ -10792,6 +10792,7 @@ instance : DecidablePred RBoxCompatibleWithUniversalRoles := by
   unfold RBoxCompatibleWithUniversalRoles
   exact inferInstance
 
+
 /-- **Decidable instance for `IsELOrVacuousOnly`.**   Six axiom
     shapes, all Bool-checkable. -/
 instance : DecidablePred IsELOrVacuousOnly := by
@@ -11397,6 +11398,20 @@ theorem inUnifiedSlice_of_sliceEligible_bothFamiliesRBox
     (empty-roles forbids the trivial chain). -/
 def RAxiomCompatibleWithBothFamilies (ax : SROIQ.RAxiom) : Prop :=
   RAxiomCompatibleWithEmptyRoles ax ∧ RAxiomCompatibleWithUniversalRoles ax
+
+/-- **Decidable instance for `RAxiomCompatibleWithBothFamilies`.**
+    Conjunction of the two per-axiom decidability instances. -/
+instance : DecidablePred RAxiomCompatibleWithBothFamilies := by
+  intro ax
+  unfold RAxiomCompatibleWithBothFamilies
+  exact inferInstance
+
+/-- **Decidable instance for `RBoxCompatibleWithBothFamilies`.**
+    Conjunction of the two RBox-level decidability instances. -/
+instance : DecidablePred RBoxCompatibleWithBothFamilies := by
+  intro rbox
+  unfold RBoxCompatibleWithBothFamilies
+  exact inferInstance
 
 theorem rAxiomCompatibleWithBothFamilies_empty
     {ax : SROIQ.RAxiom} (h : RAxiomCompatibleWithBothFamilies ax) :
