@@ -5885,6 +5885,119 @@ theorem axiomIsTreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     rw [h2]
     exact (treeTrueRHSBool_iff D).mpr hD
 
+/-- **Bool check for `(LHS, ∃R.D) ∧ TreeTrueRHS D` axiom shape.**
+    Tree-friendly disjunct: RHS is an existential whose filler is
+    structurally True at every successor. -/
+def axiomIsAnyLHSExistTreeTrueRHS (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.2 with
+  | ALCHOQ.Concept.exist _ D => treeTrueRHSBool D
+  | _ => false
+
+/-- Characterization of the `(LHS, ∃R.TreeTrueRHS-filler)` axiom shape. -/
+theorem axiomIsAnyLHSExistTreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
+    axiomIsAnyLHSExistTreeTrueRHS ax = true ↔
+    ∃ LHS : ALCHOQ.Concept, ∃ R : Nat, ∃ D : ALCHOQ.Concept,
+      ax = (LHS, ALCHOQ.Concept.exist R D) ∧ TreeTrueRHS D := by
+  unfold axiomIsAnyLHSExistTreeTrueRHS
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c2 with
+    | atom _ => simp at h
+    | top => simp at h
+    | bot => simp at h
+    | nom _ => simp at h
+    | neg _ => simp at h
+    | conj _ _ => simp at h
+    | disj _ _ => simp at h
+    | exist R D =>
+      exact ⟨c1, R, D, rfl, (treeTrueRHSBool_iff D).mp h⟩
+    | univ _ _ => simp at h
+    | atLeast _ _ _ => simp at h
+    | atMost _ _ _ => simp at h
+    | hasSelf _ => simp at h
+  · rintro ⟨LHS, R, D, hEq, hD⟩
+    have h2 : c2 = ALCHOQ.Concept.exist R D := (Prod.mk.inj hEq).2
+    rw [h2]
+    exact (treeTrueRHSBool_iff D).mpr hD
+
+/-- **Bool check for `(LHS, ∀R.D) ∧ TreeTrueRHS D` axiom shape.**
+    Tree-friendly disjunct: RHS is a universal whose filler is
+    structurally True at every successor, so the universal is
+    vacuously satisfied. -/
+def axiomIsAnyLHSUnivTreeTrueRHS (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.2 with
+  | ALCHOQ.Concept.univ _ D => treeTrueRHSBool D
+  | _ => false
+
+/-- Characterization of the `(LHS, ∀R.TreeTrueRHS-filler)` axiom shape. -/
+theorem axiomIsAnyLHSUnivTreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
+    axiomIsAnyLHSUnivTreeTrueRHS ax = true ↔
+    ∃ LHS : ALCHOQ.Concept, ∃ R : Nat, ∃ D : ALCHOQ.Concept,
+      ax = (LHS, ALCHOQ.Concept.univ R D) ∧ TreeTrueRHS D := by
+  unfold axiomIsAnyLHSUnivTreeTrueRHS
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c2 with
+    | atom _ => simp at h
+    | top => simp at h
+    | bot => simp at h
+    | nom _ => simp at h
+    | neg _ => simp at h
+    | conj _ _ => simp at h
+    | disj _ _ => simp at h
+    | exist _ _ => simp at h
+    | univ R D =>
+      exact ⟨c1, R, D, rfl, (treeTrueRHSBool_iff D).mp h⟩
+    | atLeast _ _ _ => simp at h
+    | atMost _ _ _ => simp at h
+    | hasSelf _ => simp at h
+  · rintro ⟨LHS, R, D, hEq, hD⟩
+    have h2 : c2 = ALCHOQ.Concept.univ R D := (Prod.mk.inj hEq).2
+    rw [h2]
+    exact (treeTrueRHSBool_iff D).mpr hD
+
+/-- **Bool check for `(LHS, ≥1 R.D) ∧ TreeTrueRHS D` axiom shape.**
+    Tree-friendly disjunct: number-restriction analogue of
+    `∃R.TreeTrueRHS-filler` — the extended `axiomTriggersRole` fires
+    for `atLeast 1`. -/
+def axiomIsAnyLHSAtLeast1TreeTrueRHS (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.2 with
+  | ALCHOQ.Concept.atLeast 1 _ D => treeTrueRHSBool D
+  | _ => false
+
+/-- Characterization of the `(LHS, ≥1 R.TreeTrueRHS-filler)` axiom shape. -/
+theorem axiomIsAnyLHSAtLeast1TreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
+    axiomIsAnyLHSAtLeast1TreeTrueRHS ax = true ↔
+    ∃ LHS : ALCHOQ.Concept, ∃ R : Nat, ∃ D : ALCHOQ.Concept,
+      ax = (LHS, ALCHOQ.Concept.atLeast 1 R D) ∧ TreeTrueRHS D := by
+  unfold axiomIsAnyLHSAtLeast1TreeTrueRHS
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c2 with
+    | atom _ => simp at h
+    | top => simp at h
+    | bot => simp at h
+    | nom _ => simp at h
+    | neg _ => simp at h
+    | conj _ _ => simp at h
+    | disj _ _ => simp at h
+    | exist _ _ => simp at h
+    | univ _ _ => simp at h
+    | atLeast n R D =>
+      match n with
+      | 0 => simp [axiomIsAnyLHSAtLeast1TreeTrueRHS] at h
+      | 1 => exact ⟨c1, R, D, rfl, (treeTrueRHSBool_iff D).mp h⟩
+      | n + 2 => simp [axiomIsAnyLHSAtLeast1TreeTrueRHS] at h
+    | atMost _ _ _ => simp at h
+    | hasSelf _ => simp at h
+  · rintro ⟨LHS, R, D, hEq, hD⟩
+    have h2 : c2 = ALCHOQ.Concept.atLeast 1 R D := (Prod.mk.inj hEq).2
+    rw [h2]
+    exact (treeTrueRHSBool_iff D).mpr hD
+
 /-- Atoms forced at a `succ _ ax _` node by **universal-restriction
     propagation** from O.   Any axiom `(lhs, ∀R.filler) ∈ O` whose
     LHS is structurally True at every tree node (`TreeTrueRHS lhs`)

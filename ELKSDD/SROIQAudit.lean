@@ -1349,5 +1349,12 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.axiomIsTreeFalseLHS_iff
 #print axioms ALCHOIQContext.axiomIsTreeTrueRHS
 #print axioms ALCHOIQContext.axiomIsTreeTrueRHS_iff
+-- §AXIOM-SHAPE BOOL CHECKS FOR (LHS, role.TreeTrueRHS) TREE-FRIENDLY DISJUNCTS
+#print axioms ALCHOIQContext.axiomIsAnyLHSExistTreeTrueRHS
+#print axioms ALCHOIQContext.axiomIsAnyLHSExistTreeTrueRHS_iff
+#print axioms ALCHOIQContext.axiomIsAnyLHSUnivTreeTrueRHS
+#print axioms ALCHOIQContext.axiomIsAnyLHSUnivTreeTrueRHS_iff
+#print axioms ALCHOIQContext.axiomIsAnyLHSAtLeast1TreeTrueRHS
+#print axioms ALCHOIQContext.axiomIsAnyLHSAtLeast1TreeTrueRHS_iff
 
 end ELKSDD
