@@ -6249,6 +6249,14 @@ def axiomIsAnyLHSExistTop (ax : ALCHOQ.Axiom) : Bool :=
   | ALCHOQ.Concept.exist _ ALCHOQ.Concept.top => true
   | _ => false
 
+/-- **Bool check for `(LHS, ≥1 R.filler) ∧ IsConjOfAtoms filler`.**
+    Tree-friendly disjunct: number-restriction with n-ary conjunction
+    of atom filler. -/
+def axiomIsAnyLHSAtLeast1ConjOfAtoms (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.2 with
+  | ALCHOQ.Concept.atLeast 1 _ filler => isConjOfAtomsBool filler
+  | _ => false
+
 /-- Characterization of the `(LHS, ≥1 R.TreeTrueRHS-filler)` axiom shape. -/
 theorem axiomIsAnyLHSAtLeast1TreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     axiomIsAnyLHSAtLeast1TreeTrueRHS ax = true ↔
@@ -6279,6 +6287,39 @@ theorem axiomIsAnyLHSAtLeast1TreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     have h2 : c2 = ALCHOQ.Concept.atLeast 1 R D := (Prod.mk.inj hEq).2
     rw [h2]
     exact (treeTrueRHSBool_iff D).mpr hD
+
+/-- Characterization of the `(LHS, ≥1 R.IsConjOfAtoms-filler)` shape. -/
+theorem axiomIsAnyLHSAtLeast1ConjOfAtoms_iff (ax : ALCHOQ.Axiom) :
+    axiomIsAnyLHSAtLeast1ConjOfAtoms ax = true ↔
+    ∃ LHS : ALCHOQ.Concept, ∃ R : Nat, ∃ filler : ALCHOQ.Concept,
+      ax = (LHS, ALCHOQ.Concept.atLeast 1 R filler) ∧ IsConjOfAtoms filler := by
+  unfold axiomIsAnyLHSAtLeast1ConjOfAtoms
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c2 with
+    | atom _ => simp at h
+    | top => simp at h
+    | bot => simp at h
+    | nom _ => simp at h
+    | neg _ => simp at h
+    | conj _ _ => simp at h
+    | disj _ _ => simp at h
+    | exist _ _ => simp at h
+    | univ _ _ => simp at h
+    | atLeast n R filler =>
+      match n with
+      | 0 => simp [axiomIsAnyLHSAtLeast1ConjOfAtoms] at h
+      | 1 =>
+        exact ⟨c1, R, filler, rfl, (isConjOfAtomsBool_iff filler).mp h⟩
+      | n + 2 => simp [axiomIsAnyLHSAtLeast1ConjOfAtoms] at h
+    | atMost _ _ _ => simp at h
+    | hasSelf _ => simp at h
+  · rintro ⟨LHS, R, filler, hEq, hF⟩
+    have h2 : c2 = ALCHOQ.Concept.atLeast 1 R filler :=
+      (Prod.mk.inj hEq).2
+    rw [h2]
+    exact (isConjOfAtomsBool_iff filler).mpr hF
 
 /-- Characterization of the `(LHS, ∃R.top)` axiom shape. -/
 theorem axiomIsAnyLHSExistTop_iff (ax : ALCHOQ.Axiom) :
