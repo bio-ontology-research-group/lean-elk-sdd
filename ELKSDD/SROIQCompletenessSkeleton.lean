@@ -5425,6 +5425,72 @@ inductive IsConjOfAtoms : ALCHOQ.Concept → Prop where
       IsConjOfAtoms C₁ → IsConjOfAtoms C₂ →
       IsConjOfAtoms (ALCHOQ.Concept.conj C₁ C₂)
 
+/-- **Bool-valued check for `IsConjOfAtoms`.**   Recurses through
+    nested `conj` constructors, accepting only `atom _` leaves. -/
+def isConjOfAtomsBool : ALCHOQ.Concept → Bool
+  | ALCHOQ.Concept.atom _ => true
+  | ALCHOQ.Concept.conj C₁ C₂ => isConjOfAtomsBool C₁ && isConjOfAtomsBool C₂
+  | _ => false
+
+/-- Characterization: `isConjOfAtomsBool C = true` iff `IsConjOfAtoms C`. -/
+theorem isConjOfAtomsBool_iff (C : ALCHOQ.Concept) :
+    isConjOfAtomsBool C = true ↔ IsConjOfAtoms C := by
+  induction C with
+  | atom A => exact ⟨fun _ => IsConjOfAtoms.atom, fun _ => rfl⟩
+  | top =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsBool] at h
+    · cases h
+  | bot =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsBool] at h
+    · cases h
+  | nom _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsBool] at h
+    · cases h
+  | neg _ _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsBool] at h
+    · cases h
+  | conj C₁ C₂ ih₁ ih₂ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsBool, Bool.and_eq_true] at h
+      exact IsConjOfAtoms.conj (ih₁.mp h.1) (ih₂.mp h.2)
+    · cases h with
+      | conj h₁ h₂ =>
+        simp [isConjOfAtomsBool, Bool.and_eq_true]
+        exact ⟨ih₁.mpr h₁, ih₂.mpr h₂⟩
+  | disj _ _ _ _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsBool] at h
+    · cases h
+  | exist _ _ _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsBool] at h
+    · cases h
+  | univ _ _ _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsBool] at h
+    · cases h
+  | atLeast _ _ _ _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsBool] at h
+    · cases h
+  | atMost _ _ _ _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsBool] at h
+    · cases h
+  | hasSelf _ =>
+    refine ⟨fun h => ?_, fun h => ?_⟩
+    · simp [isConjOfAtomsBool] at h
+    · cases h
+
+/-- **Decidable instance for `IsConjOfAtoms`.**   Via the recursive
+    Bool check `isConjOfAtomsBool`. -/
+instance : DecidablePred IsConjOfAtoms :=
+  fun C => decidable_of_iff (isConjOfAtomsBool C = true) (isConjOfAtomsBool_iff C)
+
 /-- **Conjunction of atoms or top shape**: a concept whose leaves
     are `atom _` or `top`.   Generalises `IsConjOfAtoms` by allowing
     `top` leaves, which trivially evaluate to True. -/
