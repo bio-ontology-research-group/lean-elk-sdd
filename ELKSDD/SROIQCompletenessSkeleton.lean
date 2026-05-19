@@ -6265,6 +6265,14 @@ def axiomIsAnyLHSExistConjOfAtomsOrTop (ax : ALCHOQ.Axiom) : Bool :=
   | ALCHOQ.Concept.exist _ filler => isConjOfAtomsOrTopBool filler
   | _ => false
 
+/-- **Bool check for `(LHS, ≥1 R.filler) ∧ IsConjOfAtomsOrTop filler`.**
+    Tree-friendly disjunct: number-restriction with mixed atom/top
+    conjunction filler. -/
+def axiomIsAnyLHSAtLeast1ConjOfAtomsOrTop (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.2 with
+  | ALCHOQ.Concept.atLeast 1 _ filler => isConjOfAtomsOrTopBool filler
+  | _ => false
+
 /-- Characterization of the `(LHS, ≥1 R.TreeTrueRHS-filler)` axiom shape. -/
 theorem axiomIsAnyLHSAtLeast1TreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     axiomIsAnyLHSAtLeast1TreeTrueRHS ax = true ↔
@@ -6295,6 +6303,40 @@ theorem axiomIsAnyLHSAtLeast1TreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     have h2 : c2 = ALCHOQ.Concept.atLeast 1 R D := (Prod.mk.inj hEq).2
     rw [h2]
     exact (treeTrueRHSBool_iff D).mpr hD
+
+/-- Characterization of the `(LHS, ≥1 R.IsConjOfAtomsOrTop-filler)` shape. -/
+theorem axiomIsAnyLHSAtLeast1ConjOfAtomsOrTop_iff (ax : ALCHOQ.Axiom) :
+    axiomIsAnyLHSAtLeast1ConjOfAtomsOrTop ax = true ↔
+    ∃ LHS : ALCHOQ.Concept, ∃ R : Nat, ∃ filler : ALCHOQ.Concept,
+      ax = (LHS, ALCHOQ.Concept.atLeast 1 R filler) ∧
+      IsConjOfAtomsOrTop filler := by
+  unfold axiomIsAnyLHSAtLeast1ConjOfAtomsOrTop
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c2 with
+    | atom _ => simp at h
+    | top => simp at h
+    | bot => simp at h
+    | nom _ => simp at h
+    | neg _ => simp at h
+    | conj _ _ => simp at h
+    | disj _ _ => simp at h
+    | exist _ _ => simp at h
+    | univ _ _ => simp at h
+    | atLeast n R filler =>
+      match n with
+      | 0 => simp [axiomIsAnyLHSAtLeast1ConjOfAtomsOrTop] at h
+      | 1 =>
+        exact ⟨c1, R, filler, rfl, (isConjOfAtomsOrTopBool_iff filler).mp h⟩
+      | n + 2 => simp [axiomIsAnyLHSAtLeast1ConjOfAtomsOrTop] at h
+    | atMost _ _ _ => simp at h
+    | hasSelf _ => simp at h
+  · rintro ⟨LHS, R, filler, hEq, hF⟩
+    have h2 : c2 = ALCHOQ.Concept.atLeast 1 R filler :=
+      (Prod.mk.inj hEq).2
+    rw [h2]
+    exact (isConjOfAtomsOrTopBool_iff filler).mpr hF
 
 /-- Characterization of the `(LHS, ∃R.IsConjOfAtomsOrTop-filler)` shape. -/
 theorem axiomIsAnyLHSExistConjOfAtomsOrTop_iff (ax : ALCHOQ.Axiom) :
