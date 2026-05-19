@@ -10495,6 +10495,24 @@ instance (sig : List Nat) :
     · intro l hl
       exact (CLit.refsSig_iff sig l).mpr (fun A t hEq => hD A t (hEq ▸ hl))
 
+/-- **Composition decidability for `InDischargedRegion`.**   Given a
+    decidability instance for the slice-eligibility predicate at `O`
+    (which is the only remaining undecided conjunct — its full
+    decidability requires per-axiom shape decidability for each of
+    the maximal slice families), the discharged-region predicate
+    becomes algorithmically decidable.
+
+    Combined with the existing decidability instances for the two
+    query-side conjuncts (`AtomConjDisjQuery` and
+    `QueryReferencesSignature`), this composes the full
+    `Decidable (InDischargedRegion O Q)` instance modulo only the
+    slice-eligibility check on `O`. -/
+instance (O : Ontology) (Q : QueryClause)
+    [Decidable (SliceEligibleOntology O)] :
+    Decidable (InDischargedRegion O Q) := by
+  unfold InDischargedRegion
+  exact inferInstance
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at
