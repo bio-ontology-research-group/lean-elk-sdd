@@ -10743,6 +10743,33 @@ theorem axiomIsAtomTop_iff (ax : ALCHOQ.Concept × ALCHOQ.Concept) :
     subst h1; subst h2
     rfl
 
+/-- **Decidable instance for `RAxiomCompatibleWithEmptyRoles`.**
+    The predicate is `False` on the two incompatible shapes
+    (`refl R` and `chain [] _`) and `True` on every other shape.
+    Pattern matching makes this immediate. -/
+instance : DecidablePred RAxiomCompatibleWithEmptyRoles := by
+  intro ax
+  cases ax with
+  | refl _ => exact isFalse (fun h => h)
+  | chain rs _ =>
+    cases rs with
+    | nil => exact isFalse (fun h => h)
+    | cons _ _ => exact isTrue trivial
+  | incl _ _ => exact isTrue trivial
+  | trans _ => exact isTrue trivial
+  | sym _ => exact isTrue trivial
+  | asym _ => exact isTrue trivial
+  | irrefl _ => exact isTrue trivial
+  | inv _ _ => exact isTrue trivial
+  | disj _ _ => exact isTrue trivial
+
+/-- **Decidable instance for `RBoxCompatibleWithEmptyRoles`.**
+    Lifts the per-axiom decidability through `List.all`. -/
+instance : DecidablePred RBoxCompatibleWithEmptyRoles := by
+  intro rbox
+  unfold RBoxCompatibleWithEmptyRoles
+  exact inferInstance
+
 /-- **Decidable instance for `IsELOrVacuousOnly`.**   Six axiom
     shapes, all Bool-checkable. -/
 instance : DecidablePred IsELOrVacuousOnly := by
