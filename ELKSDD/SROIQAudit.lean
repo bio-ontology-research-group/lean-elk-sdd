@@ -1333,5 +1333,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.herbrand_universal_bool_iff
 #print axioms ALCHOIQContext.herbrandFalseLHSUniversalBool_iff
 #print axioms ALCHOIQContext.herbrandTrueRHSUniversalBool_iff
+-- §FULL DECIDABLE IsELOrUniversalRoleVacuousOnly
+#print axioms ALCHOIQContext.axiomIsELOrUniversalRoleVacuousShape
+#print axioms ALCHOIQContext.axiomIsELOrUniversalRoleVacuousShape_iff
 
 end ELKSDD
