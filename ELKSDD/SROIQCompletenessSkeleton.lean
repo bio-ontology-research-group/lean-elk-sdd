@@ -14396,6 +14396,39 @@ theorem treeFriendly_isCanonicalSeedOver_of_treeRefutationOver_canonicalSeedOf
    treeFriendly_herbrandPropertyOver_of_treeRefutationOver
      sig O (canonicalSeedOf O) hBool hRef⟩
 
+/-- **`treeFriendlyTBoxBool` is unconditionally `true` for the
+    empty ontology.**   `List.nil.all f = true` by definition. -/
+theorem treeFriendlyTBoxBool_empty : treeFriendlyTBoxBool [] = true := rfl
+
+/-- **Empty-ontology tree Herbrand model satisfies `[]`
+    unconditionally.**   Direct consequence of
+    `treeFriendlyTBoxBool_empty` and `treeFriendlyTBoxBool_satisfies`. -/
+theorem treeFriendlyTBoxBool_satisfies_empty (Q : QueryClause) :
+    (elHerbrandInterpTree [] Q).satisfies [] :=
+  treeFriendlyTBoxBool_satisfies [] Q treeFriendlyTBoxBool_empty
+
+/-- **For the empty ontology, the literal-form
+    `treeFriendly_herbrandProperty_of_treeRefutation` bridge has
+    its `hBool` premise discharged unconditionally.**   The bridge
+    becomes a one-premise lemma: `TreeRefutationProperty [] D_seed →
+    HerbrandProperty [] D_seed`.   This is foundation-only progress
+    that does not depend on Bool-checking the input. -/
+theorem treeFriendly_herbrandProperty_of_treeRefutation_empty
+    (D_seed : ContextStructure)
+    (hRef : TreeRefutationProperty [] D_seed) :
+    HerbrandProperty [] D_seed :=
+  treeFriendly_herbrandProperty_of_treeRefutation [] D_seed
+    treeFriendlyTBoxBool_empty hRef
+
+/-- **Same simplification for the refined signature-restricted
+    bridge.**   Empty ontology specialization. -/
+theorem treeFriendly_herbrandPropertyOver_of_treeRefutationOver_empty
+    (sig : List Nat) (D_seed : ContextStructure)
+    (hRef : TreeRefutationPropertyOver sig [] D_seed) :
+    HerbrandPropertyOver sig [] D_seed :=
+  treeFriendly_herbrandPropertyOver_of_treeRefutationOver
+    sig [] D_seed treeFriendlyTBoxBool_empty hRef
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at

@@ -1521,5 +1521,12 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.TreeRefutationPropertyOver
 #print axioms ALCHOIQContext.treeFriendly_herbrandPropertyOver_of_treeRefutationOver
 #print axioms ALCHOIQContext.treeFriendly_isCanonicalSeedOver_of_treeRefutationOver_canonicalSeedOf
+-- §UNCONDITIONAL EMPTY-O DISCHARGES OF `treeFriendlyTBoxBool`
+-- These eliminate the Bool-truth premise of the bridge entirely
+-- for the empty-ontology specialization.
+#print axioms ALCHOIQContext.treeFriendlyTBoxBool_empty
+#print axioms ALCHOIQContext.treeFriendlyTBoxBool_satisfies_empty
+#print axioms ALCHOIQContext.treeFriendly_herbrandProperty_of_treeRefutation_empty
+#print axioms ALCHOIQContext.treeFriendly_herbrandPropertyOver_of_treeRefutationOver_empty
 
 end ELKSDD
