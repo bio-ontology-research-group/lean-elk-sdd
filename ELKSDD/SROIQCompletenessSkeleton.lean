@@ -6035,6 +6035,68 @@ theorem axiomIsAnyLHSExistConjOfAtoms_iff (ax : ALCHOQ.Axiom) :
     rw [h2]
     exact (isConjOfAtomsBool_iff filler).mpr hF
 
+/-- **Bool check for `(top, ∃R.atom B)` axiom shape.**
+    Tree-friendly disjunct: simplest existential-RHS shape with a
+    `top` LHS and an atom filler. -/
+def axiomIsTopExistAtom (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.1, ax.2 with
+  | ALCHOQ.Concept.top, ALCHOQ.Concept.exist _ (ALCHOQ.Concept.atom _) => true
+  | _, _ => false
+
+/-- Characterization of the `(top, ∃R.atom B)` axiom shape. -/
+theorem axiomIsTopExistAtom_iff (ax : ALCHOQ.Axiom) :
+    axiomIsTopExistAtom ax = true ↔
+    ∃ R B : Nat,
+      ax = (ALCHOQ.Concept.top,
+            ALCHOQ.Concept.exist R (ALCHOQ.Concept.atom B)) := by
+  unfold axiomIsTopExistAtom
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 with
+    | top =>
+      cases c2 with
+      | exist R filler =>
+        cases filler with
+        | atom B => exact ⟨R, B, rfl⟩
+        | top => simp at h
+        | bot => simp at h
+        | nom _ => simp at h
+        | neg _ => simp at h
+        | conj _ _ => simp at h
+        | disj _ _ => simp at h
+        | exist _ _ => simp at h
+        | univ _ _ => simp at h
+        | atLeast _ _ _ => simp at h
+        | atMost _ _ _ => simp at h
+        | hasSelf _ => simp at h
+      | atom _ => simp at h
+      | top => simp at h
+      | bot => simp at h
+      | nom _ => simp at h
+      | neg _ => simp at h
+      | conj _ _ => simp at h
+      | disj _ _ => simp at h
+      | univ _ _ => simp at h
+      | atLeast _ _ _ => simp at h
+      | atMost _ _ _ => simp at h
+      | hasSelf _ => simp at h
+    | atom _ => simp [axiomIsTopExistAtom] at h
+    | bot => simp [axiomIsTopExistAtom] at h
+    | nom _ => simp [axiomIsTopExistAtom] at h
+    | neg _ => simp [axiomIsTopExistAtom] at h
+    | conj _ _ => simp [axiomIsTopExistAtom] at h
+    | disj _ _ => simp [axiomIsTopExistAtom] at h
+    | exist _ _ => simp [axiomIsTopExistAtom] at h
+    | univ _ _ => simp [axiomIsTopExistAtom] at h
+    | atLeast _ _ _ => simp [axiomIsTopExistAtom] at h
+    | atMost _ _ _ => simp [axiomIsTopExistAtom] at h
+    | hasSelf _ => simp [axiomIsTopExistAtom] at h
+  · rintro ⟨R, B, hEq⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    subst h1; subst h2
+    rfl
+
 /-- **Bool check for `(LHS, ≥1 R.D) ∧ TreeTrueRHS D` axiom shape.**
     Tree-friendly disjunct: number-restriction analogue of
     `∃R.TreeTrueRHS-filler` — the extended `axiomTriggersRole` fires

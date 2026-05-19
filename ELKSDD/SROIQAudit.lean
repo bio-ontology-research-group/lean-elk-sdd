@@ -1370,5 +1370,8 @@ namespace ELKSDD
 -- §EMPTY ONTOLOGY IS TREE-FRIENDLY + TREE HERBRAND SATISFIES IT
 #print axioms ALCHOIQContext.isTreeFriendlyTBox_empty
 #print axioms ALCHOIQContext.elHerbrandInterpTree_empty_satisfies
+-- §AXIOM-SHAPE BOOL CHECK FOR (top, ∃R.atom B)
+#print axioms ALCHOIQContext.axiomIsTopExistAtom
+#print axioms ALCHOIQContext.axiomIsTopExistAtom_iff
 
 end ELKSDD
