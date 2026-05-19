@@ -10332,6 +10332,17 @@ theorem unconditional_IsCanonicalSeed_iff_universal_perOResidual :
   · intro hRes O
     exact (isCanonicalSeed_canonicalSeedOfFull_iff_perOResidual O).mpr (hRes O)
 
+/-- **Empty query is always falsifiable.**   The query
+    `Q.Gamma = [], Q.Delta = []` has `Q.eval = True → False = False`,
+    so every interpretation falsifies it. -/
+theorem queryClause_empty_eval_false
+    {α : Type} (I : Interp α) (A : CtxAssign α) :
+    ¬ QueryClause.eval I A ⟨[], []⟩ := by
+  intro hEval
+  unfold QueryClause.eval at hEval
+  obtain ⟨h, hMem, _⟩ := hEval (fun b hb => absurd hb List.not_mem_nil)
+  exact absurd hMem List.not_mem_nil
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at

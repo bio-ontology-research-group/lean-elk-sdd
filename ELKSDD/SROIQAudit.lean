@@ -1273,5 +1273,7 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_iff_universal_perOResidual
 -- §MILESTONE BUNDLE: ALL UNCONDITIONALLY-PROVED FACTS + RESIDUAL
 #print axioms ALCHOIQContext.milestone_unconditionally_proved_plus_residual
+-- §EMPTY QUERY IS ALWAYS FALSIFIABLE
+#print axioms ALCHOIQContext.queryClause_empty_eval_false
 
 end ELKSDD
