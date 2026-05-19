@@ -1267,5 +1267,9 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.sliceEligibleOntology_nil
 #print axioms ALCHOIQContext.inDischargedRegion_nil_iff
 #print axioms ALCHOIQContext.notInDischargedRegion_nil_iff
+-- §PER-ONTOLOGY RESIDUAL + UNIVERSAL EQUIVALENCE
+#print axioms ALCHOIQContext.PerOResidualHerbrand
+#print axioms ALCHOIQContext.isCanonicalSeed_canonicalSeedOfFull_iff_perOResidual
+#print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_iff_universal_perOResidual
 
 end ELKSDD

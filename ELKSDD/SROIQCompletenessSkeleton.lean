@@ -10280,6 +10280,58 @@ theorem notInDischargedRegion_nil_iff (Q : QueryClause) :
        AtomConjDisjQuery Q) := by
   rw [inDischargedRegion_nil_iff]
 
+/-- **Per-ontology residual.**   The §6.3.4 obligation localised to a
+    specific `O`: every saturated derivative produces a counter-model
+    for every unsubsumed query outside the discharged region. -/
+def PerOResidualHerbrand (O : Ontology) : Prop :=
+  ∀ (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      ¬ InDischargedRegion O Q →
+      (∀ c ∈ D.S D.vr,
+         ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+      ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+        (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+        I.satisfies O ∧ ¬ Q.eval I ⟨γ, φ, vx, vy⟩
+
+/-- **Per-O equivalence: IsCanonicalSeed iff the per-O residual.**
+    The §6.3.4 obligation is *exactly* the per-O residual: at any
+    specific `O`, proving `PerOResidualHerbrand O` is equivalent
+    to proving `IsCanonicalSeed O (canonicalSeedOfFull O)`.
+    Localizes the multi-session obligation per-ontology. -/
+theorem isCanonicalSeed_canonicalSeedOfFull_iff_perOResidual
+    (O : Ontology) :
+    IsCanonicalSeed O (canonicalSeedOfFull O) ↔ PerOResidualHerbrand O := by
+  rw [isCanonicalSeed_canonicalSeedOfFull_iff_herbrandProperty]
+  constructor
+  · intro hHP D hDeriv hSat Q _hOut hNoSub
+    exact hHP D hDeriv hSat Q hNoSub
+  · intro hRes D hDeriv hSat Q hNoSub
+    classical
+    by_cases hIn : InDischargedRegion O Q
+    · -- In-region: extract counter-model from the unified-slice
+      -- machinery directly.
+      obtain ⟨hSE, hQsig, hQAtom⟩ := hIn
+      obtain ⟨rbox, hSlice⟩ := inUnifiedSlice_exists_of_sliceEligible O hSE
+      obtain ⟨α, _inh, I, γ, φ, vx, vy, hSatO, _hRBox, hNotEval⟩ :=
+        canonicalSeedOfFull_herbrand_property_unifiedSlice O rbox hSlice
+          D hDeriv hSat Q hQsig hQAtom hNoSub
+      exact ⟨α, _inh, I, γ, φ, vx, vy, hSatO, hNotEval⟩
+    · exact hRes D hDeriv hSat Q hIn hNoSub
+
+/-- **Universal-quantified per-O residual iff the literal goal.**
+    The literal `UnconditionalIsCanonicalSeed` is exactly
+    `∀ O, PerOResidualHerbrand O` — the §6.3.4 obligation
+    universally quantified at the per-O level. -/
+theorem unconditional_IsCanonicalSeed_iff_universal_perOResidual :
+    UnconditionalIsCanonicalSeed ↔ (∀ O : Ontology, PerOResidualHerbrand O) := by
+  unfold UnconditionalIsCanonicalSeed
+  constructor
+  · intro hUncond O
+    exact (isCanonicalSeed_canonicalSeedOfFull_iff_perOResidual O).mp (hUncond O)
+  · intro hRes O
+    exact (isCanonicalSeed_canonicalSeedOfFull_iff_perOResidual O).mpr (hRes O)
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
