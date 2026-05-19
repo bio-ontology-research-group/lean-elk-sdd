@@ -1359,5 +1359,8 @@ namespace ELKSDD
 -- §EMPTY-ONTOLOGY CONCEPT-DERIVABLE EL CHARACTERIZATION
 #print axioms ALCHOIQContext.conceptDerivableEL_empty_iff_initial
 #print axioms ALCHOIQContext.elHerbrandInterpTree_empty_root_iff_body_atom
+-- §AXIOM-SHAPE BOOL CHECK FOR (LHS, ∃R.IsConjOfAtoms filler)
+#print axioms ALCHOIQContext.axiomIsAnyLHSExistConjOfAtoms
+#print axioms ALCHOIQContext.axiomIsAnyLHSExistConjOfAtoms_iff
 
 end ELKSDD

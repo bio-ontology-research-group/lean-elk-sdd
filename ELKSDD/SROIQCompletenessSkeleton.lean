@@ -5998,6 +5998,43 @@ theorem axiomIsAnyLHSUnivTreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
     rw [h2]
     exact (treeTrueRHSBool_iff D).mpr hD
 
+/-- **Bool check for `(LHS, ∃R.filler) ∧ IsConjOfAtoms filler`.**
+    Tree-friendly disjunct: existential whose filler is an n-ary
+    conjunction of concept atoms — handled at the tree level via
+    the successor's initial-atom set. -/
+def axiomIsAnyLHSExistConjOfAtoms (ax : ALCHOQ.Axiom) : Bool :=
+  match ax.2 with
+  | ALCHOQ.Concept.exist _ filler => isConjOfAtomsBool filler
+  | _ => false
+
+/-- Characterization of the `(LHS, ∃R.IsConjOfAtoms-filler)` shape. -/
+theorem axiomIsAnyLHSExistConjOfAtoms_iff (ax : ALCHOQ.Axiom) :
+    axiomIsAnyLHSExistConjOfAtoms ax = true ↔
+    ∃ LHS : ALCHOQ.Concept, ∃ R : Nat, ∃ filler : ALCHOQ.Concept,
+      ax = (LHS, ALCHOQ.Concept.exist R filler) ∧ IsConjOfAtoms filler := by
+  unfold axiomIsAnyLHSExistConjOfAtoms
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c2 with
+    | atom _ => simp at h
+    | top => simp at h
+    | bot => simp at h
+    | nom _ => simp at h
+    | neg _ => simp at h
+    | conj _ _ => simp at h
+    | disj _ _ => simp at h
+    | exist R filler =>
+      exact ⟨c1, R, filler, rfl, (isConjOfAtomsBool_iff filler).mp h⟩
+    | univ _ _ => simp at h
+    | atLeast _ _ _ => simp at h
+    | atMost _ _ _ => simp at h
+    | hasSelf _ => simp at h
+  · rintro ⟨LHS, R, filler, hEq, hF⟩
+    have h2 : c2 = ALCHOQ.Concept.exist R filler := (Prod.mk.inj hEq).2
+    rw [h2]
+    exact (isConjOfAtomsBool_iff filler).mpr hF
+
 /-- **Bool check for `(LHS, ≥1 R.D) ∧ TreeTrueRHS D` axiom shape.**
     Tree-friendly disjunct: number-restriction analogue of
     `∃R.TreeTrueRHS-filler` — the extended `axiomTriggersRole` fires
