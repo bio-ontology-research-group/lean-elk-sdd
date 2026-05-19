@@ -9318,6 +9318,62 @@ theorem extensionGapOnSliceEligible_reduces_to_nonAtomConjDisj
   · -- Non-AtomConjDisj signature: handed off to the residual hypothesis.
     exact hRes O hO D hDeriv hSat Q hEnt hPQ
 
+/-- **Named gap restricted to non-slice-eligible ontologies.**   The
+    extension-gap predicate quantified over the complementary class —
+    ontologies for which neither maximal-slice predicate
+    (`IsELOrAllVacuousOnly` or `IsELOrUniversalRoleVacuousOnly`)
+    holds.   This is the structural complement of
+    `UnconditionalSCExtensionGapOnSliceEligible`. -/
+def UnconditionalSCExtensionGapOnNonSliceEligible : Prop :=
+  ∀ (O : Ontology), ¬ SliceEligibleOntology O →
+  ∀ (D : ContextStructure),
+    FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+    ∀ (Q : QueryClause),
+      entailsQuery O Q →
+      ¬ (∃ rbox : SROIQ.RBox, InUnifiedSlice O rbox ∧
+          QueryReferencesSignature (ontologyConceptSig O) Q ∧
+          AtomConjDisjQuery Q) →
+      ∃ c ∈ D.S D.vr,
+        subsumes c {body := Q.Gamma, head := Q.Delta}
+
+/-- **Gap decomposition along slice-eligibility.**   The full extension
+    gap is equivalent to the conjunction of its slice-eligible and
+    non-slice-eligible restrictions — a classical case split on
+    `SliceEligibleOntology O`.   This makes the structural shape of
+    the residual §6.3.4 obligation explicit: it has a slice-eligible
+    portion (where the AtomConjDisj branch is already discharged)
+    and a non-slice-eligible portion (where saturation completeness
+    is not yet available at any granularity). -/
+theorem extensionGap_decomposes_along_sliceEligibility :
+    UnconditionalSCExtensionGap ↔
+    (UnconditionalSCExtensionGapOnSliceEligible ∧
+     UnconditionalSCExtensionGapOnNonSliceEligible) := by
+  constructor
+  · intro hGap
+    refine ⟨?_, ?_⟩
+    · intro O _hO D hDeriv hSat Q hEnt hNeg
+      exact hGap O D hDeriv hSat Q hEnt hNeg
+    · intro O _hO D hDeriv hSat Q hEnt hNeg
+      exact hGap O D hDeriv hSat Q hEnt hNeg
+  · rintro ⟨hSE, hNSE⟩ O D hDeriv hSat Q hEnt hNeg
+    classical
+    by_cases hO : SliceEligibleOntology O
+    · exact hSE O hO D hDeriv hSat Q hEnt hNeg
+    · exact hNSE O hO D hDeriv hSat Q hEnt hNeg
+
+/-- **Slice-eligible portion + non-slice-eligible portion implies
+    `UnconditionalIsCanonicalSeed`.**   Combining the structural
+    decomposition with `extensionGap_implies_unconditional_IsCanonicalSeed`,
+    discharging both gap components is sufficient for the literal
+    unconditional theorem. -/
+theorem extensionGap_components_imply_unconditional_IsCanonicalSeed
+    (hSE : UnconditionalSCExtensionGapOnSliceEligible)
+    (hNSE : UnconditionalSCExtensionGapOnNonSliceEligible) :
+    UnconditionalIsCanonicalSeed := by
+  have hGap : UnconditionalSCExtensionGap :=
+    (extensionGap_decomposes_along_sliceEligibility).mpr ⟨hSE, hNSE⟩
+  exact extensionGap_implies_unconditional_IsCanonicalSeed hGap
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
