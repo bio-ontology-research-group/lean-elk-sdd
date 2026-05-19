@@ -13986,6 +13986,37 @@ theorem axiomIsTreeFriendlySomeBool21_implies_treeFriendly
         Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
         Or.inr <| Or.inr <| Or.inr <| Or.inl h2
 
+/-- **Extended combined Bool check (round 22)** — adds
+    `axiomIsTopUnivConjOfAtoms` (disjunct 29) to the prior
+    31-way Bool check. -/
+def axiomIsTreeFriendlySomeBool22 (ax : ALCHOQ.Axiom) : Bool :=
+  axiomIsTreeFriendlySomeBool21 ax ||
+  axiomIsTopUnivConjOfAtoms ax
+
+/-- Implication for the round-22 Bool check. -/
+theorem axiomIsTreeFriendlySomeBool22_implies_treeFriendly
+    (ax : ALCHOQ.Axiom) :
+    axiomIsTreeFriendlySomeBool22 ax = true → IsTreeFriendlyAxiom ax := by
+  intro h
+  classical
+  unfold axiomIsTreeFriendlySomeBool22 at h
+  by_cases h1 : axiomIsTreeFriendlySomeBool21 ax = true
+  · exact axiomIsTreeFriendlySomeBool21_implies_treeFriendly ax h1
+  have h2 : axiomIsTopUnivConjOfAtoms ax = true := by
+    have hAll : (axiomIsTreeFriendlySomeBool21 ax ||
+                 axiomIsTopUnivConjOfAtoms ax) = true := h
+    rw [Bool.or_eq_true] at hAll
+    rcases hAll with hAll | hAll
+    · exact absurd hAll h1
+    · exact hAll
+  rw [axiomIsTopUnivConjOfAtoms_iff] at h2
+  -- disjunct 29: top-LHS ∀R.conjOfAtoms — 28 Or.inr's then Or.inl
+  exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+        Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inl h2
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at
