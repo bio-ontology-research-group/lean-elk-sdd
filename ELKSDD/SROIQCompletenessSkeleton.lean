@@ -10574,6 +10574,47 @@ instance : DecidablePred IsAtomicSubsumptionOnly := by
   · intro h ax hax; exact (axiomIsAtomAtom_iff ax).mp (h ax hax)
   · intro h ax hax; exact (axiomIsAtomAtom_iff ax).mpr (h ax hax)
 
+/-- **Bool check for atom-bot axiom shape.** -/
+def axiomIsAtomBot (ax : ALCHOQ.Concept × ALCHOQ.Concept) : Bool :=
+  match ax.1, ax.2 with
+  | ALCHOQ.Concept.atom _, ALCHOQ.Concept.bot => true
+  | _, _ => false
+
+/-- Characterization for atom-bot. -/
+theorem axiomIsAtomBot_iff (ax : ALCHOQ.Concept × ALCHOQ.Concept) :
+    axiomIsAtomBot ax = true ↔
+    ∃ A : Nat, ax = (ALCHOQ.Concept.atom A, ALCHOQ.Concept.bot) := by
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    cases c1 <;> (try simp [axiomIsAtomBot] at h) <;>
+      (cases c2 <;> simp [axiomIsAtomBot] at h)
+    rename_i A
+    exact ⟨A, rfl⟩
+  · rintro ⟨A, hEq⟩
+    obtain ⟨h1, h2⟩ := Prod.mk.inj hEq
+    subst h1; subst h2
+    rfl
+
+/-- **Decidable instance for `IsAtomicOrBotOnly`.**   Either an
+    atom-atom axiom or an atom-bot axiom; both shapes are
+    Bool-checkable. -/
+instance : DecidablePred IsAtomicOrBotOnly := by
+  intro O
+  unfold IsAtomicOrBotOnly
+  refine decidable_of_iff
+    (O.all (fun ax => axiomIsAtomAtom ax || axiomIsAtomBot ax)) ?_
+  rw [List.all_eq_true]
+  constructor
+  · intro h ax hax
+    rcases Bool.or_eq_true _ _ |>.mp (h ax hax) with h1 | h2
+    · exact Or.inl ((axiomIsAtomAtom_iff ax).mp h1)
+    · exact Or.inr ((axiomIsAtomBot_iff ax).mp h2)
+  · intro h ax hax
+    rcases h ax hax with h1 | h2
+    · exact Bool.or_eq_true _ _ |>.mpr (Or.inl ((axiomIsAtomAtom_iff ax).mpr h1))
+    · exact Bool.or_eq_true _ _ |>.mpr (Or.inr ((axiomIsAtomBot_iff ax).mpr h2))
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at

@@ -1290,5 +1290,8 @@ namespace ELKSDD
 -- §DECIDABILITY OF IsAtomicSubsumptionOnly
 #print axioms ALCHOIQContext.axiomIsAtomAtom
 #print axioms ALCHOIQContext.axiomIsAtomAtom_iff
+-- §DECIDABILITY OF IsAtomicOrBotOnly
+#print axioms ALCHOIQContext.axiomIsAtomBot
+#print axioms ALCHOIQContext.axiomIsAtomBot_iff
 
 end ELKSDD
