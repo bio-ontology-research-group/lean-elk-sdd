@@ -1382,5 +1382,8 @@ namespace ELKSDD
 -- §AXIOM-SHAPE BOOL CHECK FOR (top, ∀R.IsConjOfAtoms filler)
 #print axioms ALCHOIQContext.axiomIsTopUnivConjOfAtoms
 #print axioms ALCHOIQContext.axiomIsTopUnivConjOfAtoms_iff
+-- §EXTENDED SUFFICIENT BOOL CONDITION FOR IsTreeFriendlyAxiom
+#print axioms ALCHOIQContext.axiomIsTreeFriendlySomeBool2
+#print axioms ALCHOIQContext.axiomIsTreeFriendlySomeBool2_implies_treeFriendly
 
 end ELKSDD

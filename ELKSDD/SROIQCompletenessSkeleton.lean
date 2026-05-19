@@ -12605,6 +12605,77 @@ theorem axiomIsTreeFriendlySomeBool_implies_treeFriendly
   rw [axiomIsTopConj_iff] at h8
   exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl h8)))))))
 
+/-- **Extended combined Bool check** for twelve of the tree-friendly
+    axiom shapes — adds four more disjuncts to
+    `axiomIsTreeFriendlySomeBool`: `axiomIsAtomConjOfAtoms`,
+    `axiomIsTopExistAtom`, `axiomIsTopUnivAtom`, and
+    `axiomIsTopUnivConjOfAtoms`. -/
+def axiomIsTreeFriendlySomeBool2 (ax : ALCHOQ.Axiom) : Bool :=
+  axiomIsTreeFriendlySomeBool ax ||
+  axiomIsAtomConjOfAtoms ax ||
+  axiomIsTopExistAtom ax ||
+  axiomIsTopUnivAtom ax ||
+  axiomIsTopUnivConjOfAtoms ax
+
+/-- **Extended sufficient Bool condition for `IsTreeFriendlyAxiom`.**
+    Reuses the previous 8-way Bool check, plus four more disjuncts
+    dispatched to their positions in the 33-way IsTreeFriendlyAxiom
+    disjunction. -/
+theorem axiomIsTreeFriendlySomeBool2_implies_treeFriendly
+    (ax : ALCHOQ.Axiom) :
+    axiomIsTreeFriendlySomeBool2 ax = true → IsTreeFriendlyAxiom ax := by
+  intro h
+  classical
+  unfold axiomIsTreeFriendlySomeBool2 at h
+  by_cases h1 : axiomIsTreeFriendlySomeBool ax = true
+  · exact axiomIsTreeFriendlySomeBool_implies_treeFriendly ax h1
+  by_cases h2 : axiomIsAtomConjOfAtoms ax = true
+  · rw [axiomIsAtomConjOfAtoms_iff] at h2
+    -- disjunct 9: 8 Or.inr's then Or.inl
+    exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+          (Or.inr (Or.inl h2))))))))
+  by_cases h3 : axiomIsTopExistAtom ax = true
+  · rw [axiomIsTopExistAtom_iff] at h3
+    -- disjunct 25: 24 Or.inr's then Or.inl
+    exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+          (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+          (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+          (Or.inr (Or.inr (Or.inr (Or.inl h3))))))))))))))))))))))))
+  by_cases h4 : axiomIsTopUnivAtom ax = true
+  · rw [axiomIsTopUnivAtom_iff] at h4
+    -- disjunct 28: 27 Or.inr's then Or.inl
+    exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+          (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+          (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+          (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+          (Or.inl h4)))))))))))))))))))))))))))
+  by_cases h5 : axiomIsTopUnivConjOfAtoms ax = true
+  · rw [axiomIsTopUnivConjOfAtoms_iff] at h5
+    -- disjunct 29: 28 Or.inr's then Or.inl
+    exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+          (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+          (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+          (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+          (Or.inl h5))))))))))))))))))))))))))))
+  -- Remaining: h must be true via h1..h5 false → contradiction
+  exfalso
+  have hAll : ((((axiomIsTreeFriendlySomeBool ax ||
+                   axiomIsAtomConjOfAtoms ax) || axiomIsTopExistAtom ax) ||
+                axiomIsTopUnivAtom ax) || axiomIsTopUnivConjOfAtoms ax) = true := h
+  rw [Bool.or_eq_true] at hAll
+  rcases hAll with hAll | hAll
+  · rw [Bool.or_eq_true] at hAll
+    rcases hAll with hAll | hAll
+    · rw [Bool.or_eq_true] at hAll
+      rcases hAll with hAll | hAll
+      · rw [Bool.or_eq_true] at hAll
+        rcases hAll with hAll | hAll
+        · exact absurd hAll h1
+        · exact absurd hAll h2
+      · exact absurd hAll h3
+    · exact absurd hAll h4
+  · exact absurd hAll h5
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at
