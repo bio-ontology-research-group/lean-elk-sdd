@@ -16093,6 +16093,72 @@ theorem partial_isCanonicalSeed_exampleVacuous_via_sliceEligibleBool :
           ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
   partial_isCanonicalSeed_of_sliceEligibleBool exampleVacuous (by decide)
 
+/-- **Whole-TBox Bool check for `SliceEligibleBoth`.**   The AND
+    counterpart to `isSliceEligibleOntologyBool`: returns `true` iff
+    the ontology lies in *both* maximal slices, hence admits both
+    families of compatible RBoxes. -/
+def isSliceEligibleBothBool (O : Ontology) : Bool :=
+  isELOrAllVacuousOnlyBool O && isELOrUniversalRoleVacuousOnlyBool O
+
+/-- `isSliceEligibleBothBool O = true ↔ SliceEligibleBoth O`. -/
+theorem isSliceEligibleBothBool_iff (O : Ontology) :
+    isSliceEligibleBothBool O = true ↔ SliceEligibleBoth O := by
+  unfold isSliceEligibleBothBool SliceEligibleBoth
+  rw [Bool.and_eq_true]
+  constructor
+  · rintro ⟨h1, h2⟩
+    exact ⟨(isELOrAllVacuousOnlyBool_iff O).mp h1,
+           (isELOrUniversalRoleVacuousOnlyBool_iff O).mp h2⟩
+  · rintro ⟨h1, h2⟩
+    exact ⟨(isELOrAllVacuousOnlyBool_iff O).mpr h1,
+           (isELOrUniversalRoleVacuousOnlyBool_iff O).mpr h2⟩
+
+/-- **Bool-driven dispatch into the dual-family partial canonical
+    seed (empty-family branch).**   Given only `isSliceEligibleBothBool
+    O = true` and an empty-roles-compatible RBox, conclude the
+    partial-IsCanonicalSeed bundle. -/
+theorem partial_isCanonicalSeed_of_sliceEligibleBothBool_emptyFamily
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hBool : isSliceEligibleBothBool O = true)
+    (hRBox : RBoxCompatibleWithEmptyRoles rbox) :
+    (canonicalSeedOfFull O).vr ∈ (canonicalSeedOfFull O).contexts ∧
+    (∃ CD : DerivedClauses, isSound O (canonicalSeedOfFull O) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig O) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  partial_isCanonicalSeed_of_sliceEligibleBoth_emptyFamily O rbox
+    ((isSliceEligibleBothBool_iff O).mp hBool) hRBox
+
+/-- **Bool-driven dispatch into the dual-family partial canonical
+    seed (universal-family branch).** -/
+theorem partial_isCanonicalSeed_of_sliceEligibleBothBool_universalFamily
+    (O : Ontology) (rbox : SROIQ.RBox)
+    (hBool : isSliceEligibleBothBool O = true)
+    (hRBox : RBoxCompatibleWithUniversalRoles rbox) :
+    (canonicalSeedOfFull O).vr ∈ (canonicalSeedOfFull O).contexts ∧
+    (∃ CD : DerivedClauses, isSound O (canonicalSeedOfFull O) CD) ∧
+    (∀ (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        QueryReferencesSignature (ontologyConceptSig O) Q →
+        AtomConjDisjQuery Q →
+        (∀ c ∈ D.S D.vr,
+           ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+        ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+          (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+          I.satisfies O ∧ SROIQ.RBox.eval I rbox ∧
+          ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :=
+  partial_isCanonicalSeed_of_sliceEligibleBoth_universalFamily O rbox
+    ((isSliceEligibleBothBool_iff O).mp hBool) hRBox
+
 /-- **Worked instance** of `partial_isCanonicalSeed_of_sliceEligibleBool`
     on `exampleAtomChain` with the *empty* RBox.   Demonstrates that
     the same ontology that was paired with the non-trivial

@@ -1553,5 +1553,10 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.partial_isCanonicalSeed_exampleELConj_via_sliceEligibleBool
 #print axioms ALCHOIQContext.partial_isCanonicalSeed_exampleVacuous_via_sliceEligibleBool
 #print axioms ALCHOIQContext.partial_isCanonicalSeed_exampleAtomChain_via_sliceEligibleBool
+-- §SLICE-ELIGIBLE-BOTH BOOL DISPATCHES (dual-family)
+#print axioms ALCHOIQContext.isSliceEligibleBothBool
+#print axioms ALCHOIQContext.isSliceEligibleBothBool_iff
+#print axioms ALCHOIQContext.partial_isCanonicalSeed_of_sliceEligibleBothBool_emptyFamily
+#print axioms ALCHOIQContext.partial_isCanonicalSeed_of_sliceEligibleBothBool_universalFamily
 
 end ELKSDD
