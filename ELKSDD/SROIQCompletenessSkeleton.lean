@@ -5843,6 +5843,48 @@ instance : DecidablePred TreeFalseLHS :=
 instance : DecidablePred TreeTrueRHS :=
   fun D => decidable_of_iff _ (treeTrueRHSBool_iff D)
 
+/-- **Bool check for the `TreeFalseLHS-LHS` axiom-shape disjunct.**
+    Matches the `(∃ C D, ax = (C, D) ∧ TreeFalseLHS C)` disjunct of
+    `IsTreeFriendlyAxiom`. -/
+def axiomIsTreeFalseLHS (ax : ALCHOQ.Axiom) : Bool :=
+  treeFalseLHSBool ax.1
+
+/-- Characterization of the TreeFalseLHS-LHS axiom shape. -/
+theorem axiomIsTreeFalseLHS_iff (ax : ALCHOQ.Axiom) :
+    axiomIsTreeFalseLHS ax = true ↔
+    ∃ C D : ALCHOQ.Concept, ax = (C, D) ∧ TreeFalseLHS C := by
+  unfold axiomIsTreeFalseLHS
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    refine ⟨c1, c2, rfl, ?_⟩
+    exact (treeFalseLHSBool_iff c1).mp h
+  · rintro ⟨C, D, hEq, hC⟩
+    have h1 : c1 = C := (Prod.mk.inj hEq).1
+    rw [h1]
+    exact (treeFalseLHSBool_iff C).mpr hC
+
+/-- **Bool check for the `TreeTrueRHS-RHS` axiom-shape disjunct.**
+    Matches the `(∃ C D, ax = (C, D) ∧ TreeTrueRHS D)` disjunct of
+    `IsTreeFriendlyAxiom`. -/
+def axiomIsTreeTrueRHS (ax : ALCHOQ.Axiom) : Bool :=
+  treeTrueRHSBool ax.2
+
+/-- Characterization of the TreeTrueRHS-RHS axiom shape. -/
+theorem axiomIsTreeTrueRHS_iff (ax : ALCHOQ.Axiom) :
+    axiomIsTreeTrueRHS ax = true ↔
+    ∃ C D : ALCHOQ.Concept, ax = (C, D) ∧ TreeTrueRHS D := by
+  unfold axiomIsTreeTrueRHS
+  obtain ⟨c1, c2⟩ := ax
+  constructor
+  · intro h
+    refine ⟨c1, c2, rfl, ?_⟩
+    exact (treeTrueRHSBool_iff c2).mp h
+  · rintro ⟨C, D, hEq, hD⟩
+    have h2 : c2 = D := (Prod.mk.inj hEq).2
+    rw [h2]
+    exact (treeTrueRHSBool_iff D).mpr hD
+
 /-- Atoms forced at a `succ _ ax _` node by **universal-restriction
     propagation** from O.   Any axiom `(lhs, ∀R.filler) ∈ O` whose
     LHS is structurally True at every tree node (`TreeTrueRHS lhs`)
