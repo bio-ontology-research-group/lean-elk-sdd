@@ -1260,5 +1260,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_iff_universal_HerbrandProperty
 -- §HERBRANDPROPERTY RESIDUAL ON SLICE-ELIGIBLE O
 #print axioms ALCHOIQContext.herbrandProperty_residual_on_sliceEligible
+-- §COMBINED HERBRANDPROPERTY RESIDUAL + BRIDGE
+#print axioms ALCHOIQContext.universal_HerbrandProperty_from_combined_residual
+#print axioms ALCHOIQContext.combined_residual_implies_unconditional_IsCanonicalSeed
 
 end ELKSDD

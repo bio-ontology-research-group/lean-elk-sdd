@@ -10187,6 +10187,69 @@ theorem herbrandProperty_residual_on_sliceEligible
   · -- Non-AtomConjDisj-sig Q: handed to the residual hypothesis.
     exact hRes D hDeriv hSat Q hPQ hNoSub
 
+/-- **Combined universal-HerbrandProperty residual.**   The
+    universal `∀ O, HerbrandProperty O (canonicalSeedOfFull O)` is
+    implied by a single combined residual hypothesis that covers
+    the cases not already discharged:
+    - for slice-eligible O, only the non-AtomConjDisj-sig queries
+      need to be handled;
+    - for non-slice-eligible O, every query needs to be handled.
+
+    This single combined residual is the cleanest single-target
+    HerbrandProperty-level statement of the §6.3.4 obligation. -/
+theorem universal_HerbrandProperty_from_combined_residual
+    (hRes :
+      ∀ (O : Ontology) (D : ContextStructure),
+        FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+        ∀ (Q : QueryClause),
+          ¬ InDischargedRegion O Q →
+          (∀ c ∈ D.S D.vr,
+             ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+          ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+            (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+            I.satisfies O ∧ ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :
+    ∀ O : Ontology, HerbrandProperty O (canonicalSeedOfFull O) := by
+  intro O D hDeriv hSat Q hNoSub
+  classical
+  by_cases hIn : InDischargedRegion O Q
+  · -- In discharged region: produce subsumer (contradicts hNoSub).
+    -- Note: the HerbrandProperty wants a counter-model directly.
+    -- We need to extract a counter-model from non-entailment.   The
+    -- discharged region only handles the case when the query *is*
+    -- entailed; HerbrandProperty here is the dual side and requires
+    -- non-entailment to extract.   Therefore in the in-region branch
+    -- we can either appeal to the slice machinery (which produces
+    -- the counter-model on the unified slice for AtomConjDisj-sig
+    -- queries) or fall back to the combined residual.
+    obtain ⟨hSE, hQsig, hQAtom⟩ := hIn
+    obtain ⟨rbox, hSlice⟩ := inUnifiedSlice_exists_of_sliceEligible O hSE
+    obtain ⟨α, _inh, I, γ, φ, vx, vy, hSatO, _hRBox, hNotEval⟩ :=
+      canonicalSeedOfFull_herbrand_property_unifiedSlice O rbox hSlice
+        D hDeriv hSat Q hQsig hQAtom hNoSub
+    exact ⟨α, _inh, I, γ, φ, vx, vy, hSatO, hNotEval⟩
+  · -- Outside discharged region: handed to the combined residual.
+    exact hRes O D hDeriv hSat Q hIn hNoSub
+
+/-- **Bridging: combined residual implies the literal goal.**
+    Composing `universal_HerbrandProperty_from_combined_residual` with
+    `unconditional_IsCanonicalSeed_iff_universal_HerbrandProperty`.
+    The single combined residual `hRes` is the cleanest single
+    HerbrandProperty-level obligation sufficient for the literal goal. -/
+theorem combined_residual_implies_unconditional_IsCanonicalSeed
+    (hRes :
+      ∀ (O : Ontology) (D : ContextStructure),
+        FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+        ∀ (Q : QueryClause),
+          ¬ InDischargedRegion O Q →
+          (∀ c ∈ D.S D.vr,
+             ¬ subsumes c {body := Q.Gamma, head := Q.Delta}) →
+          ∃ (α : Type) (_inh : Inhabited α) (I : Interp α)
+            (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+            I.satisfies O ∧ ¬ Q.eval I ⟨γ, φ, vx, vy⟩) :
+    UnconditionalIsCanonicalSeed :=
+  (unconditional_IsCanonicalSeed_iff_universal_HerbrandProperty).mpr
+    (universal_HerbrandProperty_from_combined_residual hRes)
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`
