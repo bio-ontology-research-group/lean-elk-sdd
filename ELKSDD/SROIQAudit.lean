@@ -1356,5 +1356,8 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.axiomIsAnyLHSUnivTreeTrueRHS_iff
 #print axioms ALCHOIQContext.axiomIsAnyLHSAtLeast1TreeTrueRHS
 #print axioms ALCHOIQContext.axiomIsAnyLHSAtLeast1TreeTrueRHS_iff
+-- §EMPTY-ONTOLOGY CONCEPT-DERIVABLE EL CHARACTERIZATION
+#print axioms ALCHOIQContext.conceptDerivableEL_empty_iff_initial
+#print axioms ALCHOIQContext.elHerbrandInterpTree_empty_root_iff_body_atom
 
 end ELKSDD

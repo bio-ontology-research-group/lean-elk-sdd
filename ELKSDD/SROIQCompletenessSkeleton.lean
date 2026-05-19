@@ -3929,6 +3929,46 @@ theorem conceptDerivableEL_mono
   | @step_disj_conjmember_R A₁ A₂ B' C' _ hAx hM ih =>
     exact ConceptDerivableEL.step_disj_conjmember_R ih hAx hM
 
+/-- **EL closure on the empty ontology collapses to the initial atoms.**
+    On `O = []`, no step rule can fire because every step rule
+    requires an axiom in `O`.   Hence `ConceptDerivableEL`
+    coincides with `initial`.   Foundational lemma for the
+    §6.3.4 saturation correspondence on the empty ontology:
+    the tree Herbrand at the root forces exactly the query body
+    atoms (since `treeNodeInitialAtoms Q root = queryBodyAtomConcepts Q`).
+
+    See [[elHerbrandInterpTree_empty_root_iff_body_atom]] for the
+    direct corollary about the tree-Herbrand evaluation at the root. -/
+theorem conceptDerivableEL_empty_iff_initial
+    (initial : Nat → Prop) (B : Nat) :
+    ConceptDerivableEL [] initial B ↔ initial B := by
+  constructor
+  · intro h
+    induction h with
+    | @base B' hInit => exact hInit
+    | @step_atom A' B' _ hAx _ => exact absurd hAx List.not_mem_nil
+    | @step_conj A₁ A₂ B' _ _ hAx _ _ => exact absurd hAx List.not_mem_nil
+    | @step_conj_RHS_left A' B' C' _ hAx _ => exact absurd hAx List.not_mem_nil
+    | @step_conj_RHS_right A' B' C' _ hAx _ => exact absurd hAx List.not_mem_nil
+    | @step_disj_LHS_left A₁ A₂ B' _ hAx _ => exact absurd hAx List.not_mem_nil
+    | @step_disj_LHS_right A₁ A₂ B' _ hAx _ => exact absurd hAx List.not_mem_nil
+    | @step_conj_conj_left A₁ A₂ B' C' _ _ hAx _ _ => exact absurd hAx List.not_mem_nil
+    | @step_conj_conj_right A₁ A₂ B' C' _ _ hAx _ _ => exact absurd hAx List.not_mem_nil
+    | @step_disj_conj_left_L A₁ A₂ B' C' _ hAx _ => exact absurd hAx List.not_mem_nil
+    | @step_disj_conj_right_L A₁ A₂ B' C' _ hAx _ => exact absurd hAx List.not_mem_nil
+    | @step_disj_conj_left_R A₁ A₂ B' C' _ hAx _ => exact absurd hAx List.not_mem_nil
+    | @step_disj_conj_right_R A₁ A₂ B' C' _ hAx _ => exact absurd hAx List.not_mem_nil
+    | @step_top B' hAx => exact absurd hAx List.not_mem_nil
+    | @step_top_conj_L B' C' hAx => exact absurd hAx List.not_mem_nil
+    | @step_top_conj_R B' C' hAx => exact absurd hAx List.not_mem_nil
+    | @step_atom_conjmember A' B' C' _ hAx _ _ => exact absurd hAx List.not_mem_nil
+    | @step_top_conjmember B' C' hAx _ => exact absurd hAx List.not_mem_nil
+    | @step_conj_conjmember A₁ A₂ B' C' _ _ hAx _ _ _ => exact absurd hAx List.not_mem_nil
+    | @step_disj_conjmember_L A₁ A₂ B' C' _ hAx _ _ => exact absurd hAx List.not_mem_nil
+    | @step_disj_conjmember_R A₁ A₂ B' C' _ hAx _ _ => exact absurd hAx List.not_mem_nil
+  · intro h
+    exact ConceptDerivableEL.base h
+
 /-- **Multi-source witness lemma.**  Every `ConceptDerivableEL`
     derivation of `B` from `initial` factors through a finite
     list `S` of "actually used" initial atoms.  The list `S` is
@@ -6098,6 +6138,23 @@ theorem elHerbrandInterpTree_sat_atom_atom
   intro p hA
   show ConceptDerivableEL O (treeNodeInitialAtoms Q p) B
   exact ConceptDerivableEL.step_atom hA hAx
+
+/-- **Tree-Herbrand evaluation at the root on the empty ontology.**
+    Direct corollary of `conceptDerivableEL_empty_iff_initial`: the
+    only atoms holding at the root of the empty-ontology tree
+    Herbrand are exactly the query's body atoms.   This is the
+    base-case fragment of the §6.3.4 saturation correspondence
+    on `O = []`: the saturation rules cannot derive new atoms,
+    so the tree-Herbrand semantics at the root coincides with
+    `queryBodyAtomConcepts Q`. -/
+theorem elHerbrandInterpTree_empty_root_iff_body_atom
+    (Q : QueryClause) (B : Nat) :
+    (elHerbrandInterpTree [] Q).eval (ALCHOQ.Concept.atom B)
+        HerbrandTree.root ↔
+      queryBodyAtomConcepts Q B := by
+  show ConceptDerivableEL [] (treeNodeInitialAtoms Q HerbrandTree.root) B ↔ _
+  rw [conceptDerivableEL_empty_iff_initial]
+  exact Iff.rfl
 
 /-- `(conj (atom A₁) (atom A₂), atom B) ∈ O`: by `step_conj`. -/
 theorem elHerbrandInterpTree_sat_conj_atom
