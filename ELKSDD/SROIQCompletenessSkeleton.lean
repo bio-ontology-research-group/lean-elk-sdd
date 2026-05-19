@@ -10076,6 +10076,48 @@ theorem unconditional_IsCanonicalSeed_iff_extensionGap :
   rw [unconditional_IsCanonicalSeed_iff_outsideInDischargedRegion,
       ← extensionGap_outsideInDischargedRegion]
 
+/-- **FINAL STATUS BUNDLE.**   Records, in one place, the four
+    foundation-only-proved facts that capture the exact state of the
+    Tena-Cucala Theorem 2 formalisation:
+
+    1.  **Discharged region (positive content).**   On every `(O, Q)`
+        pair in `InDischargedRegion O Q` with `entailsQuery O Q`, the
+        saturation contains a subsumer of `Q`.   Unconditionally
+        proved by `inDischargedRegion_implies_subsumed`.
+
+    2.  **Bidirectional characterization of the literal goal.**
+        `UnconditionalIsCanonicalSeed ↔ GapCell_OutsideInDischargedRegion`
+        — the §6.3.4 obligation is *exactly* the single named
+        residual cell, with no hidden direction.
+
+    3.  **Bidirectional characterization via the extension gap.**
+        `UnconditionalIsCanonicalSeed ↔ UnconditionalSCExtensionGap`
+        — equivalence with the original gap statement.
+
+    4.  **Forward bridge.**   `GapCell_OutsideInDischargedRegion`
+        suffices for the literal goal.
+
+    The residual `GapCell_OutsideInDischargedRegion` is the
+    multi-session §6.3.4 saturation-completeness obligation, distilled
+    to a single named target. -/
+theorem final_status :
+    -- (1) Discharged content:
+    (∀ (O : Ontology) (D : ContextStructure),
+      FullDerivation (canonicalSeedOfFull O) D → FullSaturated D →
+      ∀ (Q : QueryClause),
+        InDischargedRegion O Q → entailsQuery O Q →
+        ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta}) ∧
+    -- (2) Bidirectional residual characterization:
+    (UnconditionalIsCanonicalSeed ↔ GapCell_OutsideInDischargedRegion) ∧
+    -- (3) Bidirectional gap characterization:
+    (UnconditionalIsCanonicalSeed ↔ UnconditionalSCExtensionGap) ∧
+    -- (4) Forward bridge:
+    (GapCell_OutsideInDischargedRegion → UnconditionalIsCanonicalSeed) :=
+  ⟨inDischargedRegion_implies_subsumed,
+   unconditional_IsCanonicalSeed_iff_outsideInDischargedRegion,
+   unconditional_IsCanonicalSeed_iff_extensionGap,
+   outsideInDischargedRegion_implies_unconditional_IsCanonicalSeed⟩
+
 /-- **Partial SaturationCompleteness for the unified-slice +
     AtomConjDisjQuery + signature-restricted family.**   For every
     `(O, rbox)` in the unified slice, every `AtomConjDisjQuery Q`

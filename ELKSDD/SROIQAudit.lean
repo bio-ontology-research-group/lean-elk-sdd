@@ -1253,5 +1253,7 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_implies_extensionGap
 #print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_iff_outsideInDischargedRegion
 #print axioms ALCHOIQContext.unconditional_IsCanonicalSeed_iff_extensionGap
+-- §FINAL STATUS BUNDLE: ALL FOUR FOUNDATION-ONLY FACTS IN ONE PLACE
+#print axioms ALCHOIQContext.final_status
 
 end ELKSDD
