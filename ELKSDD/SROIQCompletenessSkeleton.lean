@@ -16314,6 +16314,67 @@ theorem tenacucala_theorem2_exampleAtomChain
     exampleAtomChain_in_unifiedSlice_transInclRBox
     Q hQsig hQAtom D hDeriv hSat hEntail
 
+/-- **Worked instance** of `tenacucala_theorem2` on `exampleELConj`
+    paired with the empty RBox.   The ELConj-only ontology fragment
+    is in the unified slice via the empty-RBox family branch. -/
+theorem tenacucala_theorem2_exampleELConj
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig exampleELConj) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull exampleELConj) D)
+    (hSat : FullSaturated D)
+    (hEntail : ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+              (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+              I.satisfies exampleELConj →
+              SROIQ.RBox.eval I ([] : SROIQ.RBox) →
+              Q.eval I ⟨γ, φ, vx, vy⟩) :
+    ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  tenacucala_theorem2 exampleELConj ([] : SROIQ.RBox)
+    exampleELConj_in_unifiedSlice_emptyRBox
+    Q hQsig hQAtom D hDeriv hSat hEntail
+
+/-- **Worked instance** of `tenacucala_theorem2` on `exampleVacuous`
+    paired with the empty RBox.   The Herbrand-vacuous fragment is
+    in the unified slice via the empty-RBox family branch. -/
+theorem tenacucala_theorem2_exampleVacuous
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig exampleVacuous) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull exampleVacuous) D)
+    (hSat : FullSaturated D)
+    (hEntail : ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+              (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+              I.satisfies exampleVacuous →
+              SROIQ.RBox.eval I ([] : SROIQ.RBox) →
+              Q.eval I ⟨γ, φ, vx, vy⟩) :
+    ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  tenacucala_theorem2 exampleVacuous ([] : SROIQ.RBox)
+    exampleVacuous_in_unifiedSlice_emptyRBox
+    Q hQsig hQAtom D hDeriv hSat hEntail
+
+/-- **Worked instance** of `tenacucala_theorem2` on `exampleAtomChain`
+    paired with the *empty* RBox.   The atom-atom-only fragment is
+    in the unified slice via the atom-atom branch (which sits inside
+    both families). -/
+theorem tenacucala_theorem2_exampleAtomChain_emptyRBox
+    (Q : QueryClause)
+    (hQsig : QueryReferencesSignature (ontologyConceptSig exampleAtomChain) Q)
+    (hQAtom : AtomConjDisjQuery Q)
+    (D : ContextStructure)
+    (hDeriv : FullDerivation (canonicalSeedOfFull exampleAtomChain) D)
+    (hSat : FullSaturated D)
+    (hEntail : ∀ (α : Type) (_inh : Inhabited α) (I : Interp α)
+              (γ : Indu → α) (φ : FunSym → α → α) (vx vy : α),
+              I.satisfies exampleAtomChain →
+              SROIQ.RBox.eval I ([] : SROIQ.RBox) →
+              Q.eval I ⟨γ, φ, vx, vy⟩) :
+    ∃ c ∈ D.S D.vr, subsumes c {body := Q.Gamma, head := Q.Delta} :=
+  tenacucala_theorem2 exampleAtomChain ([] : SROIQ.RBox)
+    exampleAtomChain_in_unifiedSlice_emptyRBox
+    Q hQsig hQAtom D hDeriv hSat hEntail
+
 -- ============================================================
 -- §FINAL-GOAL.  Statement scaffolding for the full Tena-Cucala
 -- (2021) Theorem 2.
