@@ -14250,6 +14250,40 @@ theorem axiomIsTreeFriendlySomeBool26_implies_treeFriendly
         Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
         Or.inl h2
 
+/-- **Whole-TBox Bool check** — every axiom of `O` satisfies the
+    round-26 Bool aggregator (which is now structurally complete:
+    covers every disjunct of `IsTreeFriendlyAxiom`). -/
+def treeFriendlyTBoxBool (O : Ontology) : Bool :=
+  O.all axiomIsTreeFriendlySomeBool26
+
+/-- **Sufficient condition for `IsTreeFriendlyTBox`.**   If the
+    whole-TBox Bool aggregator returns `true` then `O` is a
+    tree-friendly TBox in the propositional sense, by per-axiom
+    dispatch through `axiomIsTreeFriendlySomeBool26_implies_treeFriendly`. -/
+theorem treeFriendlyTBoxBool_implies_treeFriendlyTBox
+    (O : Ontology) :
+    treeFriendlyTBoxBool O = true → IsTreeFriendlyTBox O := by
+  intro hAll ax hAx
+  classical
+  unfold treeFriendlyTBoxBool at hAll
+  rw [List.all_eq_true] at hAll
+  have h_ax_bool : axiomIsTreeFriendlySomeBool26 ax = true :=
+    hAll ax hAx
+  exact axiomIsTreeFriendlySomeBool26_implies_treeFriendly ax h_ax_bool
+
+/-- **Bool-driven tree-Herbrand satisfaction**.   If the whole-TBox
+    Bool aggregator returns `true` then the tree Herbrand model
+    satisfies `O`.   Combines `treeFriendlyTBoxBool_implies_treeFriendlyTBox`
+    with `elHerbrandInterpTree_satisfies_O_tree_friendly`. -/
+theorem treeFriendlyTBoxBool_satisfies
+    (O : Ontology) (Q : QueryClause) :
+    treeFriendlyTBoxBool O = true →
+    (elHerbrandInterpTree O Q).satisfies O := by
+  intro hBool
+  have hTF : IsTreeFriendlyTBox O :=
+    treeFriendlyTBoxBool_implies_treeFriendlyTBox O hBool
+  exact elHerbrandInterpTree_satisfies_O_tree_friendly O Q hTF
+
 /-- **MILESTONE: All unconditionally-proved facts + precise residual.**
     This is a single statement combining every fact about
     `canonicalSeedOfFull` that has been unconditionally proved at

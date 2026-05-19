@@ -1504,5 +1504,9 @@ namespace ELKSDD
 -- has a sufficient Bool counterpart. **
 #print axioms ALCHOIQContext.axiomIsTreeFriendlySomeBool26
 #print axioms ALCHOIQContext.axiomIsTreeFriendlySomeBool26_implies_treeFriendly
+-- §WHOLE-TBOX BOOL CHECK + LIFT TO IsTreeFriendlyTBox AND TREE SATISFACTION
+#print axioms ALCHOIQContext.treeFriendlyTBoxBool
+#print axioms ALCHOIQContext.treeFriendlyTBoxBool_implies_treeFriendlyTBox
+#print axioms ALCHOIQContext.treeFriendlyTBoxBool_satisfies
 
 end ELKSDD
