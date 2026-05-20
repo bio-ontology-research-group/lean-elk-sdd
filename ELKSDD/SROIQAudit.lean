@@ -21,6 +21,7 @@ import ELKSDD.SROIQSkolemCanonical
 import ELKSDD.SROIQContextBridge
 import ELKSDD.SROIQCompletenessSkeleton
 import ELKSDD.SROIQPythonParity
+import ELKSDD.SROIQCompilationWMC
 
 namespace ELKSDD
 
@@ -1617,5 +1618,23 @@ namespace ELKSDD
 #print axioms SROIQ.PythonParity.functional_python_clause_sound
 #print axioms SROIQ.PythonParity.inverseFunctional_python_clause_sound
 #print axioms SROIQ.PythonParity.python_calculus_soundness_manifest
+
+-- ============================================================
+-- SROIQ-WMC correspondence (Shannon SDD WMC ↔ DISPONTE world-sum)
+-- for the consequence-based saturation predicate SROIQ.SatC.
+-- Mirrors ELpp.wmc_compileSat_eq_disponteWMC under the
+-- foundation-only axiom budget.
+-- ============================================================
+#print axioms SROIQ.WMC.compileSatCAux
+#print axioms SROIQ.WMC.compileSatC
+#print axioms SROIQ.WMC.shannonSatCSum
+#print axioms SROIQ.WMC.wmc_compileSatCAux_eq
+#print axioms SROIQ.WMC.wmc_compileSatC_eq_shannonSatCSum
+#print axioms SROIQ.WMC.shannonSatCSum_eq_foldr_extensionListS
+#print axioms SROIQ.WMC.extensionListS_finRange_perm_enumerateWorldsS
+#print axioms SROIQ.WMC.disponteWMCSatC
+#print axioms SROIQ.WMC.wmc_compileSatC_eq_disponteWMCSatC
+#print axioms SROIQ.WMC.compileSatC_correct
+#print axioms SROIQ.WMC.exists_sroiq_disponte_correspondence
 
 end ELKSDD
