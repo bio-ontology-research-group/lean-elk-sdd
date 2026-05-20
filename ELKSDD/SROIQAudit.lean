@@ -22,6 +22,7 @@ import ELKSDD.SROIQContextBridge
 import ELKSDD.SROIQCompletenessSkeleton
 import ELKSDD.SROIQPythonParity
 import ELKSDD.SROIQCompilationWMC
+import ELKSDD.SROIQComplexity
 
 namespace ELKSDD
 
@@ -1636,5 +1637,25 @@ namespace ELKSDD
 #print axioms SROIQ.WMC.wmc_compileSatC_eq_disponteWMCSatC
 #print axioms SROIQ.WMC.compileSatC_correct
 #print axioms SROIQ.WMC.exists_sroiq_disponte_correspondence
+
+-- ============================================================
+-- SROIQ complexity bounds (subsumption pair count, compiled SDD
+-- size, WMC time, per-feature grounding polynomials).
+-- ============================================================
+#print axioms SROIQ.Complexity.concept_size_pos
+#print axioms SROIQ.Complexity.self_mem_concept_subconcepts
+#print axioms SROIQ.Complexity.concept_subconcepts_card_le_size
+#print axioms SROIQ.Complexity.signature_pair_count
+#print axioms SROIQ.Complexity.sroiq_subsumption_pair_bound
+#print axioms SROIQ.Complexity.compileSatCAux_size_bound
+#print axioms SROIQ.Complexity.compileSatC_size_bound
+#print axioms SROIQ.Complexity.wmc_compileSatC_time_bound
+#print axioms SROIQ.Complexity.at_least_n_grounding_size_bound
+#print axioms SROIQ.Complexity.role_chain_k_grounding_size_bound
+#print axioms SROIQ.Complexity.transitive_role_grounding_size_bound
+#print axioms SROIQ.Complexity.functional_role_grounding_size_bound
+#print axioms SROIQ.Complexity.universal_role_grounding_size_bound
+#print axioms SROIQ.Complexity.grounding_size_polynomial_sroiq
+#print axioms SROIQ.Complexity.sroiq_disponteWMC_compute_bound
 
 end ELKSDD
