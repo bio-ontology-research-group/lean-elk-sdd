@@ -59,3 +59,4 @@ import ELKSDD.ALCHOQ
 import ELKSDD.ALCHOQCompleteness
 import ELKSDD.SROIQ
 import ELKSDD.SROIQCompleteness
+import ELKSDD.SROIQPythonParity

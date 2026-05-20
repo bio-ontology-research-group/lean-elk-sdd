@@ -20,6 +20,7 @@ import ELKSDD.SROIQCanonical
 import ELKSDD.SROIQSkolemCanonical
 import ELKSDD.SROIQContextBridge
 import ELKSDD.SROIQCompletenessSkeleton
+import ELKSDD.SROIQPythonParity
 
 namespace ELKSDD
 
@@ -1585,5 +1586,36 @@ namespace ELKSDD
 #print axioms ALCHOIQContext.tenacucala_completeness_thm2_full_treeFriendly
 #print axioms ALCHOIQContext.tenacucala_theorem2_full_conditional
 #print axioms ALCHOIQContext.tenacucala_completeness_thm2_full_conditional
+
+-- ============================================================
+-- Python ↔ Lean parity manifest.
+-- For each SROIQ feature now emitted as a native DL-clause by the
+-- Python `moose.sroiq.normalisation` (so that it flows through
+-- `moose.sroiq.cb_saturation` rather than a grounder hook), the
+-- corresponding Lean soundness theorem lives in
+-- `ELKSDD.SROIQPythonParity`.  Each must close under
+-- `[propext, Classical.choice, Quot.sound]`.
+-- ============================================================
+#print axioms SROIQ.PythonParity.asymmetric_python_clause_sound
+#print axioms SROIQ.PythonParity.disjointRoles_python_clause_sound
+#print axioms SROIQ.PythonParity.reflexive_python_clause_sound
+#print axioms SROIQ.PythonParity.irreflexive_python_clause_sound
+#print axioms SROIQ.PythonParity.hasSelf_python_clause_sound
+#print axioms SROIQ.PythonParity.inverseRoles_python_clause_sound
+#print axioms SROIQ.PythonParity.symmetric_python_clause_sound
+#print axioms SROIQ.PythonParity.transitive_python_clause_sound
+#print axioms SROIQ.PythonParity.chain_two_python_clause_sound
+#print axioms SROIQ.PythonParity.chain_k_python_clause_sound
+#print axioms SROIQ.PythonParity.transitive_iff_self_chain
+#print axioms SROIQ.PythonParity.universal_python_clause_sound
+#print axioms SROIQ.PythonParity.atLeast_zero_python_clause_sound
+#print axioms SROIQ.PythonParity.atLeast_one_python_clause_sound
+#print axioms SROIQ.PythonParity.atLeast_n_python_clause_sound
+#print axioms SROIQ.PythonParity.atMost_n_python_clause_sound
+#print axioms SROIQ.PythonParity.atMost_zero_python_clause_sound
+#print axioms SROIQ.PythonParity.atMost_one_iff_functional
+#print axioms SROIQ.PythonParity.functional_python_clause_sound
+#print axioms SROIQ.PythonParity.inverseFunctional_python_clause_sound
+#print axioms SROIQ.PythonParity.python_calculus_soundness_manifest
 
 end ELKSDD
