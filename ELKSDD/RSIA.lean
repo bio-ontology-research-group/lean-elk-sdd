@@ -21,6 +21,16 @@
       DISPONTE-style WMC: the same conclusion for the SROIQ
       saturation predicate.
 
+    * `RS_mixture_in_mixOfUCI` — the **positive complement** to
+      Theorem 11: every RS mixture is representable in the
+      mixture-of-UCI family.  The family generalises UCI by
+      categorical mixing over multiple UCI cells; in SROIQ, each
+      cell corresponds to a justification's "deterministic part"
+      and admits the corresponding RS-induced concept distribution.
+
+    * `sroiq_RSIA_sufficient` — instantiation of the positive
+      complement to the SROIQ saturation predicate.
+
   Foundation-only axiom budget: no `axiom`, no `sorry`.
 -/
 
@@ -469,6 +479,176 @@ theorem sroiq_RSIA_necessary
        ELKSDD.SROIQ.SatC R (selectedAxiomsS O cstar) C D) :=
   weak_RS_aware_implicant (sroiqConstraint O R C D) μ hAdm A πs
     hLen hπ_pos hRemap cstar hRep
+
+-- ============================================================
+-- 7. Justification-indexed (mixture-of-UCI) perception family
+-- ============================================================
+
+/-- Deterministic marginal: `1` where `w i = true`, `0` otherwise. -/
+def deltaMarginal {k : Nat} (w : World k) : Marginal k :=
+  fun i => if w i then 1 else 0
+
+theorem deltaMarginal_admissible {k : Nat} (w : World k) :
+    Admissible (deltaMarginal w) := by
+  intro i
+  unfold deltaMarginal
+  by_cases hw : w i = true
+  · rw [hw]; simp only [if_true]; refine ⟨?_, ?_⟩ <;> norm_num
+  · have hwF : w i = false := by
+      cases h : w i with | true => exact absurd h hw | false => rfl
+    rw [hwF]; simp only [Bool.false_eq_true, if_false]
+    refine ⟨?_, ?_⟩ <;> norm_num
+
+/-- The per-coordinate factor of a `deltaMarginal w` is the indicator
+    of `M i = w i`. -/
+theorem factor_delta_eq {k : Nat} (w : World k) (M : World k) (i : Fin k) :
+    factor (deltaMarginal w) M i = (if M i = w i then (1 : Rat) else 0) := by
+  unfold factor deltaMarginal
+  cases hM : M i <;> cases hW : w i <;> simp
+
+/-- The foldr of `deltaMarginal`-factors over a list equals the
+    indicator of "all listed coordinates agree". -/
+theorem foldr_factor_delta_eq {k : Nat} (w : World k) (M : World k)
+    (l : List (Fin k)) :
+    l.foldr (fun i acc => factor (deltaMarginal w) M i * acc) 1 =
+    (if ∀ i ∈ l, M i = w i then (1 : Rat) else 0) := by
+  classical
+  induction l with
+  | nil => simp
+  | cons x rest ih =>
+      simp only [List.foldr_cons]
+      rw [factor_delta_eq, ih]
+      by_cases hX : M x = w x
+      · rw [if_pos hX, one_mul]
+        by_cases hRest : ∀ i ∈ rest, M i = w i
+        · rw [if_pos hRest]
+          have h : ∀ i ∈ (x :: rest), M i = w i := by
+            intro i hi
+            rcases List.mem_cons.mp hi with hxi | hi'
+            · exact hxi ▸ hX
+            · exact hRest i hi'
+          rw [if_pos h]
+        · rw [if_neg hRest]
+          have h : ¬ ∀ i ∈ (x :: rest), M i = w i := fun h =>
+            hRest (fun i hi => h i (List.mem_cons_of_mem _ hi))
+          rw [if_neg h]
+      · rw [if_neg hX, zero_mul]
+        have h : ¬ ∀ i ∈ (x :: rest), M i = w i := fun h =>
+          hX (h x List.mem_cons_self)
+        rw [if_neg h]
+
+/-- **UCI of a deterministic marginal is the world indicator.** -/
+theorem UCI_delta_eq_indicator {k : Nat} (w : World k) (M : World k) :
+    UCI (deltaMarginal w) M = (if M = w then (1 : Rat) else 0) := by
+  unfold UCI
+  rw [foldr_factor_delta_eq]
+  by_cases hEq : M = w
+  · rw [if_pos hEq]
+    have h : ∀ i ∈ List.finRange k, M i = w i := by
+      intro i _; rw [hEq]
+    rw [if_pos h]
+  · rw [if_neg hEq]
+    have h : ¬ ∀ i ∈ List.finRange k, M i = w i := by
+      intro hAll
+      apply hEq
+      funext i
+      exact hAll i (List.mem_finRange i)
+    rw [if_neg h]
+
+/-- Mixture-of-UCI distribution: a categorical-weighted sum of UCI
+    distributions, each given by its own marginal vector.  The
+    *justification-indexed* perception family. -/
+noncomputable def mixOfUCI {k : Nat}
+    (cells : List ((Marginal k) × Rat)) (M : World k) : Rat :=
+  cells.foldr (fun cell acc => cell.2 * UCI cell.1 M + acc) 0
+
+/-- An auxiliary list-mapping lemma: the foldr over `A.zip πs` of an
+    indicator-summand equals the foldr over `(A.map δ).zip πs` of the
+    corresponding UCI-summand. -/
+theorem mixOfUCI_eq_pMixZip_aux {k : Nat}
+    (A : List (World k → World k)) (πs : List Rat)
+    (cstar M : World k) :
+    (List.zip A πs).foldr
+        (fun ap acc => mixSummand cstar M ap + acc) 0 =
+    (List.zip (A.map (fun α => deltaMarginal (α cstar))) πs).foldr
+        (fun cell acc => cell.2 * UCI cell.1 M + acc) 0 := by
+  classical
+  induction A generalizing πs with
+  | nil => simp
+  | cons α restA ih =>
+      cases πs with
+      | nil => simp
+      | cons p restπ =>
+          simp only [List.zip_cons_cons, List.foldr_cons, List.map_cons]
+          rw [ih restπ]
+          -- Show: mixSummand cstar M (α, p) = p * UCI (deltaMarginal (α cstar)) M
+          have hSum : mixSummand cstar M (α, p) =
+              p * UCI (deltaMarginal (α cstar)) M := by
+            unfold mixSummand
+            rw [UCI_delta_eq_indicator]
+            split_ifs with h
+            · simp
+            · simp
+          rw [hSum]
+
+/-- **van Krieken positive complement / Theorem 11 converse.**
+    Every RS mixture is representable in the mixture-of-UCI family
+    using deterministic-marginal cells (one per remapping).
+
+    Concretely: given any list `A` of concept remappings and weights
+    `πs`, the RS-mixture distribution `pMixZip (zip A πs) c*`
+    coincides pointwise with `mixOfUCI (zip (map δ_{α(c*)} A) πs)`,
+    where each cell uses the deterministic marginal pinning the
+    corresponding `α(c*)`.
+
+    No remapping or admissibility hypothesis is required for the
+    *representability* itself; the deterministic marginals are
+    admissible by `deltaMarginal_admissible`. -/
+theorem RS_mixture_in_mixOfUCI {k : Nat}
+    (A : List (World k → World k)) (πs : List Rat)
+    (cstar : World k) :
+    ∀ M,
+      pMixZip (List.zip A πs) cstar M =
+      mixOfUCI (List.zip (A.map (fun α => deltaMarginal (α cstar))) πs) M := by
+  intro M
+  unfold pMixZip mixOfUCI
+  exact mixOfUCI_eq_pMixZip_aux A πs cstar M
+
+/-- Every cell in the canonical mixture-of-UCI representation has an
+    admissible marginal. -/
+theorem RS_mixture_cells_admissible {k : Nat}
+    (A : List (World k → World k)) (cstar : World k) :
+    ∀ μ ∈ A.map (fun α => deltaMarginal (α cstar)), Admissible μ := by
+  intro μ hμ
+  rw [List.mem_map] at hμ
+  obtain ⟨α, _, hEq⟩ := hμ
+  rw [← hEq]
+  exact deltaMarginal_admissible (α cstar)
+
+-- ============================================================
+-- 8. SROIQ-WMC instantiation of the positive complement
+-- ============================================================
+
+/-- **SROIQ RS-IA sufficient condition.**  The positive complement
+    of `sroiq_RSIA_necessary`: for any list of concept remappings
+    and weights, the RS mixture is representable in the
+    mixture-of-UCI perception family.  This is unconditional: it
+    holds for arbitrary remappings (in particular, the family is
+    expressive enough to capture every RS mixture for any SROIQ
+    query). -/
+theorem sroiq_RSIA_sufficient
+    (O : ELKSDD.ALCHOQ.Ontology) (R : RBox) (C D : Concept)
+    (A : List (World O.length → World O.length))
+    (πs : List Rat)
+    (cstar : World O.length) :
+    ∀ M,
+      pMixZip (List.zip A πs) cstar M =
+      mixOfUCI (List.zip (A.map (fun α => deltaMarginal (α cstar))) πs) M := by
+  -- The result is independent of the SROIQ-specific constraint;
+  -- it depends only on the world/marginal structure.  We expose it
+  -- as a SROIQ-named theorem for symmetry with `sroiq_RSIA_necessary`.
+  intro M
+  exact RS_mixture_in_mixOfUCI A πs cstar M
 
 end RSIA
 end ELKSDD
