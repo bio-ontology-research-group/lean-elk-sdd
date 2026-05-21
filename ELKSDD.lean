@@ -1,30 +1,48 @@
 /-
   Root module for ELKSDD.
 
-  ELKSDD bundles four reusable Lean 4 modules:
+  The Lean 4 mechanisation of the MOOSE neuro-symbolic reasoner ---
+  from EL through full SROIQ (OWL 2 DL), with Sentential Decision
+  Diagrams, weighted model counting, the DISPONTE distribution
+  semantics, and a verified treatment of reasoning shortcuts under
+  the independence assumption.
 
-    * ELKSDD.Util    — list-length lemmas for flatMap/map patterns,
-                       triangular numbers (`K(K-1)/2` arithmetic).
-    * ELKSDD.MiniEL  — atomic-subsumption EL with first-principles
-                       ELK soundness + completeness (zero axioms).
-    * ELKSDD.EL      — full conjunction + existential fragment of
-                       EL with ELK rules R₀, R_⊤, R_⊑, R⁻_⊓, R⁺_⊓,
-                       R_⊥, R⁺_∃, R_⊥-∃; soundness end-to-end;
-                       completeness via canonical model with role
-                       extension.
-    * ELKSDD.SDD     — BDD-style sentential decision diagrams
-                       generic over the atom type; Shannon-
-                       expansion compile from CNF; structural
-                       linear-time WMC; compile correctness proved
-                       end-to-end.
+  Layers (each import-block corresponds to one):
 
-  All non-foundational dependencies are tracked: `#print axioms
-  <theorem>` reveals only `propext`, `Classical.choice`,
-  `Quot.sound` (Lean's standard foundation) for theorems that need
-  classical reasoning, and no axioms at all for the constructive
-  fragment in MiniEL.
+    * Generic infrastructure: `Util`, `SDD`, `DISPONTE`,
+      `DISPONTERat`.
+    * EL family (Horn): `MiniEL` (zero axioms), `EL`, `ELpp`,
+      `Normalize` + `RangeNorm` + `Merging` + `OWL2EL`,
+      `ELKBoundary`; saturation machinery (`Saturation`, `SCC`,
+      `SCCWorld`, `SCCWMCUniform`, `SCCNomLHS`,
+      `SatFactorGeneral`, `SatComplexity`, `Stratified`); compile
+      (`Compilation`, `CompilationWMC`, `Complexity`); citation
+      theorems (`MOOSE`).
+    * ALC: `ALC`, `Completeness`, `CompletenessExamples`,
+      `ALCComplexity`.
+    * ALCHOQ (nominals + qualified cardinality): `ALCHOQ`
+      (zero-axiom saturation soundness), `ALCHOQCompleteness`,
+      and the Tena Cucala context-structure calculus
+      (`ALCHOIQContext`, indirectly via the SROIQ bridge).
+    * SROIQ (full OWL 2 DL): `SROIQ` (RBox semantics with per-shape
+      soundness), `SROIQCompleteness`, `SROIQComplexity`,
+      `SROIQPythonParity`, headline correspondence
+      `SROIQCompilationWMC`.
+    * RS-IA: `RSIA` --- van Krieken et al. (NeSy 2025) Theorem 11
+      and its positive complement, both mechanised for the SROIQ
+      saturation predicate.
 
-  No Mathlib dependency — Lean 4 core only.
+  Axiom hygiene.  All exposed theorems audit to only
+  `propext`, `Classical.choice`, `Quot.sound`.  Two notable cases
+  of stronger hygiene: `MiniEL` (atomic-subsumption fragment) is
+  *fully* axiom-free; `ALCHOQ.sat_sound` reports zero axioms.  No
+  user axioms, no `sorry`s.
+
+  `Mathlib` is required only for the `Rat`-valued layers
+  (`DISPONTERat`, `RSIA`).  The classical-DL layers are Lean 4 core
+  only.
+
+  See `README.md` for module-by-module details and quick examples.
 -/
 
 import ELKSDD.Util
