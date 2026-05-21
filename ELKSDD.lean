@@ -62,3 +62,4 @@ import ELKSDD.SROIQCompleteness
 import ELKSDD.SROIQPythonParity
 import ELKSDD.SROIQCompilationWMC
 import ELKSDD.SROIQComplexity
+import ELKSDD.RSIA
